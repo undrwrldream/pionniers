@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Tableau — Royaume des Savants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Cinzel+Decorative:wght@700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="02_interface_eleve/config-classe.js"></script>
+<style>
+  :root{ --parchment:#F1E4C3; --gold-light:#D9A62E; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; height:100%; overflow:hidden; }
+  body{
+    font-family:'Crimson Text', serif; color:var(--parchment);
+    background:radial-gradient(ellipse at 50% 40%, #241109 0%, #0d0704 78%);
+  }
+
+  /* ---------- Écran normal (attente) ---------- */
+  #attente{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:16px; text-align:center; padding:24px;
+  }
+  #attente h1{
+    font-family:'Cinzel Decorative', 'Cinzel', serif; font-weight:700; margin:0;
+    font-size:clamp(34px, 6vw, 84px); color:var(--gold-light); text-shadow:0 0 28px rgba(217,166,46,.45);
+  }
+  #attente p{ margin:0; font-size:clamp(18px, 2.2vw, 30px); font-style:italic; opacity:.8; }
+
+  /* ---------- Arène ---------- */
+  #cadreArene{ position:absolute; inset:0; width:100%; height:100%; border:none; background:#17130D; display:none; }
+  body.arene-ouverte #cadreArene{ display:block; }
+  body.arene-ouverte #attente{ display:none; }
+
+  /* Petit témoin de connexion, discret : gris = ok, orange = reconnexion */
+  #temoin{
+    position:fixed; right:10px; bottom:10px; width:9px; height:9px; border-radius:50%;
+    background:rgba(241,228,195,.22); z-index:10; transition:background .3s ease;
+  }
+  #temoin.probleme{ background:#d98a2e; }
+</style>
+</head>
+<body>
+
+<div id="attente">
+  <h1>Royaume des Savants</h1>
+  <p>Le royaume veille. L'arène s'ouvrira sur ordre de l'enseignant.</p>
+</div>
+
+<iframe id="cadreArene" title="Arène de combat" src="about:blank" allow="fullscreen" allowfullscreen></iframe>
+<div id="temoin" title="Connexion au script Google"></div>
+
+<script>
+/* =====================================================================
+   PAGE DU TABLEAU (TBI) — écoute la commande de l'enseignant.
+   Relit la ligne « Commande » de la feuille Google toutes les 2,5 s.
+   Une commande est NOUVELLE quand son identifiant change.
+   ===================================================================== */
+
+const CFG = window.CONFIG_CLASSE || {};
+const PAGE_ARENE = '03_ecran_arene/arene_combat.html';
+const INTERVALLE_MS = 2500;
+
+// Si cette page est (re)chargée alors que l'arène a été lancée il y a moins de
+// 2 h et jamais fermée, on la rouvre. Plus vieux : c'est un oubli, on reste en attente.
+const FENETRE_REPRISE_MS = 2 * 60 * 60 * 1000;
+
+const cadre = document.getElementById('cadreArene');
+const temoin = document.getElementById('temoin');
+let dernierId = null;      // null tant qu'on n'a pas lu une première fois
+let areneOuverte = false;
+
+function ouvrirArene(){
+  if(areneOuverte) return;
+  areneOuverte = true;
+  cadre.src = PAGE_ARENE + '?v=' + Date.now();   // arène neuve à chaque lancement
+  document.body.classList.add('arene-ouverte');
+}
+
+function fermerArene(){
+  if(!areneOuverte) return;
+  areneOuverte = false;
+  document.body.classList.remove('arene-ouverte');
+  cadre.src = 'about:blank';
+}
+
+function appliquer(action){
+  if(action === 'ouvrir_arene') ouvrirArene();
+  else if(action === 'fermer_arene') fermerArene();
+}
+
+async function lireCommande(){
+  const res = await fetch(CFG.URL_SCRIPT + '?commande=1&tbi=1&t=' + Date.now(), { cache:'no-store' });
+  const d = await res.json();
+  if(!d || d.error || typeof d.id !== 'string') throw new Error('réponse illisible');
+  return d;
+}
+
+async function sonder(){
+  try{
+    const d = await lireCommande();
+    temoin.classList.remove('probleme');
+
+    if(dernierId === null){
+      // Première lecture : on adopte l'état actuel sans rejouer une vieille commande.
+      dernierId = d.id;
+      const age = (d.maintenant || Date.now()) - (d.horodatage || 0);
+      if(d.action === 'ouvrir_arene' && age >= 0 && age < FENETRE_REPRISE_MS) ouvrirArene();
+    }else if(d.id !== dernierId){
+      dernierId = d.id;
+      appliquer(d.action);
+    }
+  }catch(e){
+    temoin.classList.add('probleme');   // on garde l'écran actuel et on réessaie
+  }
+}
+
+(function boucle(){
+  if(!CFG.URL_SCRIPT || CFG.URL_SCRIPT.indexOf('COLLE_ICI') !== -1){
+    temoin.classList.add('probleme');
+    return;   // configuration incomplète : rien à écouter
+  }
+  sonder().finally(() => setTimeout(boucle, INTERVALLE_MS));
+})();
+</script>
+</body>
+</html>

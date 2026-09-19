@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Royaume des Savants — Entrée</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="02_interface_eleve/config-classe.js"></script>
+<script src="02_interface_eleve/stockage-classe.js"></script>
+<script src="02_interface_eleve/passerelle-core.js"></script>
+<style>
+  :root{
+    --parchment:#F1E4C3; --parchment-dark:#E3D3A6; --ink:#2B2118;
+    --burgundy:#7B2D26; --burgundy-dark:#5C201B; --gold:#B8860B; --gold-light:#D9A62E;
+  }
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+  html,body{ margin:0; min-height:100%; }
+  body{
+    font-family:'Crimson Text', serif; color:var(--parchment);
+    background:radial-gradient(ellipse at center, #241109 0%, #0d0704 75%) fixed;
+    min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:28px 16px;
+  }
+  main{ width:100%; max-width:920px; }
+
+  .ecran{ display:flex; flex-direction:column; align-items:center; gap:18px; text-align:center; }
+  h1{
+    font-family:'Cinzel', serif; font-weight:700; color:var(--gold-light);
+    font-size:clamp(22px, 4vw, 30px); margin:0; text-shadow:0 0 16px rgba(217,166,46,.5);
+  }
+  p{ margin:0; line-height:1.5; font-size:18px; }
+  p.consigne{ opacity:.85; font-style:italic; }
+  h1:focus{ outline:none; }
+
+  /* ---------- Liste des noms ---------- */
+  .noms{
+    width:100%; display:grid; gap:10px; margin-top:8px;
+    grid-template-columns:repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .nom{
+    font-family:'Crimson Text', serif; font-size:19px; font-weight:600; color:var(--ink);
+    background:var(--parchment); border:2px solid rgba(184,134,11,.55); border-radius:6px;
+    padding:12px 10px; cursor:pointer; min-height:52px;
+    box-shadow:0 3px 10px rgba(0,0,0,.45);
+    transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .nom:hover{ transform:translateY(-2px); border-color:var(--gold-light); box-shadow:0 6px 16px rgba(0,0,0,.55); }
+  .nom:focus-visible, .bouton:focus-visible, .carte:focus-visible{ outline:3px solid var(--gold-light); outline-offset:3px; }
+
+  /* ---------- Confirmation ---------- */
+  .etiquette-nom{
+    font-family:'Cinzel', serif; font-weight:700; font-size:clamp(26px, 6vw, 40px); color:var(--parchment);
+    padding:18px 30px; border:2px solid var(--gold-light); border-radius:8px;
+    background:rgba(0,0,0,.35); max-width:100%; overflow-wrap:anywhere;
+  }
+  .rangee{ display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+  .bouton{
+    font-family:'Cinzel', serif; font-weight:700; font-size:15px; letter-spacing:.5px;
+    padding:13px 26px; border-radius:6px; cursor:pointer; min-height:48px;
+    border:2px solid var(--gold-light); color:var(--parchment); background:var(--burgundy);
+    transition:background .15s ease, opacity .15s ease;
+  }
+  .bouton:hover:not(:disabled){ background:var(--burgundy-dark); }
+  .bouton.discret{ background:transparent; color:var(--parchment); border-color:rgba(241,228,195,.4); }
+  .bouton.discret:hover:not(:disabled){ background:rgba(241,228,195,.1); }
+  .bouton:disabled{ opacity:.45; cursor:not-allowed; }
+
+  /* ---------- Couvertures ---------- */
+  .couvertures{ display:flex; gap:32px; flex-wrap:wrap; justify-content:center; margin:6px 0; }
+  .carte{
+    cursor:pointer; border:none; background:none; padding:0; width:min(42vw, 210px);
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    transition:transform .25s ease;
+  }
+  .carte:hover{ transform:translateY(-5px); }
+  .carte .cadre{
+    width:100%; aspect-ratio:3/4.2; border-radius:10px; overflow:hidden; background:#1a0f08;
+    box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 0 2px rgba(217,166,46,.35);
+    transition:box-shadow .25s ease;
+  }
+  .carte img{ width:100%; height:100%; object-fit:cover; display:block; opacity:0; transition:opacity .4s ease; }
+  .carte img.prete{ opacity:1; }
+  .carte .etiquette{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:15px; }
+  .carte[aria-pressed="true"]{ transform:translateY(-6px) scale(1.03); }
+  .carte[aria-pressed="true"] .cadre{ box-shadow:0 14px 36px rgba(0,0,0,.6), 0 0 0 4px var(--gold-light), 0 0 38px rgba(217,166,46,.5); }
+  .carte[aria-pressed="true"] .etiquette{ color:var(--parchment); }
+
+  /* ---------- Attente et erreurs ---------- */
+  .sceau{
+    width:54px; height:54px; border-radius:50%;
+    border:3px solid rgba(217,166,46,.25); border-top-color:var(--gold-light);
+    animation:tourne 1.1s linear infinite;
+  }
+  @keyframes tourne{ to{ transform:rotate(360deg); } }
+  .erreur h1{ color:#e3a8a0; text-shadow:none; }
+  .erreur p{ max-width:520px; }
+  .message-inline{ min-height:24px; color:#e3a8a0; font-size:17px; }
+
+  @media (prefers-reduced-motion: reduce){
+    .sceau{ animation:none; }
+    .nom, .carte, .carte .cadre{ transition:none; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- 1. Chargement de la liste -->
+  <section class="ecran" id="ecran-liste-attente" aria-live="polite">
+    <div class="sceau" aria-hidden="true"></div>
+    <p class="consigne">Le royaume rassemble ses élèves…</p>
+  </section>
+
+  <!-- 2. Choix du nom -->
+  <section class="ecran" id="ecran-noms" hidden>
+    <h1 tabindex="-1">Qui ouvre le grimoire ?</h1>
+    <p class="consigne">Touche ton nom dans la liste.</p>
+    <div class="noms" id="listeNoms"></div>
+  </section>
+
+  <!-- 3. Confirmation -->
+  <section class="ecran" id="ecran-confirmation" hidden>
+    <h1 tabindex="-1">Tu es bien…</h1>
+    <div class="etiquette-nom" id="nomConfirme"></div>
+    <div class="rangee">
+      <button class="bouton" id="btnOui" type="button">Oui, c'est moi</button>
+      <button class="bouton discret" id="btnNon" type="button">Non, retour à la liste</button>
+    </div>
+  </section>
+
+  <!-- 4. Recherche du coffre / ouverture -->
+  <section class="ecran" id="ecran-coffre-attente" hidden aria-live="polite">
+    <div class="sceau" aria-hidden="true"></div>
+    <p class="consigne" id="texteCoffre">Le sceau cherche ton grimoire…</p>
+  </section>
+
+  <!-- 5. Choix de la couverture (première visite seulement) -->
+  <section class="ecran" id="ecran-couvertures" hidden>
+    <h1 tabindex="-1">Choisis ton grimoire</h1>
+    <p class="consigne">Ce choix est définitif pour ton aventure.</p>
+    <div class="couvertures">
+      <button class="carte" type="button" data-genre="garcon" aria-pressed="false" aria-label="Le Protecteur">
+        <div class="cadre"><img alt="Couverture du grimoire, version garçon" data-src="02_interface_eleve/couverture_assets/couverture_garcon.webp"></div>
+        <span class="etiquette">Le Protecteur</span>
+      </button>
+      <button class="carte" type="button" data-genre="fille" aria-pressed="false" aria-label="La Protectrice">
+        <div class="cadre"><img alt="Couverture du grimoire, version fille" data-src="02_interface_eleve/couverture_assets/couverture_fille.webp"></div>
+        <span class="etiquette">La Protectrice</span>
+      </button>
+    </div>
+    <div class="message-inline" id="erreurGenre" role="alert"></div>
+    <button class="bouton" id="btnValiderGenre" type="button" disabled>Ouvrir ce grimoire</button>
+  </section>
+
+  <!-- 6. Erreurs -->
+  <section class="ecran erreur" id="ecran-erreur" hidden role="alert">
+    <h1 tabindex="-1" id="erreurTitre"></h1>
+    <p id="erreurTexte"></p>
+    <button class="bouton" id="btnReessayer" type="button">Réessayer</button>
+  </section>
+
+</main>
+
+<script>
+/* =====================================================================
+   ÉCRAN D'ACCUEIL — choix du nom, choix de la couverture, redirection.
+   Aucune saisie au clavier : l'identité vient de la liste de l'onglet
+   « Élèves » de la feuille Google, jamais d'un champ que l'élève remplit.
+   Tout ce qui touche au coffre passe par PasserelleCore (jamais direct).
+   ===================================================================== */
+
+// Page où l'élève arrive une fois son grimoire prêt.
+const PAGE_SUIVANTE = '02_interface_eleve/interface_eleve.html';
+
+const CFG = window.CONFIG_CLASSE || {};
+const $ = id => document.getElementById(id);
+
+let eleves = [];          // [{ nom, slug }]
+let eleveCourant = null;  // { nom, slug }
+let donneesCoffre = null; // coffre chargé, en attente du choix de couverture
+let genreChoisi = null;
+let actionReessayer = null;
+
+/* ---------- Identifiant : même algorithme que le Grimoire et le générateur de liens ---------- */
+function slugify(str){
+  const base = str.toString()
+    .replace(/œ/gi, 'oe').replace(/æ/gi, 'ae')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return base || 'eleve';
+}
+
+function preparerEleves(brut){
+  const liste = brut.map(e => ({
+    nom: e.nom,
+    slugBase: slugify(e.identifiant || e.nom),
+    explicite: !!e.identifiant
+  }));
+  // Deux noms rigoureusement identiques sans identifiant : suffixe _1, _2 selon l'ordre de la feuille.
+  const compte = {}, numero = {};
+  liste.forEach(l => { compte[l.slugBase] = (compte[l.slugBase] || 0) + 1; });
+  liste.forEach(l => {
+    l.slug = l.slugBase;
+    if(compte[l.slugBase] > 1 && !l.explicite){
+      numero[l.slugBase] = (numero[l.slugBase] || 0) + 1;
+      l.slug = l.slugBase + '_' + numero[l.slugBase];
+    }
+  });
+  liste.sort((a, b) => a.nom.localeCompare(b.nom, 'fr', { sensitivity:'base' }));
+  return liste.map(l => ({ nom: l.nom, slug: l.slug }));
+}
+
+/* ---------- Affichage ---------- */
+const ECRANS = ['ecran-liste-attente','ecran-noms','ecran-confirmation','ecran-coffre-attente','ecran-couvertures','ecran-erreur'];
+function montrer(id){
+  ECRANS.forEach(e => { $(e).hidden = (e !== id); });
+  const titre = $(id).querySelector('h1');
+  if(titre) titre.focus({ preventScroll:true });
+  window.scrollTo(0, 0);
+}
+
+function montrerErreur(titre, texte, action, libelleBouton){
+  $('erreurTitre').textContent = titre;
+  $('erreurTexte').textContent = texte;
+  actionReessayer = action || null;
+  $('btnReessayer').hidden = !action;
+  $('btnReessayer').textContent = libelleBouton || 'Réessayer';
+  montrer('ecran-erreur');
+}
+$('btnReessayer').addEventListener('click', () => { if(actionReessayer) actionReessayer(); });
+
+const ERR_RESEAU = ['Connexion impossible',
+  "Le grimoire n'arrive pas à joindre le royaume. Vérifie ta connexion Internet, puis appuie sur Réessayer. Si ça ne marche toujours pas, avertis ton enseignant."];
+
+/* ---------- 1. Liste des élèves ---------- */
+function configurationValide(){
+  return !!CFG.URL_SCRIPT && CFG.URL_SCRIPT.indexOf('COLLE_ICI') === -1;
+}
+
+async function lireListeEleves(){
+  let derniere;
+  for(let i = 0; i < 3; i++){
+    try{
+      const res = await fetch(CFG.URL_SCRIPT + '?eleves=1&t=' + Date.now(), { cache:'no-store' });
+      const data = await res.json();
+      if(data && Array.isArray(data.eleves)) return data.eleves;
+      throw new Error((data && data.error) || 'réponse illisible');
+    }catch(e){
+      derniere = e;
+      await new Promise(r => setTimeout(r, 500 * (i + 1)));
+    }
+  }
+  throw derniere;
+}
+
+async function demarrer(){
+  montrer('ecran-liste-attente');
+  if(!configurationValide()){
+    montrerErreur('Configuration incomplète',
+      "L'adresse du script Google n'est pas encore renseignée dans config-classe.js. Avertis ton enseignant.");
+    return;
+  }
+  let brut;
+  try{
+    brut = await lireListeEleves();
+  }catch(e){
+    montrerErreur(ERR_RESEAU[0], ERR_RESEAU[1], demarrer);
+    return;
+  }
+  if(!brut.length){
+    montrerErreur('Aucun élève dans la liste',
+      "L'onglet « Élèves » de la feuille Google est vide. Avertis ton enseignant.", demarrer);
+    return;
+  }
+  eleves = preparerEleves(brut);
+  afficherNoms();
+}
+
+function afficherNoms(){
+  const zone = $('listeNoms');
+  zone.innerHTML = '';
+  eleves.forEach(el => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'nom';
+    b.textContent = el.nom;
+    b.addEventListener('click', () => choisirEleve(el));
+    zone.appendChild(b);
+  });
+  eleveCourant = null; donneesCoffre = null; genreChoisi = null;
+  montrer('ecran-noms');
+}
+
+/* ---------- 2. Confirmation ---------- */
+function choisirEleve(el){
+  eleveCourant = el;
+  $('nomConfirme').textContent = el.nom;
+  montrer('ecran-confirmation');
+}
+$('btnNon').addEventListener('click', afficherNoms);
+$('btnOui').addEventListener('click', ouvrirCoffre);
+
+/* ---------- 3. Coffre ---------- */
+function pause(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+// Distingue "cette clé n'existe vraiment pas" d'une panne réseau passagère.
+// (chargerCoffre renvoie un coffre vide dans les deux cas ; ici on ne peut pas s'y fier.)
+async function coffreExisteSurLeServeur(slug){
+  try{
+    await window.storage.get('coffre_' + slug, true);
+    return 'presente';
+  }catch(e){
+    return (e && e.code === 'ABSENTE') ? 'absente' : 'reseau';
+  }
+}
+
+async function ouvrirCoffre(){
+  const { slug, nom } = eleveCourant;
+  $('texteCoffre').textContent = 'Le sceau cherche ton grimoire…';
+  montrer('ecran-coffre-attente');
+
+  let resultat = await PasserelleCore.chargerCoffre(slug, nom);
+
+  if(resultat.source === 'defaut'){
+    // Aucun coffre valide trouvé : élève tout neuf, panne réseau, ou données illisibles ?
+    let etat = await coffreExisteSurLeServeur(slug);
+    if(etat === 'reseau'){
+      montrerErreur(ERR_RESEAU[0], ERR_RESEAU[1], ouvrirCoffre);
+      return;
+    }
+    if(etat === 'presente'){
+      // Un coffre existe mais n'a pas été lu : on réessaie avant de conclure.
+      for(let i = 0; i < 2 && resultat.source === 'defaut'; i++){
+        await pause(1000);
+        resultat = await PasserelleCore.chargerCoffre(slug, nom);
+      }
+      if(resultat.source === 'defaut'){
+        montrerErreur('Ton grimoire a besoin d\u2019aide',
+          "Tes données n'ont pas pu être lues. Ne choisis pas de nouveau grimoire : avertis ton enseignant.",
+          () => afficherNoms(), 'Retour à la liste');
+        return;
+      }
+    }
+    // etat === 'absente' : première visite confirmée, on continue avec le coffre vide.
+  }
+
+  donneesCoffre = resultat.donnees;
+
+  if(donneesCoffre.genre){
+    // Élève déjà venu : on saute le choix de couverture.
+    $('texteCoffre').textContent = 'Le sceau reconnaît ta présence…';
+    await pause(600);
+    partir();
+    return;
+  }
+  afficherCouvertures();
+}
+
+/* ---------- 4. Couvertures (première visite) ---------- */
+function afficherCouvertures(){
+  genreChoisi = null;
+  $('erreurGenre').textContent = '';
+  $('btnValiderGenre').disabled = true;
+  document.querySelectorAll('.carte').forEach(c => c.setAttribute('aria-pressed', 'false'));
+  document.querySelectorAll('.carte img').forEach(img => {
+    if(img.src) return;
+    img.onload = () => img.classList.add('prete');   // onload AVANT src
+    img.src = img.dataset.src;
+  });
+  montrer('ecran-couvertures');
+}
+
+document.querySelectorAll('.carte').forEach(carte => {
+  carte.addEventListener('click', () => {
+    genreChoisi = carte.dataset.genre;
+    document.querySelectorAll('.carte').forEach(c => c.setAttribute('aria-pressed', String(c === carte)));
+    $('btnValiderGenre').disabled = false;
+    $('erreurGenre').textContent = '';
+  });
+});
+
+$('btnValiderGenre').addEventListener('click', async () => {
+  if(!genreChoisi || !donneesCoffre) return;
+  const bouton = $('btnValiderGenre');
+  bouton.disabled = true;
+  bouton.textContent = 'Le grimoire se scelle…';
+  donneesCoffre.genre = genreChoisi;
+  const ok = await PasserelleCore.sauvegarderCoffre(eleveCourant.slug, donneesCoffre);
+  if(!ok){
+    donneesCoffre.genre = null;
+    $('erreurGenre').textContent = "L'enregistrement a échoué. Vérifie ta connexion et appuie de nouveau sur le bouton.";
+    bouton.textContent = 'Ouvrir ce grimoire';
+    bouton.disabled = false;
+    return;
+  }
+  bouton.textContent = 'Ouvrir ce grimoire';
+  $('texteCoffre').textContent = "Le grimoire s'ouvre…";
+  montrer('ecran-coffre-attente');
+  await pause(500);
+  partir();
+});
+
+/* ---------- 5. Redirection ---------- */
+function partir(){
+  const url = PAGE_SUIVANTE +
+    '?eleve=' + encodeURIComponent(eleveCourant.slug) +
+    '&nom=' + encodeURIComponent(eleveCourant.nom);
+  window.location.assign(url);
+}
+
+demarrer();
+</script>
+</body>
+</html>
