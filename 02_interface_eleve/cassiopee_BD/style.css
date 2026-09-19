@@ -1,0 +1,299 @@
+/* ===================================================================
+   Cassiopée — Hublot de lecture
+   Aligné sur mystic_white_portal.jpg (1920x1280) :
+   trou circulaire centré à (50%, 50.2%), diamètre = 48.6% de la largeur
+   du cadre. Le visuel du portail n'est PAS inclus ici — seules ses
+   proportions servent à positionner le hublot et les flèches.
+   =================================================================== */
+
+:root{
+  --void:        #04050a;
+  --void-2:      #0a0e1c;
+  --amber:       #f5b942;
+  --amber-dim:   #a9832f;
+  --ice:         #8fd8ff;
+  --text-warm:   #f1ecdf;
+  --text-dim:    #9aa3b8;
+
+  /* portal geometry, measured from the reference overlay image */
+  --portal-ratio: 1.5;      /* 1920 / 1280 */
+  --hole-cx: 50%;
+  --hole-cy: 50.2%;
+  --hole-d: 48.6%;          /* diameter, as a fraction of frame width */
+}
+
+*{ box-sizing: border-box; }
+
+html, body{ height: 100%; }
+
+body{
+  margin: 0;
+  background: var(--void);
+  color: var(--text-warm);
+  font-family: 'Literata', Georgia, serif;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- background void ---------- */
+
+.void{
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: radial-gradient(ellipse at 50% 38%, #0d1830 0%, var(--void-2) 42%, var(--void) 78%);
+}
+.nebula{
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(circle at 22% 30%, rgba(90,120,190,0.10), transparent 40%),
+    radial-gradient(circle at 78% 65%, rgba(180,120,90,0.07), transparent 45%);
+  filter: blur(20px);
+}
+.stars{ position: absolute; inset: 0; background-repeat: repeat; }
+.stars--near{
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 22%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 82% 14%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 32% 68%, #cfe3ff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 64% 82%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 91% 55%, #cfe3ff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 6% 78%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 48% 10%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 74% 40%, #cfe3ff, transparent 60%);
+  background-size: 100% 100%;
+  opacity: 0.8;
+}
+.stars--far{
+  background-image:
+    radial-gradient(1px 1px at 18% 45%, #8fa2c9, transparent 60%),
+    radial-gradient(1px 1px at 40% 88%, #8fa2c9, transparent 60%),
+    radial-gradient(1px 1px at 58% 24%, #8fa2c9, transparent 60%),
+    radial-gradient(1px 1px at 88% 78%, #8fa2c9, transparent 60%),
+    radial-gradient(1px 1px at 96% 30%, #8fa2c9, transparent 60%),
+    radial-gradient(1px 1px at 25% 8%, #8fa2c9, transparent 60%);
+  opacity: 0.5;
+}
+@media (prefers-reduced-motion: no-preference){
+  .nebula{ animation: drift 90s ease-in-out infinite alternate; }
+}
+@keyframes drift{
+  from{ transform: translate(0,0) scale(1); }
+  to{ transform: translate(-2%, 1.5%) scale(1.04); }
+}
+
+/* ---------- scene layout ---------- */
+
+.scene{
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  padding: clamp(20px, 4vh, 48px) 16px;
+}
+
+/* ---------- portal-frame : locks the 1920x1280 aspect ratio ---------- */
+
+.portal-frame{
+  position: relative;
+  width: min(94vw, calc(94svh * var(--portal-ratio)));
+  aspect-ratio: var(--portal-ratio);
+  flex: 0 0 auto;
+  background-image: url('../livre_assets/portail_cassiopee.png');
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* ---------- hublot : positioned exactly where the stone ring's hole is ---------- */
+
+.hublot{
+  position: absolute;
+  left: var(--hole-cx);
+  top: var(--hole-cy);
+  width: var(--hole-d);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  outline: none;
+}
+
+.hublot__glass{
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #000;
+  box-shadow:
+    0 0 0 1px rgba(180,205,230,0.10),
+    0 30px 70px rgba(0,0,0,0.45),
+    0 0 60px rgba(90,150,220,0.10);
+}
+
+.hublot__stage{ position: absolute; inset: 0; }
+
+/* ---------- scenes : image fills the hublot ---------- */
+
+.scene-slide{
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease;
+}
+.scene-slide.is-active{ opacity: 1; visibility: visible; }
+.scene-slide.is-silent{ transition-duration: 2.1s; }
+.scene-slide img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hublot__vignette{
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: inset 0 0 min(90px, 12vmin) rgba(0,0,0,0.7);
+  background: radial-gradient(circle at 50% 50%, transparent 66%, rgba(0,0,0,0.4) 100%);
+}
+.hublot__sheen{
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.13) 0%, transparent 28%),
+              radial-gradient(circle at 74% 82%, rgba(120,170,255,0.06) 0%, transparent 30%);
+  mix-blend-mode: screen;
+}
+
+.edge-tap{
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  z-index: 3;
+  padding: 0;
+}
+.edge-tap--prev{ left: 0; border-radius: 50% 0 0 50%; }
+.edge-tap--next{ right: 0; border-radius: 0 50% 50% 0; }
+.edge-tap:focus-visible{ outline: 2px solid var(--amber); outline-offset: -6px; }
+
+/* ---------- caption : plain rectangle, outside the circular clip,
+   positioned from the reference portal image's exact pixel measurements ---------- */
+
+.caption-overlay{
+  position: absolute;
+  left: 12.81%;
+  top: 56.72%;
+  width: 75.78%;
+  height: 30.70%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+}
+.caption-overlay::before{
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, rgba(4,6,12,0.42) 28%, rgba(4,6,12,0.6));
+  z-index: -1;
+}
+.caption-overlay.is-empty{ display: none; }
+.caption-overlay p{
+  margin: 0;
+  text-align: center;
+  color: var(--text-warm);
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.9), 0 0 18px rgba(0,0,0,0.65);
+}
+
+/* ---------- arrows : sitting directly on the portal's curve ---------- */
+
+.arrow{
+  position: absolute;
+  top: var(--hole-cy);
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid rgba(245,185,66,0.4);
+  background: rgba(8,11,20,0.68);
+  backdrop-filter: blur(6px);
+  color: var(--amber);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.12s ease, color 0.2s ease;
+  z-index: 4;
+}
+.arrow--prev{ left: calc(var(--hole-cx) - var(--hole-d) / 2); transform: translate(-50%, -50%); }
+.arrow--next{ left: calc(var(--hole-cx) + var(--hole-d) / 2); transform: translate(-50%, -50%); }
+.arrow:hover{ background: rgba(245,185,66,0.16); border-color: var(--amber); }
+.arrow:active{ transform: translate(-50%, -50%) scale(0.92); }
+.arrow:focus-visible{ outline: 2px solid var(--amber); outline-offset: 3px; }
+.arrow[disabled]{
+  color: var(--text-dim);
+  border-color: rgba(154,163,184,0.2);
+  cursor: default;
+  opacity: 0.4;
+}
+.arrow[disabled]:hover{ background: rgba(8,11,20,0.68); }
+
+/* ---------- progress + hint : quiet strip below the portal ---------- */
+
+.progress{
+  flex: 0 0 auto;
+  margin-top: clamp(16px, 3vh, 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.progress__count{
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.progress__count #curNum{ color: var(--amber); }
+.progress__sep{ margin: 0 3px; opacity: 0.5; }
+.progress__track{
+  width: 108px;
+  height: 2px;
+  background: rgba(154,163,184,0.22);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress__fill{
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--amber-dim), var(--amber));
+  transition: width 0.4s ease;
+}
+
+.hint{
+  flex: 0 0 auto;
+  margin: 14px 0 0;
+  text-align: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: rgba(154,163,184,0.5);
+}
