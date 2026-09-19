@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Livre d'Histoire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2b1a0c;
+  --ink-soft:#5b4126;
+  --gold:#b8892b;
+  --gold-clair:#e2c06a;
+  --vin:#6b1717;
+  --parchemin:#f3e5c4;
+  --fond:#140a05;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; height:100%; background:var(--fond); color:var(--ink);
+  font-family:'EB Garamond', Georgia, 'Times New Roman', serif; }
+body{ display:flex; align-items:center; justify-content:center; overflow:hidden; }
+
+/* ─────────────────────────────────────────────────────────────
+   Grand parchemin générique (bannière "PARCHEMINS") — même image
+   et même gabarit que les pages de Parchemins de lecture :
+   1568×1328, jusqu'à 97 % de la hauteur de l'écran.
+   Zone d'écriture mesurée sur l'image : le texte reste sous la
+   bannière (et son ombre) et au-dessus du rouleau du bas.
+   ───────────────────────────────────────────────────────────── */
+.parchemin-conteneur{
+  position:relative; flex:none;
+  width:min(90vw, calc(97vh * 1.1807), 1568px);
+  aspect-ratio:1568 / 1328;
+  background:url('livre_assets/parchemin_scroll.jpg') center / contain no-repeat;
+  container-type:inline-size;
+}
+#app{
+  position:absolute; left:16.5%; right:16.5%; top:32%; bottom:17.5%;
+  display:flex; flex-direction:column; min-height:0;
+  text-align:left;
+}
+
+/* ── Écrans ── */
+.ecran{ display:flex; flex-direction:column; height:100%; min-height:0; animation:apparait .28s ease-out; }
+@keyframes apparait{ from{ opacity:0; transform:translateY(.5cqw); } to{ opacity:1; transform:none; } }
+
+.titre-livre{
+  margin:0; text-align:center; font-family:'Cinzel Decorative', 'EB Garamond', serif;
+  font-weight:700; font-size:3.3cqw; letter-spacing:.06em; color:var(--vin); line-height:1.1;
+}
+.sous-titre{
+  margin:.5cqw 0 0; text-align:center; font-size:1.35cqw; letter-spacing:.32em; text-transform:uppercase;
+  color:var(--ink-soft); font-weight:600;
+}
+.ornement{
+  display:flex; align-items:center; justify-content:center; gap:1cqw; margin:1.1cqw auto 1.4cqw;
+  color:var(--gold); font-size:1.3cqw; width:60%;
+}
+.ornement::before,.ornement::after{ content:""; flex:1; height:1px;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent); }
+
+/* ── Listes (table des matières / section) ── */
+.liste{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:1cqw;
+  overflow-y:auto; min-height:0; padding:.3cqw .6cqw .6cqw; }
+.entree{
+  all:unset; box-sizing:border-box; cursor:pointer; width:100%;
+  display:flex; align-items:center; gap:1.6cqw; padding:1cqw 1.6cqw;
+  background:rgba(255,248,228,.55); border:1px solid rgba(184,137,43,.65); border-radius:.8cqw;
+  box-shadow:0 .25cqw .7cqw -.4cqw rgba(43,26,12,.45);
+  transition:background .15s, transform .15s, box-shadow .15s;
+}
+.entree:hover,.entree:focus-visible{ background:rgba(255,244,212,.9); transform:translateY(-.15cqw);
+  box-shadow:0 .5cqw 1cqw -.5cqw rgba(43,26,12,.55); }
+.entree:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+.entree .num{
+  flex:none; width:3.6cqw; height:3.6cqw; display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--gold); border-radius:50%; color:var(--vin);
+  font-family:'Cinzel Decorative','EB Garamond',serif; font-weight:700; font-size:1.5cqw; background:rgba(226,192,106,.25);
+}
+.entree .vignette{ flex:none; width:8cqw; height:5.4cqw; object-fit:cover; border-radius:.5cqw; border:1px solid var(--gold); }
+.entree .corps{ flex:1; min-width:0; }
+.entree .nom{ display:block; font-size:2.1cqw; font-weight:600; color:var(--ink); line-height:1.15; }
+.entree .meta{ display:block; margin-top:.25cqw; font-size:1.3cqw; color:var(--ink-soft); font-style:italic; }
+.entree .fleche{ flex:none; font-size:1.8cqw; color:var(--gold); }
+
+/* ── Fil d'Ariane ── */
+.fil{ flex:none; display:flex; align-items:center; gap:1.2cqw; margin-bottom:.6cqw; min-height:2.6cqw; padding:0 3.6cqw; } /* dégage les étoiles d'angle du parchemin */
+.retour{
+  all:unset; cursor:pointer; flex:none; padding:.3cqw 1.1cqw; border:1px solid var(--gold); border-radius:999px;
+  font-size:max(1.2cqw,11px); font-weight:600; color:var(--vin); background:rgba(255,248,228,.55); letter-spacing:.04em;
+}
+.retour:hover,.retour:focus-visible{ background:rgba(255,244,212,.95); }
+.retour:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+.chemin{ font-size:max(1.2cqw,11px); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); font-weight:600;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chemin b{ color:var(--vin); font-weight:700; }
+.agrandir{ margin-left:auto; }
+.fig img{ cursor:zoom-in; }
+
+/* ── Lecteur ── */
+.page{ flex:1; min-height:0; display:grid; gap:2.6cqw; align-items:center; padding:1.3cqw 1cqw .8cqw; animation:apparait .28s ease-out; }
+.page--cote{ grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); grid-template-rows:minmax(0,1fr); }
+.page--portrait{ grid-template-columns:minmax(0,.62fr) minmax(0,1fr); grid-template-rows:minmax(0,1fr); }
+.page--texte{ grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr); justify-items:center; }
+.page--solo{ grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,1fr) auto; justify-items:center; gap:1.1cqw; }
+
+.fig{ min-height:0; min-width:0; height:100%; display:flex; align-items:center; justify-content:center; }
+.fig img{
+  display:block; max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain;
+  border-radius:.6cqw; border:.28cqw solid var(--gold);
+  box-shadow:0 0 0 .12cqw var(--vin), 0 .8cqw 1.6cqw -.6cqw rgba(43,26,12,.6);
+  background:rgba(43,26,12,.08);
+}
+.texte{ min-height:0; max-height:100%; overflow-y:auto; align-self:center; padding-right:.4cqw; }
+.texte p{ margin:0; font-size:max(1.95cqw,14px); line-height:1.42; font-weight:500; color:var(--ink); text-wrap:pretty; }
+.page--texte .texte{ max-width:86%; text-align:center; }
+.page--texte .texte p{ font-size:2.2cqw; }
+.page--texte .fleuron{ display:block; margin:0 auto .9cqw; width:3.4cqw; height:3.4cqw; line-height:3.2cqw; text-align:center;
+  border:1px solid var(--gold); border-radius:50%; color:var(--gold); font-size:1.6cqw; background:rgba(226,192,106,.2); }
+.pastille{
+  display:inline-block; margin-top:1cqw; padding:.25cqw 1cqw; border:1px solid rgba(184,137,43,.75); border-radius:999px;
+  font-size:max(1.2cqw,11px); letter-spacing:.08em; color:var(--ink-soft); background:rgba(255,248,228,.55); font-style:italic;
+}
+.legende{
+  padding:.4cqw 1.6cqw; border:1px solid rgba(184,137,43,.75); border-radius:999px; background:rgba(255,248,228,.7);
+  font-size:max(1.35cqw,12px); font-weight:600; color:var(--ink); text-align:center;
+}
+
+/* ── Navigation ── */
+.nav{ flex:none; display:flex; align-items:center; justify-content:space-between; gap:1.5cqw;
+  margin:.4cqw 3.6cqw 0; padding-top:.9cqw; border-top:1px solid rgba(184,137,43,.55); }
+.points{ display:flex; align-items:center; gap:.7cqw; }
+.pt{ all:unset; cursor:pointer; width:.95cqw; height:.95cqw; border-radius:50%; background:rgba(184,137,43,.4); transition:all .2s; }
+.pt:hover{ background:var(--gold); transform:scale(1.2); }
+.pt:focus-visible{ outline:2px solid var(--vin); outline-offset:2px; }
+.pt.actif{ width:2.4cqw; border-radius:999px; background:var(--vin); cursor:default; }
+.compteur{ margin-left:.8cqw; font-size:max(1.15cqw,10.5px); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); font-weight:600; white-space:nowrap; }
+.boutons{ display:flex; gap:.9cqw; }
+.btn{
+  all:unset; cursor:pointer; padding:.5cqw 1.6cqw; border-radius:999px; font-size:max(1.35cqw,12px); font-weight:600; letter-spacing:.03em;
+  border:1px solid var(--gold); color:var(--ink); background:rgba(255,248,228,.75); transition:all .15s;
+}
+.btn:hover:not([disabled]){ background:#fff6da; }
+.btn.plein{ background:var(--vin); color:var(--parchemin); border-color:var(--gold); }
+.btn.plein:hover:not([disabled]){ background:#521010; }
+.btn[disabled]{ opacity:.38; cursor:default; }
+.btn:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+
+/* ── Agrandissement plein écran d'une image (les affiches contiennent du texte) ── */
+.zoom{ position:fixed; inset:0; z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:1.4vh; padding:2vh 2vw; background:rgba(12,6,3,.95); cursor:zoom-out; animation:fondu .2s ease-out; }
+@keyframes fondu{ from{ opacity:0; } to{ opacity:1; } }
+.zoom img{ max-width:96vw; max-height:88vh; object-fit:contain; border:2px solid var(--gold); border-radius:6px;
+  box-shadow:0 0 0 1px var(--vin), 0 10px 40px rgba(0,0,0,.7); }
+.zoom .zoom-legende{ color:var(--parchemin); font-size:max(2.2vh,15px); font-weight:600; letter-spacing:.06em; }
+.zoom .zoom-x{ position:absolute; top:1.6vh; right:1.6vw; width:42px; height:42px; border-radius:50%; cursor:pointer;
+  border:1px solid var(--gold); background:rgba(107,23,23,.9); color:var(--parchemin); font-size:20px; line-height:1; }
+.zoom .zoom-nav{ position:absolute; top:50%; transform:translateY(-50%); width:48px; height:72px; border:none; cursor:pointer;
+  background:transparent; color:var(--gold-clair); font-size:38px; opacity:.6; }
+.zoom .zoom-nav:hover{ opacity:1; }
+.zoom .zoom-nav[disabled]{ opacity:.15; cursor:default; }
+.zoom .zoom-prev{ left:.6vw; } .zoom .zoom-next{ right:.6vw; }
+
+/* Barre de défilement discrète (les textes restent dans la zone du parchemin) */
+.texte,.liste{ scrollbar-width:thin; scrollbar-color:rgba(184,137,43,.7) transparent; }
+
+/* ── Petits écrans (téléphone portrait) : une seule colonne, défilement interne ── */
+@media (max-width:700px){
+  #app{ left:16%; right:16%; top:31%; bottom:16%; }
+  .page{ overflow-y:auto; align-items:start; display:flex; flex-direction:column; gap:2cqw; }
+  .page--cote,.page--portrait,.page--texte,.page--solo{ display:flex; }
+  .fig{ height:auto; }
+  .fig img{ max-height:none; }
+  .titre-livre{ font-size:max(3.3cqw,13px); }
+  .sous-titre,.chemin,.retour,.compteur,.legende,.pastille,.btn,.entree .meta{ font-size:max(1.3cqw,8.5px); }
+  .texte p{ font-size:max(1.9cqw,10.5px); }
+  .page--texte .texte p{ font-size:max(1.95cqw,10.5px); }
+  .entree .nom{ font-size:max(2.1cqw,11px); }
+  .entree .vignette{ display:none; }
+  .compteur{ display:none; }
+}
+
+/* ── Exercice « Cherche et trouve » : plein écran (les objets à trouver sont petits) ── */
+.entree .pastille-etat{ flex:none; font-size:max(1.3cqw,11px); font-weight:700; padding:.3cqw 1cqw; border:1px solid var(--gold);
+  border-radius:999px; color:var(--ink-soft); background:rgba(255,248,228,.7); letter-spacing:.05em; }
+.entree .pastille-etat.ok{ background:var(--vin); color:var(--parchemin); }
+.jeu{ position:fixed; inset:0; z-index:60; display:flex; flex-direction:column; background:#120a05; color:var(--parchemin);
+  animation:fondu .2s ease-out; }
+.jeu-haut{ flex:none; display:flex; align-items:center; gap:12px; padding:10px 16px; border-bottom:1px solid rgba(184,137,43,.5); }
+.jeu-titre{ font-family:'Cinzel Decorative','EB Garamond',serif; font-weight:700; font-size:clamp(16px,2.4vh,24px); color:var(--gold-clair); }
+.jeu-compteur{ font:600 14px/1 'EB Garamond',serif; padding:5px 11px; border:1px solid var(--gold); border-radius:999px; color:var(--parchemin); letter-spacing:.08em; }
+.jeu-compteur.ok{ background:var(--vin); }
+.jeu-bravo{ font-weight:700; color:var(--gold-clair); letter-spacing:.06em; animation:fondu .4s ease-out; }
+.jeu-espace{ flex:1; }
+.jeu-btn{ all:unset; cursor:pointer; padding:5px 14px; border:1px solid var(--gold); border-radius:999px; font:600 14px/1.2 'EB Garamond',serif; color:var(--parchemin); }
+.jeu-btn:hover:not([disabled]){ background:rgba(184,137,43,.25); }
+.jeu-btn[disabled]{ opacity:.3; cursor:default; }
+.jeu-btn:focus-visible{ outline:2px solid var(--gold-clair); outline-offset:2px; }
+.jeu-x{ width:36px; height:36px; border-radius:50%; cursor:pointer; border:1px solid var(--gold); background:rgba(107,23,23,.9); color:var(--parchemin); font-size:16px; line-height:1; }
+.jeu-plateau{ flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:8px; }
+.jeu-zone{ position:relative; line-height:0; cursor:crosshair; user-select:none; border:2px solid var(--gold); border-radius:6px;
+  box-shadow:0 0 0 1px var(--vin), 0 10px 40px rgba(0,0,0,.7); }
+.jeu-zone img{ width:100%; height:100%; display:block; pointer-events:none; border-radius:4px; }
+.jeu-zone.secoue{ animation:secoue .28s ease; }
+@keyframes secoue{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-5px); } 40%{ transform:translateX(5px); } 60%{ transform:translateX(-3px); } 80%{ transform:translateX(3px); } }
+.cercle{ position:absolute; width:var(--d,70px); height:var(--d,70px); transform:translate(-50%,-50%); border-radius:50%;
+  border:3px solid #ff2a2a; background:rgba(255,42,42,.12); pointer-events:none; box-shadow:0 0 0 2px #fff, 0 2px 8px rgba(0,0,0,.3); }
+.cercle.nouveau{ animation:pop .35s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pop{ 0%{ transform:translate(-50%,-50%) scale(0); opacity:0; } 60%{ transform:translate(-50%,-50%) scale(1.15); opacity:1; } 100%{ transform:translate(-50%,-50%) scale(1); opacity:1; } }
+.jeu-bas{ flex:none; display:flex; align-items:center; gap:14px; padding:8px 16px 12px; border-top:1px solid rgba(184,137,43,.5); flex-wrap:wrap; }
+.jeu-consigne{ font:600 15px/1.2 'EB Garamond',serif; color:var(--gold-clair); letter-spacing:.04em; }
+.jeu-items{ list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:8px 18px; }
+.jeu-items li{ font:500 clamp(14px,2vh,18px)/1.3 'EB Garamond',Georgia,serif; display:flex; align-items:center; gap:7px; }
+.jeu-items li::before{ content:""; width:7px; height:7px; border-radius:50%; background:rgba(243,229,196,.35); flex:none; }
+.jeu-items li.trouve{ text-decoration:line-through; color:rgba(243,229,196,.45); }
+.jeu-items li.trouve::before{ background:var(--gold-clair); }
+</style>
+</head>
+<body>
+
+<div class="parchemin-conteneur" id="parcheminConteneur">
+  <div id="app"></div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   LIVRE D'HISTOIRE — données
+   Un seul arbre : livre → chapitres → sections → (sous-sections) → pages.
+   Pour ajouter un élément : ajouter un objet dans « enfants » du niveau voulu.
+     • un nœud avec « enfants » s'ouvre en liste;
+     • un nœud avec « pages » s'ouvre en diaporama/lecteur;
+     • un nœud avec type:"cherche" s'ouvre en exercice Cherche et trouve.
+   mise (pages) : "cote" (image à gauche, texte à droite)
+                  "portrait" (image verticale + texte)
+                  "texte" (texte seul, centré)
+                  "solo" (image seule + légende)
+   ═══════════════════════════════════════════════════════════════ */
+const IMG  = 'livre_assets/histoire/';
+const MINI = IMG + 'mini/';            // petites vignettes pour les listes
+
+const VILLAGES = {
+  id: "villages", titre: "Villages préhistoriques", vignette: "villages.jpg",
+  enfants: [
+    {
+      id: "diaporama", titre: "Diaporama", vignette: "diaporama.jpg",
+      unite: ["Image", "images"],
+      pages: [
+            { mise:"solo", image: IMG+"villages_01_mallaha_photo.jpg",
+              alt:"Vue d'ensemble du site archéologique de Mallaha / Eynan : les fondations circulaires des maisons en pierre",
+              legende:"Mallaha / Eynan" },
+            { mise:"solo", image: IMG+"villages_02_mallaha_dessin.jpg",
+              alt:"Illustration du village de Mallaha / Eynan, il y a 12 000 à 9 600 ans av. J.-C. : maisons rondes, foyer central, fosses de stockage",
+              legende:"Mallaha / Eynan" },
+            { mise:"solo", image: IMG+"villages_03_mureybet_photo.jpg",
+              alt:"Fouilles archéologiques sur le site de Tell Mureybet : des archéologues travaillent parmi les murs de terre",
+              legende:"Tell Mureybet" },
+            { mise:"solo", image: IMG+"villages_04_mureybet_dessin.jpg",
+              alt:"Illustration du village de Tell Mureybet au bord de l'Euphrate : maisons carrées en terre crue et grand bâtiment rond",
+              legende:"Tell Mureybet" },
+            { mise:"solo", image: IMG+"villages_05_catalhoyuk_photo.jpg",
+              alt:"Fouilles de Çatalhöyük sous un grand toit protecteur, avec une peinture murale de taureau",
+              legende:"Çatalhöyük" },
+            { mise:"solo", image: IMG+"villages_06_catalhoyuk_dessin.jpg",
+              alt:"Illustration de Çatalhöyük : des maisons collées, sans portes, dans lesquelles on entre par le toit avec une échelle",
+              legende:"Çatalhöyük" }
+      ]
+    },
+    {
+      id: "cherche", titre: "Cherche et trouve", sous: "Les premières villes", genre: "Exercice",
+      vignette: "cherche_01_mallaha.jpg", type: "cherche",
+      /* zones : position (en % de la largeur / de la hauteur de l'image) de chaque objet à trouver; tolérance 7 % */
+      defis: [
+        { id: "mallaha", titre: "1. Mallaha", vignette: "cherche_01_mallaha.jpg", img: IMG + "cherche_01_mallaha.webp",
+          items: ["un petit chien blanc caché dans les buissons", "un gros os blanc par terre", "un papillon orange dans le ciel", "une petite tortue près de l'eau"],
+          zones: [{x:42,y:88},{x:32,y:80},{x:64,y:26},{x:15,y:58}] },
+        { id: "mureybet", titre: "2. Mureybet", vignette: "cherche_02_mureybet.jpg", img: IMG + "cherche_02_mureybet.webp",
+          items: ["une jarre bleue cachée", "une chèvre blanche dans un panier", "un poisson orange dans l'eau", "deux gros épis de blé"],
+          zones: [{x:44,y:77},{x:18,y:55},{x:87,y:93},{x:11,y:86}] },
+        { id: "catalhoyuk", titre: "3. Çatalhöyük", vignette: "cherche_03_catalhoyuk.jpg", img: IMG + "cherche_03_catalhoyuk.webp",
+          items: ["un chat orange qui dort", "une échelle cassée", "un petit taureau rouge", "un bol rempli de graines"],
+          zones: [{x:71,y:58},{x:49,y:78},{x:15,y:60},{x:12,y:11}] }
+      ]
+    }
+  ]
+};
+
+const GILGAMESH = {
+  id: "gilgamesh", titre: "Gilgamesh, le roi immortel", vignette: "gilgamesh.jpg",
+  pages: [
+            { mise:"cote", image: IMG+"gilgamesh_01_uruk.jpg",
+              alt:"Gilgamesh, roi d'Uruk, devant les remparts et la ziggourat",
+              texte:"Il y a très longtemps, en Mésopotamie, entre le Tigre et l'Euphrate, régnait à Uruk un roi nommé Gilgamesh. Il était si puissant que personne n'osait le défier." },
+            { mise:"cote", image: IMG+"gilgamesh_02_enkidu.jpg",
+              alt:"Enkidu, l'homme sauvage, vivant parmi les animaux",
+              texte:"Au début, Gilgamesh était seul, car sa force impressionnait tout le monde. Alors les dieux lui envoyèrent Enkidu, un homme sauvage qui avait grandi parmi les animaux de la steppe. Très vite, ils devinrent inséparables." },
+            { mise:"cote", image: IMG+"gilgamesh_03_humbaba.jpg",
+              alt:"Gilgamesh et Enkidu face à Humbaba, le démon gardien de la Forêt de Cèdres",
+              texte:"Ensemble, ils partirent vers la Forêt de Cèdres, une forêt sacrée et interdite. Là vivait Humbaba, le démon gardien, un monstre à la voix de tonnerre et au souffle de feu. Avec courage, Gilgamesh et Enkidu l'affrontèrent et le vainquirent." },
+            { mise:"cote", image: IMG+"gilgamesh_04_ishtar.jpg",
+              alt:"La déesse Ishtar, furieuse, s'élance dans le ciel étoilé",
+              pastille:"Déesse des étoiles",
+              texte:"À leur retour, la déesse Ishtar, déesse des étoiles et du ciel, remarqua Gilgamesh. Éblouie par sa gloire, elle voulut qu'il devienne son époux. Mais Gilgamesh refusa. Blessée dans son orgueil, Ishtar entra dans une colère terrible." },
+            { mise:"cote", image: IMG+"gilgamesh_05_taureau.jpg",
+              alt:"Le Taureau Céleste ailé, envoyé par Ishtar, devant les portes d'Uruk",
+              texte:"Pour se venger, Ishtar demanda à son père Anu de lui envoyer le Taureau Céleste, une bête immense et ailée qui ravageait tout devant les portes d'Uruk. Gilgamesh et Enkidu luttèrent côte à côte et finirent par abattre le monstre." },
+            { mise:"texte",
+              texte:"Mais les dieux jugèrent que cette victoire avait un prix. Enkidu tomba gravement malade et mourut. Pour la première fois, Gilgamesh connut le chagrin et comprit que même les plus grands rois ne peuvent vivre pour toujours. Il rentra à Uruk, changé, et devint un roi juste et sage." },
+            { mise:"solo", image: IMG+"gilgamesh_07_tablettes.jpg",
+              alt:"Gilgamesh âgé faisant graver son histoire sur des tablettes d'argile",
+              legende:"Gilgamesh fait graver son histoire sur des tablettes d'argile" },
+            { mise:"solo", image: IMG+"gilgamesh_08_tablette_deluge.jpg",
+              alt:"Tablette d'argile K.3375, la Tablette du Déluge, conservée au British Museum",
+              legende:"Tablette K.3375 - Tablette du Déluge - British Museum" }
+  ]
+};
+
+const EGYPTE = {
+  id: "egypte", titre: "La civilisation égyptienne", vignette: "egypte.jpg",
+  unite: ["Image", "images"],
+  pages: [
+    { mise:"solo", image: IMG+"egypte_01_grand_sphinx.jpg",
+      alt:"Affiche illustrée du Grand Sphinx de Gizeh, gardien géant taillé dans la roche vers 2500 av. J.-C., avec ses dimensions et deux jeunes archéologues au travail",
+      legende:"Le Grand Sphinx de Gizeh" },
+    { mise:"solo", image: IMG+"egypte_02_pyramide_kheops_coupe.jpg",
+      alt:"Coupe intérieure de la Grande Pyramide de Khéops : entrée, Grande Galerie, chambre du Roi, chambre de la Reine, chambre souterraine, ouvriers et blocs de pierre",
+      legende:"La Grande Pyramide de Khéops (coupe intérieure)" },
+    { mise:"solo", image: IMG+"egypte_03_pyramides_gizeh.jpg",
+      alt:"Vue d'ensemble des pyramides de Gizeh (Khéops, Khéphren, Mykérinos), du Sphinx et du fleuve Nil, avec des ouvriers et des rampes de construction",
+      legende:"Les pyramides de Gizeh" }
+  ]
+};
+
+const LIVRE = {
+  titre: "Histoire",
+  enfants: [
+    { id: "prehistoire", titre: "Préhistoire", enfants: [ VILLAGES, GILGAMESH ] },
+    { id: "antiquite",   titre: "Antiquité",   enfants: [ EGYPTE ] }
+  ]
+};
+const TOLERANCE = 7;   // en % (distance entre le clic et l'objet à trouver)
+
+/* ═══════════════════════════════════════════════════════════════
+   Rendu
+   Adresses : #/                                  table des matières
+              #/prehistoire                       chapitre (liste de sections)
+              #/prehistoire/villages              section (liste de sous-sections)
+              #/prehistoire/villages/diaporama/3  sous-section, image 3
+              #/prehistoire/villages/cherche      exercice
+              #/prehistoire/gilgamesh/3           section, page 3
+              #/antiquite/egypte/2                section, image 2
+   ═══════════════════════════════════════════════════════════════ */
+const app = document.getElementById('app');
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const unite  = p => p.unite || ['Page','pages'];
+const romain = n => ['','I','II','III','IV','V','VI','VII','VIII','IX','X'][n] || String(n);
+const hashDe = ch => '#/' + ch.slice(1).map(x => x.id).join('/');
+const plur   = (n, un, pl) => `${n} ${n > 1 ? pl : un}`;
+function ornement(){ return '<div class="ornement" aria-hidden="true">✦</div>'; }
+
+/* état de l'exercice (en mémoire seulement : repart à zéro si on recharge la page) */
+const etat = {};
+const trouves = d => etat[d.id] || (etat[d.id] = []);
+
+function metaDe(c, profondeurEnfant){
+  if(c.enfants) return plur(c.enfants.length, profondeurEnfant === 1 ? 'section' : 'sous-section', profondeurEnfant === 1 ? 'sections' : 'sous-sections');
+  const g = c.genre ? c.genre + ' · ' : '';
+  if(c.type === 'cherche') return g + plur(c.defis.length, 'scène', 'scènes');
+  return g + `${c.pages.length} ${unite(c)[1]}`;
+}
+
+function barreRetour(chemin){
+  const depth = chemin.length - 1;
+  const parent = chemin.slice(0, -1);
+  return `<button class="retour" data-go="${hashDe(parent)}">${depth === 1 ? '↩ Table des matières' : '↩ Retour'}</button>`;
+}
+
+function vueListe(chemin){
+  const node = chemin[chemin.length-1], depth = chemin.length - 1, base = hashDe(chemin);
+  const enfant = c => (base === '#/' ? '#/' : base + '/') + c.id;
+  const entete = depth === 0
+    ? `<h1 class="titre-livre">Livre d'${esc(LIVRE.titre)}</h1><p class="sous-titre">Table des matières</p>`
+    : `<h1 class="titre-livre">${esc(node.titre)}</h1>${node.sous ? `<p class="sous-titre">${esc(node.sous)}</p>` : ''}`;
+  app.innerHTML = `
+    <div class="ecran">
+      ${depth > 0 ? `<div class="fil">${barreRetour(chemin)}</div>` : ''}
+      ${entete}
+      ${ornement()}
+      <ul class="liste">
+        ${node.enfants.map((c,i) => {
+          const lead = depth === 0 ? `<span class="num">${romain(i+1)}</span>`
+                     : c.vignette ? `<img class="vignette" src="${esc(MINI + c.vignette)}" alt="">` : '';
+          const pref = depth === 1 ? `Section ${i+1} — ` : '';
+          return `<li><button class="entree" data-go="${enfant(c)}">
+            ${lead}
+            <span class="corps"><span class="nom">${pref}${esc(c.titre)}</span>
+              <span class="meta">${esc(metaDe(c, depth+1))}</span></span>
+            <span class="fleche" aria-hidden="true">›</span>
+          </button></li>`; }).join('')}
+      </ul>
+    </div>`;
+}
+
+function vueCherche(chemin){
+  const node = chemin[chemin.length-1];
+  app.innerHTML = `
+    <div class="ecran">
+      <div class="fil">${barreRetour(chemin)}</div>
+      <h1 class="titre-livre">${esc(node.titre)}</h1>
+      <p class="sous-titre">${esc(node.sous || '')}</p>
+      ${ornement()}
+      <ul class="liste">
+        ${node.defis.map(d => { const f = trouves(d).length, fini = f === 4;
+          return `<li><button class="entree" data-jeu="${d.id}">
+            <img class="vignette" src="${esc(MINI + d.vignette)}" alt="">
+            <span class="corps"><span class="nom">${esc(d.titre)}</span>
+              <span class="meta">${fini ? 'Bravo ! Tout est trouvé' : 'Trouve 4 choses cachées dans l\'image'}</span></span>
+            <span class="pastille-etat ${fini ? 'ok' : ''}">${fini ? '✓ ' : ''}${f}/4</span>
+          </button></li>`; }).join('')}
+      </ul>
+    </div>`;
+}
+
+function contenuPage(pg){
+  const fig = pg.image ? `<div class="fig"><img src="${esc(pg.image)}" alt="${esc(pg.alt||'')}"></div>` : '';
+  switch(pg.mise){
+    case 'texte':
+      return `<div class="page page--texte"><div class="texte"><span class="fleuron" aria-hidden="true">✦</span><p>${esc(pg.texte)}</p></div></div>`;
+    case 'solo':
+      return `<div class="page page--solo">${fig}<div class="legende">${esc(pg.legende||'')}</div></div>`;
+    case 'portrait':
+    case 'cote':
+    default:
+      return `<div class="page page--${pg.mise==='portrait'?'portrait':'cote'}">${fig}
+        <div class="texte"><p>${esc(pg.texte)}</p>${pg.pastille?`<span class="pastille">${esc(pg.pastille)}</span>`:''}</div></div>`;
+  }
+}
+
+function vueLecteur(chemin, n){
+  const p = chemin[chemin.length-1], base = hashDe(chemin);
+  const total = p.pages.length, pg = p.pages[n-1];
+  const points = p.pages.map((_,i) => (i+1===n)
+    ? `<span class="pt actif" aria-current="page" aria-label="${unite(p)[0]} ${i+1} (actuelle)"></span>`
+    : `<button class="pt" data-go="${base}/${i+1}" aria-label="Aller à : ${unite(p)[0]} ${i+1}"></button>`).join('');
+  const titres = chemin.slice(1).map(x => x.titre).slice(-2);
+  const fil = titres.length > 1 ? `${esc(titres[0])} › <b>${esc(titres[1])}</b>` : `<b>${esc(titres[0])}</b>`;
+  app.innerHTML = `
+    <div class="ecran">
+      <div class="fil">
+        ${barreRetour(chemin)}
+        <div class="chemin">${fil}</div>
+        ${pg.image ? '<button class="retour agrandir" data-zoom="1">⤢ Agrandir</button>' : ''}
+      </div>
+      ${contenuPage(pg)}
+      <div class="nav">
+        <div class="points">${points}<span class="compteur">${unite(p)[0]} ${n} / ${total}</span></div>
+        <div class="boutons">
+          <button class="btn" data-go="${base}/${n-1}" ${n===1?'disabled':''}>← Précédent</button>
+          <button class="btn plein" data-go="${base}/${n+1}" ${n===total?'disabled':''}>Suivant →</button>
+        </div>
+      </div>
+    </div>`;
+  const suivante = p.pages[n];
+  if(suivante && suivante.image){ const im = new Image(); im.src = suivante.image; }   // précharge la page suivante
+}
+
+/* ── Agrandissement plein écran d'une image (les affiches contiennent du texte) ── */
+let courant = null;   // {chemin, n} quand on est dans le lecteur
+let zoomEl = null;
+function fermerZoom(){ if(zoomEl){ zoomEl.remove(); zoomEl = null; } }
+function majZoom(){
+  if(!zoomEl) return;
+  const pg = courant && courant.chemin[courant.chemin.length-1].pages[courant.n-1];
+  if(!pg || !pg.image){ fermerZoom(); return; }
+  const total = courant.chemin[courant.chemin.length-1].pages.length, n = courant.n;
+  zoomEl.innerHTML = `
+    <button class="zoom-x" aria-label="Fermer">✕</button>
+    <button class="zoom-nav zoom-prev" data-dir="-1" aria-label="Précédent" ${n===1?'disabled':''}>‹</button>
+    <img src="${esc(pg.image)}" alt="${esc(pg.alt||'')}">
+    <div class="zoom-legende">${esc(pg.legende||'')}</div>
+    <button class="zoom-nav zoom-next" data-dir="1" aria-label="Suivant" ${n===total?'disabled':''}>›</button>`;
+}
+function ouvrirZoom(){
+  if(zoomEl || !courant) return;
+  zoomEl = document.createElement('div'); zoomEl.className = 'zoom'; document.body.appendChild(zoomEl);
+  majZoom();
+}
+
+/* ── Exercice Cherche et trouve (plein écran) ── */
+let jeuEl = null, jeuNode = null, jeuId = null;
+function fermerJeu(rafraichir){ if(jeuEl){ jeuEl.remove(); jeuEl = null; jeuNode = null; jeuId = null; if(rafraichir) rendu(); } }
+function ouvrirJeu(node, id){
+  fermerZoom(); jeuNode = node; jeuId = id;
+  if(!jeuEl){ jeuEl = document.createElement('div'); jeuEl.className = 'jeu'; document.body.appendChild(jeuEl); }
+  rendreJeu();
+}
+function rendreJeu(nouveau){
+  const defis = jeuNode.defis, i = defis.findIndex(d => d.id === jeuId), d = defis[i];
+  const f = trouves(d), fini = f.length === 4;
+  jeuEl.innerHTML = `
+    <div class="jeu-haut">
+      <div class="jeu-titre">${esc(d.titre)}</div>
+      <span class="jeu-compteur ${fini?'ok':''}">${f.length}/4</span>${fini ? '<span class="jeu-bravo">Bravo 4/4 !</span>' : ''}
+      <div class="jeu-espace"></div>
+      <button class="jeu-btn" data-jeu-nav="-1" ${i===0?'disabled':''}>‹ Précédent</button>
+      <button class="jeu-btn" data-jeu-nav="1" ${i===defis.length-1?'disabled':''}>Suivant ›</button>
+      <button class="jeu-x" aria-label="Fermer">✕</button>
+    </div>
+    <div class="jeu-plateau">
+      <div class="jeu-zone" id="jeuZone">
+        <img src="${esc(d.img)}" alt="${esc(d.titre)}" draggable="false" onload="ajusterJeu()">
+        ${f.map(k => `<div class="cercle ${k===nouveau?'nouveau':''}" style="left:${d.zones[k].x}%;top:${d.zones[k].y}%"></div>`).join('')}
+      </div>
+    </div>
+    <div class="jeu-bas">
+      <span class="jeu-consigne">Clique sur l'image pour trouver :</span>
+      <ul class="jeu-items">${d.items.map((t,k) => `<li class="${f.includes(k)?'trouve':''}">${esc(t)}</li>`).join('')}</ul>
+    </div>`;
+  ajusterJeu();
+}
+function ajusterJeu(){
+  if(!jeuEl) return;
+  const pl = jeuEl.querySelector('.jeu-plateau'), z = jeuEl.querySelector('#jeuZone'); if(!pl || !z) return;
+  const r = 1920 / 1280;
+  const W = pl.clientWidth - 20, H = pl.clientHeight - 20;
+  const w = Math.max(200, Math.min(W, H * r));
+  z.style.width = w + 'px'; z.style.height = (w / r) + 'px';
+  z.style.setProperty('--d', Math.max(40, w * 0.075) + 'px');
+}
+function clicJeu(e){
+  const z = jeuEl.querySelector('#jeuZone'), d = jeuNode.defis.find(x => x.id === jeuId), f = trouves(d);
+  if(f.length >= 4) return;
+  const r = z.getBoundingClientRect();
+  const x = (e.clientX - r.left) / r.width * 100, y = (e.clientY - r.top) / r.height * 100;
+  let meilleur = -1, dist = Infinity;
+  d.zones.forEach((zn, k) => { if(f.includes(k)) return; const dd = Math.hypot(zn.x - x, zn.y - y); if(dd < dist){ dist = dd; meilleur = k; } });
+  if(meilleur !== -1 && dist <= TOLERANCE){ f.push(meilleur); rendreJeu(meilleur); }
+  else { z.classList.add('secoue'); setTimeout(() => z.classList.remove('secoue'), 300); }
+}
+function changerJeu(dir){
+  const defis = jeuNode.defis, i = defis.findIndex(d => d.id === jeuId) + dir;
+  if(i >= 0 && i < defis.length){ jeuId = defis[i].id; rendreJeu(); }
+}
+window.addEventListener('resize', ajusterJeu);
+
+/* ── Navigation ── */
+let dernierHash = null;
+function aller(hash){ location.hash = hash; route(); }   // route() tout de suite : évite tout décalage si on appuie vite
+function route(){
+  if(location.hash === dernierHash) return;                // déjà affiché (évite le double rendu avec hashchange)
+  dernierHash = location.hash;
+  fermerJeu(false);
+  rendu();
+  majZoom();                                                // ferme l'agrandissement si la nouvelle vue n'a pas d'image
+}
+function rendu(){
+  const segs = (location.hash || '#/').replace(/^#\/?/, '').split('/').filter(Boolean);
+  let chemin = [LIVRE], i = 0;
+  while(chemin[chemin.length-1].enfants && i < segs.length){
+    const c = chemin[chemin.length-1].enfants.find(x => x.id === segs[i]);
+    if(!c) break;
+    chemin.push(c); i++;
+  }
+  const node = chemin[chemin.length-1];
+  courant = null;
+  if(node.enfants){ vueListe(chemin); return; }
+  if(node.type === 'cherche'){ vueCherche(chemin); return; }
+  let n = parseInt(segs[i], 10); if(!(n >= 1)) n = 1; if(n > node.pages.length) n = node.pages.length;
+  courant = {chemin, n};
+  vueLecteur(chemin, n);
+}
+
+document.addEventListener('click', e => {
+  if(jeuEl){
+    if(e.target.closest('#jeuZone')) clicJeu(e);
+    else if(e.target.closest('.jeu-x')) fermerJeu(true);
+    else { const nv = e.target.closest('[data-jeu-nav]'); if(nv && !nv.disabled) changerJeu(parseInt(nv.dataset.jeuNav, 10)); }
+    return;
+  }
+  if(zoomEl && zoomEl.contains(e.target)){
+    const nav = e.target.closest('.zoom-nav');
+    if(nav){ e.stopPropagation(); if(!nav.disabled){ const {chemin, n} = courant; aller(`${hashDe(chemin)}/${n + parseInt(nav.dataset.dir,10)}`); } }
+    else fermerZoom();
+    return;
+  }
+  const j = e.target.closest('[data-jeu]');
+  if(j){ const chemin = enCours(); ouvrirJeu(chemin[chemin.length-1], j.dataset.jeu); return; }
+  if(e.target.closest('[data-zoom]') || e.target.closest('.fig img')){ ouvrirZoom(); return; }
+  const b = e.target.closest('[data-go]');
+  if(!b || b.disabled) return;
+  aller(b.getAttribute('data-go'));
+});
+function enCours(){   // chemin de la vue affichée (utile pour l'exercice)
+  const segs = (location.hash || '#/').replace(/^#\/?/, '').split('/').filter(Boolean);
+  let chemin = [LIVRE];
+  for(const s of segs){ const c = chemin[chemin.length-1].enfants && chemin[chemin.length-1].enfants.find(x => x.id === s); if(!c) break; chemin.push(c); }
+  return chemin;
+}
+window.addEventListener('hashchange', route);
+window.addEventListener('keydown', e => {
+  if(jeuEl){
+    if(e.key === 'Escape') fermerJeu(true);
+    else if(e.key === 'ArrowRight') changerJeu(1);
+    else if(e.key === 'ArrowLeft') changerJeu(-1);
+    return;
+  }
+  if(e.key === 'Escape' && zoomEl){ fermerZoom(); return; }
+  if(!courant) return;
+  const {chemin, n} = courant, p = chemin[chemin.length-1], base = hashDe(chemin);
+  if(e.key === 'ArrowRight' && n < p.pages.length) aller(`${base}/${n+1}`);
+  else if(e.key === 'ArrowLeft' && n > 1) aller(`${base}/${n-1}`);
+  else if(e.key === 'Escape') aller(hashDe(chemin.slice(0, -1)));
+});
+route();
+</script>
+</body>
+</html>

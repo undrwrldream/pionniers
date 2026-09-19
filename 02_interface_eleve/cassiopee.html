@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cassiopée — Hublot de lecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&family=Literata:ital,opsz,wght@0,18..144,400;0,18..144,500;1,18..144,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cassiopee_bd/style.css">
+</head>
+<body>
+
+<div class="void" aria-hidden="true">
+  <div class="stars stars--near"></div>
+  <div class="stars stars--far"></div>
+  <div class="nebula"></div>
+</div>
+
+<main class="scene">
+
+  <!-- portal-frame keeps the exact 1920x1280 aspect ratio of the physical
+       portal overlay, so the circle below always lands in the same spot
+       the stone ring's hole occupies in that overlay. -->
+  <div class="portal-frame">
+
+    <div class="hublot" id="hublot" tabindex="0" role="img" aria-label="Vignette de bande dessinée">
+      <div class="hublot__glass">
+        <div class="hublot__stage" id="stage">
+          <!-- scenes injected here -->
+        </div>
+        <div class="hublot__vignette" aria-hidden="true"></div>
+        <div class="hublot__sheen" aria-hidden="true"></div>
+      </div>
+      <button class="edge-tap edge-tap--prev" id="tapPrev" aria-label="Scène précédente"></button>
+      <button class="edge-tap edge-tap--next" id="tapNext" aria-label="Scène suivante"></button>
+    </div>
+
+    <button class="arrow arrow--prev" id="btnPrev" aria-label="Page précédente">
+      <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path d="M20 6 L11 16 L20 26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="arrow arrow--next" id="btnNext" aria-label="Page suivante">
+      <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true"><path d="M12 6 L21 16 L12 26" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+
+    <!-- caption : plain rectangle, positioned from the reference overlay's
+         own pixel measurements (246,726)-(1701,1119) in its 1920x1280 frame.
+         Lives outside the hublot's circular clip on purpose, so it is free
+         to spill onto the stone ring on both sides, same as the mock-up. -->
+    <div class="caption-overlay is-empty" id="captionOverlay">
+      <p id="captionText"></p>
+    </div>
+
+  </div>
+
+  <div class="progress">
+    <span class="progress__count"><span id="curNum">1</span><span class="progress__sep">/</span><span id="totNum">28</span></span>
+    <div class="progress__track"><div class="progress__fill" id="progressFill"></div></div>
+  </div>
+
+  <p class="hint" id="hint">Cassiopée — Volume 1 · Marc-André Deschênes</p>
+
+</main>
+
+<script>
+// Identité transmise par la fiche de personnage — pas encore utilisée par le
+// lecteur lui-même, mais disponible si on veut un jour suivre la lecture
+// (ex. marquer "Cassiopée lue" pour un élève donné).
+const params = new URLSearchParams(window.location.search);
+const eleveSlug = params.get('eleve');
+const eleveNom = params.get('nom');
+</script>
+<script src="cassiopee_bd/data.js"></script>
+<script src="cassiopee_bd/script.js"></script>
+</body>
+</html>

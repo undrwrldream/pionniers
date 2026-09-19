@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recueil de nouvelles — Marc-André Deschênes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parch-1:#ecdfc0;
+    --parch-2:#e2d0a8;
+    --parch-3:#d8c294;
+    --parch-edge:#c4a86d;
+    --ink:#3a2a16;
+    --ink-soft:#5a4527;
+    --gold:#9c7a3c;
+    --gold-bright:#c9a24b;
+    --leather:#3c2415;
+    --leather-2:#2a190e;
+    --leather-hl:#5c3820;
+    --shadow-deep: rgba(20,12,4,0.55);
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; padding:0; height:100%;
+    background:
+      radial-gradient(ellipse at 50% 0%, #4a2f1c 0%, #241409 70%, #150b04 100%);
+    font-family:'EB Garamond', serif;
+    color:var(--ink);
+    overflow:hidden;
+  }
+  .stage{
+    position:relative;
+    width:100%; height:100dvh;
+    display:flex; align-items:center; justify-content:center;
+    perspective: 2400px;
+    padding: 18px;
+  }
+  .stage::before{
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(circle at 50% 42%, rgba(255,214,140,0.10), transparent 55%);
+    pointer-events:none;
+  }
+
+  .book-wrap{
+    position:relative;
+    width:min(96vw, 1080px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+
+  .book{
+    position:relative;
+    width:100%;
+    aspect-ratio: 15 / 10;
+    max-height: 72dvh;
+    display:flex;
+    border-radius:6px;
+    box-shadow:
+      0 30px 60px var(--shadow-deep),
+      0 8px 22px rgba(0,0,0,0.45);
+    background: linear-gradient(180deg, var(--leather-hl), var(--leather) 12%, var(--leather-2));
+    padding: 14px;
+    transform-style: preserve-3d;
+    transition: transform .5s ease;
+  }
+  .book.turning{ transform: rotateY(-4deg) scale(0.992); }
+
+  .spine{
+    position:absolute;
+    left:50%; top:8px; bottom:8px;
+    width:26px;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, rgba(0,0,0,0.55), rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.05) 70%, rgba(0,0,0,0.55));
+    z-index:5;
+    pointer-events:none;
+  }
+
+  .leaf{
+    position:relative;
+    flex:1 1 50%;
+    min-width:0;
+    background:
+      radial-gradient(120% 140% at 8% 8%, rgba(255,255,255,0.10), transparent 45%),
+      linear-gradient(135deg, var(--parch-1), var(--parch-2) 55%, var(--parch-3));
+    border:1px solid #8a6a3a55;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+  .leaf.left{ border-radius:3px 0 0 3px; box-shadow: inset -10px 0 24px -14px rgba(60,40,15,0.55); }
+  .leaf.right{ border-radius:0 3px 3px 0; box-shadow: inset 10px 0 24px -14px rgba(60,40,15,0.55); }
+
+  .leaf::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      radial-gradient(circle at 15% 20%, rgba(120,86,40,0.10) 0%, transparent 18%),
+      radial-gradient(circle at 85% 75%, rgba(120,86,40,0.12) 0%, transparent 22%),
+      radial-gradient(circle at 60% 15%, rgba(120,86,40,0.07) 0%, transparent 16%),
+      repeating-linear-gradient(90deg, rgba(90,60,20,0.025) 0px, transparent 2px, transparent 4px);
+    mix-blend-mode: multiply;
+    pointer-events:none;
+  }
+  .leaf::after{
+    content:"";
+    position:absolute; inset:0;
+    box-shadow: inset 0 0 60px 4px rgba(70,45,15,0.20);
+    pointer-events:none;
+  }
+
+  .leaf-inner{
+    position:relative;
+    z-index:2;
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding: clamp(20px, 4.2%, 46px) clamp(18px, 4.6%, 42px);
+    overflow:hidden;
+  }
+
+  .leaf-text{
+    flex:1;
+    overflow-y:auto;
+    overflow-x:hidden;
+    font-size: clamp(12px, 1.55vw, 16.5px);
+    line-height:1.62;
+    color:var(--ink);
+    text-align:justify;
+    hyphens:auto;
+    scrollbar-width:thin;
+    scrollbar-color: var(--gold-bright) transparent;
+  }
+  .leaf-text::-webkit-scrollbar{ width:5px; }
+  .leaf-text::-webkit-scrollbar-thumb{ background:var(--gold-bright); border-radius:3px; opacity:0.5; }
+  .leaf-text::-webkit-scrollbar-track{ background:transparent; }
+  .leaf-text p{ margin:0 0 0.85em 0; text-indent:1.4em; }
+  .leaf-text p:first-child{ text-indent:0; }
+  .leaf-text p.no-indent{ text-indent:0; }
+  .leaf-text .dropcap{
+    float:left;
+    font-family:'Cinzel Decorative', serif;
+    font-size: 2.8em;
+    line-height:0.78;
+    padding:0.04em 0.09em 0 0;
+    color: var(--gold);
+    text-shadow: 1px 1px 0 rgba(60,40,10,0.25);
+  }
+  .leaf-text .dialogue{ text-indent:0; padding-left:0.6em; }
+
+  .leaf-folio{
+    text-align:center;
+    font-family:'Cinzel Decorative', serif;
+    font-size:11px;
+    letter-spacing:0.12em;
+    color:var(--ink-soft);
+    margin-top:8px;
+    opacity:0.8;
+  }
+
+  /* COVER (recueil et nouvelles) */
+  .cover{
+    overflow:visible;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    background:
+      radial-gradient(120% 140% at 50% 30%, rgba(255,255,255,0.08), transparent 50%),
+      linear-gradient(150deg, #dfc99a, #cbaf78 55%, #b89760);
+  }
+  .cover-frame{
+    border: 1.5px solid var(--gold);
+    outline: 1px solid rgba(156,122,60,0.35);
+    outline-offset: 6px;
+    padding: clamp(14px,4%,34px) clamp(10px,4%,26px);
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    width:82%; height:84%;
+    justify-content:center;
+  }
+  .cover h1{
+    font-family:'Cinzel Decorative', serif;
+    font-weight:700;
+    font-size: clamp(16px, 2.5vw, 29px);
+    line-height:1.25;
+    margin:0;
+    color: var(--leather);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.25);
+  }
+  .cover .byline{
+    font-style:italic;
+    font-size: clamp(11px, 1.3vw, 15px);
+    color: var(--ink-soft);
+  }
+  .cover .collection{
+    margin-top:8px;
+    font-family:'Cinzel Decorative', serif;
+    font-size: clamp(9px, 1vw, 11px);
+    letter-spacing:0.18em;
+    color: var(--gold);
+    text-transform:uppercase;
+  }
+  .cover .ornament{ font-size: 20px; color: var(--gold); letter-spacing: 0.3em; opacity:0.85; }
+
+  /* TABLE DES MATIÈRES */
+  .toc-title{
+    font-family:'Cinzel Decorative', serif;
+    font-size: clamp(15px,1.8vw,20px);
+    color: var(--leather);
+    text-align:center;
+    margin: 0 0 6px 0;
+    letter-spacing:0.06em;
+  }
+  .toc-rule{ text-align:center; color:var(--gold); font-size:13px; margin-bottom:16px; opacity:0.8; }
+  .toc-list{ list-style:none; margin:0; padding:0; }
+  .toc-entry{
+    display:flex; align-items:baseline; gap:8px;
+    padding: 9px 4px;
+    cursor:pointer;
+    font-size: clamp(12px, 1.5vw, 15px);
+    color: var(--ink);
+    border-bottom: 1px dotted rgba(90,60,20,0.3);
+    transition: color .15s ease;
+  }
+  .toc-entry:hover{ color: var(--gold-bright); }
+  .toc-entry .toc-num{
+    font-family:'Cinzel Decorative', serif;
+    color: var(--gold);
+    font-size:0.85em;
+    min-width:1.4em;
+  }
+  .toc-entry .toc-name{ flex:1; }
+  .toc-entry .toc-dots{ flex:1; border-bottom: 1px dotted rgba(90,60,20,0.35); margin:0 4px; }
+  .toc-entry .toc-page{ font-style:italic; color:var(--ink-soft); font-size:0.9em; }
+  .toc-empty{ text-align:center; font-style:italic; color:var(--ink-soft); margin-top:30px; font-size:13px; }
+
+  /* FIN D'UNE NOUVELLE */
+  .story-end{ align-items:center; justify-content:center; text-align:center; }
+  .story-end .fin{
+    font-family:'Cinzel Decorative', serif;
+    font-size: clamp(18px,2.6vw,30px);
+    color: var(--gold);
+    letter-spacing:0.25em;
+  }
+  .story-end .sigil{ margin-top:16px; font-size:24px; color:var(--gold); opacity:0.75; }
+  .story-end .meta{
+    margin-top:16px;
+    font-size: clamp(10px,1.1vw,13px);
+    color: var(--ink-soft);
+    font-style:italic;
+    line-height:1.7;
+  }
+
+  .leaf.blank .leaf-inner{ align-items:center; justify-content:center; }
+  .leaf.blank .sigil{ font-size:28px; color:var(--gold); opacity:0.35; }
+
+  /* CADENAS — nouvelle verrouillée */
+  .cover.locked{
+    background:
+      radial-gradient(120% 140% at 50% 30%, rgba(0,0,0,0.12), transparent 55%),
+      linear-gradient(150deg, #b9a276, #9c8760 55%, #85714d);
+  }
+
+  /* COMPRÉHENSION DE LECTURE */
+  .comprehension-intro .toc-title{ margin-bottom:4px; }
+  .comprehension-intro .intro-text{ text-indent:0; font-size:0.95em; color:var(--ink-soft); margin-top:14px; }
+  .comprehension-intro .intro-text + .intro-text{ margin-top:10px; }
+  .question-page{ display:flex; flex-direction:column; }
+  .question-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .question-num{
+    font-family:'Cinzel Decorative', serif;
+    color:var(--gold);
+    font-size:0.85em;
+    letter-spacing:0.08em;
+    margin-bottom:6px;
+  }
+  .question-text{ text-indent:0 !important; margin-bottom:0 !important; }
+  .gold-badge{
+    flex:0 0 auto;
+    display:flex; align-items:center; gap:4px;
+    font-family:'Cinzel Decorative', serif;
+    font-size:0.78em;
+    color:#7a5a1e;
+    background: linear-gradient(180deg, #f4dfa0, #d9b969);
+    border:1px solid var(--gold);
+    border-radius:3px;
+    padding:4px 9px;
+    white-space:nowrap;
+  }
+  .write-lines{ margin-top:22px; flex:1; }
+
+  .submit-page{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; text-align:center; padding-top:20px; }
+  .submit-btn{
+    margin-top:26px;
+    font-family:'Cinzel Decorative', serif;
+    font-size: clamp(11px, 1.3vw, 14px);
+    letter-spacing:0.06em;
+    color:#6b5327;
+    background: linear-gradient(180deg, #e7d29a, #cdae6c);
+    border:1.5px solid var(--gold);
+    border-radius:4px;
+    padding:12px 22px;
+    cursor:not-allowed;
+    opacity:0.75;
+    box-shadow: 0 3px 0 rgba(90,65,20,0.25);
+  }
+  .write-line{
+    border-bottom:1px dotted rgba(90,60,20,0.45);
+    height: 2.6em;
+  }
+
+  /* NAV */
+  .controls{
+    display:flex; align-items:center; gap:14px;
+    color: var(--parch-1);
+    font-family:'Cinzel Decorative', serif;
+    font-size:12px;
+    letter-spacing:0.08em;
+    user-select:none;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+  .nav-btn{
+    appearance:none; border:1px solid var(--gold);
+    background: linear-gradient(180deg, #5c3820, #3c2415);
+    color: var(--parch-1);
+    font-family:'Cinzel Decorative', serif;
+    font-size: 12px;
+    letter-spacing:0.08em;
+    padding:9px 18px;
+    border-radius:3px;
+    cursor:pointer;
+    transition: transform .15s ease, box-shadow .15s ease, opacity .2s ease;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.35), 0 6px 14px rgba(0,0,0,0.3);
+  }
+  .nav-btn:hover:not(:disabled){ transform: translateY(-1px); box-shadow: 0 4px 0 rgba(0,0,0,0.35), 0 8px 18px rgba(0,0,0,0.35); }
+  .nav-btn:active:not(:disabled){ transform: translateY(1px); box-shadow: 0 2px 0 rgba(0,0,0,0.35); }
+  .nav-btn:disabled{ opacity:0.35; cursor:default; }
+  .nav-btn.toc-btn{ background: linear-gradient(180deg, #7a5a2e, #543c18); }
+  .folio-indicator{ min-width:100px; text-align:center; color:#e7d6ab; opacity:0.9; }
+
+  @media (max-width: 640px){
+    .book{ aspect-ratio: 10 / 13; flex-direction:column; max-height:78dvh; }
+    .spine{ left:8px; right:8px; top:50%; bottom:auto; height:20px; width:auto; transform:translateY(-50%);
+      background: linear-gradient(180deg, rgba(0,0,0,0.5), rgba(0,0,0,0.05) 35%, rgba(0,0,0,0.05) 65%, rgba(0,0,0,0.5)); }
+    .leaf.left{ border-radius:3px 3px 0 0; box-shadow: inset 0 -10px 20px -14px rgba(60,40,15,0.55); }
+    .leaf.right{ border-radius:0 0 3px 3px; box-shadow: inset 0 10px 20px -14px rgba(60,40,15,0.55); }
+    .leaf-text{ font-size:13px; }
+    .controls{ font-size:11px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="book-wrap">
+    <div class="book" id="book">
+      <div class="spine"></div>
+      <div class="leaf left" id="leafLeft"><div class="leaf-inner" id="innerLeft"></div></div>
+      <div class="leaf right" id="leafRight"><div class="leaf-inner" id="innerRight"></div></div>
+    </div>
+
+    <div class="controls">
+      <button class="nav-btn" id="prevBtn">◄ Précédente</button>
+      <button class="nav-btn toc-btn" id="tocBtn">☰ Table des matières</button>
+      <span class="folio-indicator" id="folioIndicator">Page 1 / 1</span>
+      <button class="nav-btn" id="nextBtn">Suivante ►</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   RECUEIL — structure de données
+   Pour ajouter une nouvelle nouvelle : dupliquer un objet dans STORIES,
+   lui donner un id unique, un titre, et un tableau "leaves" (un élément
+   de tableau = une page de texte en HTML, séparée par <p>...</p>).
+   ========================================================================= */
+const RECUEIL_TITLE = "Recueil de nouvelles";
+const RECUEIL_AUTHOR = "Marc-André Deschênes";
+
+const STORIES = [
+  {
+    id: "mise-a-jour-automatique-du-pilote",
+    title: "Mise à jour automatique du pilote",
+    requiredLevel: 5,
+    comprehension: [
+      {
+        question: "Quand le copilote pousse violemment son collègue au sol au lieu de l'aider, le narrateur se demande : « Mais que lui avait-il pris ? » Selon toi, qu'est-ce que cette action du copilote permet de comprendre à ce moment de l'histoire, même si le texte ne le dit pas encore clairement ?",
+        gold: 3
+      },
+      {
+        question: "Au moment où l'avion fonce vers les gratte-ciel de Tokyo, le pilote automatique se réactive soudainement et l'avion se pose en sécurité. Plus tard, à la toute fin du texte, quel indice permet de comprendre qui a réactivé le pilote automatique ?",
+        gold: 3
+      },
+      {
+        question: "Le narrateur mentionne l'état de sa passagère une dernière fois juste avant de se lever pour intervenir dans la bagarre, laissant sa mallette sans surveillance sur son siège. À partir de ce moment, plus rien n'est dit à son sujet jusqu'à la toute fin de l'histoire. Pourquoi ce silence du texte, combiné à la mallette laissée sans surveillance, est-il une information importante pour comprendre ce qui s'est vraiment passé ?",
+        gold: 3
+      }
+    ],
+    leaves: [
+`<p><span class="dropcap">J</span>e travaille pour la Gendarmerie royale du Canada. Récemment, j'ai fait un voyage en Europe afin de ramener au pays une dangereuse criminelle informatique capable d'infiltrer n'importe quel système. Heureusement pour Interpol, elle souffre également d'un syndrome du spectre de l'autisme et elle se contente de pirater pour le plaisir de le faire et ne cause généralement que de légers problèmes.</p>
+<p>Cependant, elle s'est récemment fait pincer en Russie après s'être introduite dans le système informatique de divers gouvernements de plusieurs pays du monde, dont le Canada et les États-Unis. On m'a envoyé la cueillir là-bas puisqu'elle et moi nous connaissons depuis plusieurs années. En effet, je l'ai longtemps poursuivie à travers le cyberespace avant de lui mettre enfin la main au collet. Elle a toujours évité de lourdes peines carcérales puisque ses crimes furent minimes par le passé. Ce n'est pas le cas cette fois, par contre. Ce qui m'attriste de toute cette histoire, c'est que je suis convaincu qu'elle s'est fait manipuler par des crapules et que ses mauvaises intentions ne provenaient pas d'elle, mais de ses patrons russes. Ils avaient dû profiter de sa condition particulière pour se servir d'elle et utiliser son génie en informatique à mauvais escient. Peu importe comment elle avait pu faire son compte, le résultat était le même : elle s'était mise dans l'embarras et elle devra répondre de ses actes en justice.</p>`,
+
+`<p>Lorsque je la retrouvai, à l'aéroport de Moscou, elle était en état de choc. Cela se voyait tout de suite par son état de catatonie. Elle refusait de bouger à moins que l'on ne la force à le faire. J'ai donc dû la pousser, en plaçant une main dans son dos, pour nous rendre jusqu'à nos sièges à l'intérieur de l'avion qui allait nous ramener au Canada tous les deux. Nous embarquions dans un appareil récent, équipé de technologies de pointe : le plus avancé modèle d'avion de type commercial de cette envergure, parcourant actuellement le ciel. Avant le décollage, je tentai de faire la conversation avec la prévenue que j'escortais, mais elle ne disait pas un mot. Repliée sur elle-même, elle se balançait de l'avant vers l'arrière et elle émettait parfois de petits cris, qui me faisaient chaque fois sursauter, tellement ils étaient soudains. Lorsque nous décollâmes, j'avais déjà abandonné l'idée de discuter avec elle ; elle n'allait visiblement pas bien.</p>`,
+
+`<p><span class="dropcap">J</span>e m'étais endormi sur mon siège, juste après avoir mangé le repas que l'agente de bord m'avait servi, lorsque je fus réveillé en sursaut par des cris. En ouvrant les yeux, devant moi, à l'avant de l'avion, j'aperçus ce qui semblait être une bagarre entre deux hommes. Lorsque je remarquai que l'un d'eux portait l'uniforme de pilote, je réalisai que quelqu'un tentait de s'introduire dans le cockpit et que l'un des deux pilotes lui barrait la route. J'étais policier et je me devais d'intervenir. Je regardai à ma gauche pour constater que ma passagère spéciale n'avait pas bougé de son siège et qu'elle était dans le même état qu'au décollage. Je mis la main sur mon arme ; je devais assurer la sécurité des passagers de cet appareil. Je me levai de mon siège et laissai ma mallette sur celui-ci, déterminé à régler le conflit avant qu'il ne dégénère.</p>`,
+
+`<p><span class="dropcap">A</span>u même moment, deux hommes se levèrent tout juste devant moi et s'engagèrent dans l'allée pour se diriger vers le cockpit. J'entrevis le copilote venir en main forte à son collègue. Je devais passer, mais ces deux individus venaient de me barrer la route. À mon plus grand étonnement, au lieu d'aider son coéquipier, le copilote poussa celui-ci violemment dans le dos, le projetant au sol, dans le milieu de l'allée. Mais que lui avait-il pris ? Je criai :</p>
+<p class="dialogue no-indent">« Police, tout le monde garde son calme et restez assis ! »</p>`,
+
+`<p><span class="dropcap">L</span>es passagers du vol se sont tous retournés en ma direction en entendant mes ordres. Les deux hommes qui me barraient la route se sont retournés aussi, mais au lieu d'obtempérer et de retourner s'asseoir, le premier fonça tête première vers l'avant de l'avion alors que le deuxième se retourna vers moi pour m'assainir un coup de poing en plein visage. Le coup fut si brutal que mes genoux flanchèrent et je dus me cramponner aux sièges de chaque côté pour éviter de m'effondrer. Alors qu'il allait me frapper de nouveau, une jeune femme portant un uniforme militaire s'interposa entre nous. Elle bloqua, avec son avant-bras, le coup que l'homme voulait me porter et elle se plaça devant moi. L'homme sembla hésiter à frapper une fille et fit un pas vers l'arrière. Elle feinta un coup de la gauche et, lorsque celui-ci voulut l'esquiver, elle lui balança le plus violent coup de pied frontal de l'histoire en plein sur la mâchoire, avec ses bottes militaires. Je le vis faire un vol plané dans le corridor central, et la femme qui m'avait secouru se rua sur lui de plus belle, alors que je reprenais mes esprits. Par-dessus la mêlée, j'aperçus les deux autres individus s'enfermer avec le copilote dans le cockpit et fermer la porte blindée derrière eux. Des terroristes venaient de prendre le contrôle de l'appareil et le copilote était leur complice. Je hurlai de toutes mes forces afin d'éviter la panique générale à bord du vol :</p>
+<p class="dialogue no-indent">« Tout le monde reste bien assis, la situation est sous contrôle ! »</p>`,
+
+`<p><span class="dropcap">L</span>es gens se mirent à crier de manière incontrôlable, et ceux qui n'étaient pas affolés jusqu'ici l'étaient forcément maintenant. Les 234 passagers du vol dans lequel je me trouvais risquaient fort bien de ne pas voir le jour se lever de nouveau si je n'arrivais pas à entrer à l'intérieur du cockpit le plus vite possible. À travers la foule, je vis le pilote de l'avion ; je devais savoir comment ouvrir cette porte et il pouvait m'aider. Je criai aux gens de s'asseoir et je parvins à rejoindre le devant de l'avion pour rejoindre le pilote. Je remerciai la militaire au passage et je fus soulagé de voir que celle-ci avait mis mon assaillant hors d'état de nuire ; il n'allait pas se lever de sitôt.</p>`,
+
+`<p><span class="dropcap">J</span>'atteignis le commandant, qui avait du mal à reprendre ses esprits. Je lui montrai mon badge d'agent fédéral canadien et il me dit alors :</p>
+<p class="dialogue no-indent">— Je n'arrive pas à croire que Ferno soit un terroriste et que je n'ai jamais rien remarqué.</p>
+<p class="dialogue no-indent">— Ce n'est pas le moment, commandant, nous devons ouvrir la porte du cockpit immédiatement, répliquai-je, nous n'avions aucune minute à perdre.</p>
+<p class="dialogue no-indent">— La porte est impossible à ouvrir de ce côté, c'est ainsi dans tous les appareils de cette envergure depuis les évènements de New York, vous devez bien le savoir, officier, me dit-il, d'un air résigné, comme s'il ne réalisait pas la gravité de la situation.</p>
+<p class="dialogue no-indent">— Je sais, commandant, mais il doit forcément y avoir un moyen d'entrer dans ce cockpit, je refuse d'abandonner et de mourir ici.</p>
+<p class="dialogue no-indent">— Le verrou est mécanique et ne s'active qu'à la main. Je vous assure, officier, elle ne s'ouvre pas de ce côté.</p>`,
+
+`<p><span class="dropcap">J</span>e tentais de trouver une solution au problème, mais mon cerveau refusait de coopérer ; je commençais à paniquer à mon tour. Si je ne pouvais ouvrir cette porte, j'étais impuissant à intervenir et éviter la catastrophe. Je balayai l'appareil du regard pour constater que les gens s'étaient calmés un peu. Je réalisai que l'avion n'avait toujours pas changé de trajectoire ; le comportement de l'avion ne semblait pas avoir changé depuis que les terroristes étaient aux commandes. Je demandai au pilote :</p>
+<p class="dialogue no-indent">— Comment se fait-il que nous soyons toujours à la même altitude ? N'ont-ils pas l'intention d'abîmer cet engin quelque part en mer ?</p>
+<p class="dialogue no-indent">— Je n'ai aucune idée de ce qu'ils cherchent à faire, mais ils n'ont toujours pas désactivé le pilote automatique, nous sommes toujours à destination de Tokyo jusqu'à maintenant. Cet avion peut décoller et atterrir de lui-même, vous savez, c'est un vrai bijou d'ingénierie.</p>`,
+
+`<p><span class="dropcap">A</span>lors qu'il élaborait les mérites de son bolide, l'avion fut secoué à plusieurs reprises par de violentes turbulences. Puis l'avion tourna brusquement vers la droite avant de se mettre à perdre de l'altitude. Je me cramponnai aux sièges et je regardai par un hublot. Je vis l'horizon passer du haut vers le bas et j'entrevis, dans l'obscurité de la nuit, les lumières d'une ville. Nous devions être en approche de Tokyo ; peu d'autres villes dans le monde ne sont aussi lumineuses que ne l'est la capitale nipponne. La panique reprit de plus belle à l'intérieur de l'avion et le commandant me cria à l'oreille :</p>
+<p class="dialogue no-indent">« Voilà, le pilote automatique est désactivé. Ce salaud de Ferno a repris les commandes et il souhaite probablement transformer cet avion en missile et l'envoyer directement entrer en collision avec l'un des gratte-ciel de Tokyo. Cette fois, vous pouvez dire que nous sommes cuits, officier. »</p>`,
+
+`<p><span class="dropcap">L</span>'avion perdait de l'altitude à un rythme de plus en plus affolant. Des masques à oxygène sortirent du plafond de l'avion et les lumières se fermèrent pour ne laisser que les voyants lumineux de secours comme éclairage. Les hurlements devenaient presque insupportables, tellement nous étions à l'étroit et nombreux. J'ai dû me boucher les oreilles à l'aide de mes mains pour continuer de réfléchir à comment j'allais nous sortir de ce pétrin. Je retournai au hublot, ne sachant que faire d'autre. Nous foncions effectivement directement vers le centre-ville et je pouvais apercevoir les grands immeubles surplombant la métropole japonaise.</p>`,
+
+`<p><span class="dropcap">U</span>ne alarme se mit à résonner à travers le bruit infernal, pour nous avertir que la situation était grave, comme si quelqu'un ici pouvait encore en douter. C'est à ce moment que je me suis résigné. Je ne pouvais rien faire pour sauver les passagers de l'appareil et j'allais mourir dans un terrible accident d'avion. Je n'entendais plus rien autour de moi ; je voyais les gens en pleurs, tenter de rejoindre leurs proches au téléphone, probablement pour leur faire leurs adieux. Je pensai à mes parents et à mes enfants, à ma tendre épouse et à ma carrière de policier. Je revis le jour de mon mariage et la naissance de mes enfants. J'éclatai en sanglots en réalisant que je ne les reverrais plus jamais.</p>`,
+
+`<p><span class="dropcap">S</span>oudainement, une violente secousse nous envoya nous frapper les uns contre les autres et l'avion revint brusquement en position horizontale par rapport au sol. Les lumières s'allumèrent rangée par rangée et les passagers de l'avion retinrent leur souffle. Nous avions tous le même regard d'incompréhension, et c'est alors qu'une voix féminine, provenant des haut-parleurs de l'appareil, nous avisa :</p>
+<p class="dialogue no-indent">« Nous sommes présentement en approche de notre destination. Chers passagers, veuillez vous asseoir et boucler votre ceinture. Nous espérons que votre vol fut des plus agréables. Bienvenue à Tokyo. »</p>`,
+
+`<p><span class="dropcap">N</span>ous avions changé de trajectoire et avions évité de justesse le centre-ville. Nous semblions nous diriger vers l'aéroport ; je voyais les voyants lumineux des pistes d'atterrissage à travers la fenêtre. L'avion s'était engagé dans une procédure d'atterrissage et nous allions nous poser d'un moment à l'autre. Au moment où le train d'atterrissage toucha terre, je réalisai que les terroristes étaient toujours à l'intérieur du cockpit. Nous n'étions peut-être pas morts, mais ils allaient quand même être placés en état d'arrestation, aussitôt extirpés de la cabine.</p>`,
+
+`<p><span class="dropcap">L</span>'avion s'immobilisa au bout de la piste d'atterrissage et les membres de l'équipage déployèrent les sorties d'urgence afin que nous puissions tous sortir au plus vite. J'avais les yeux rivés sur la porte du cockpit. J'attendais qu'ils osent sortir de là, mon pistolet à la main, pointé en direction de la cabine de pilotage. J'étais prêt à les abattre s'il le fallait.</p>
+<p>Je me tournai pour réaliser que tous les passagers avaient quitté l'avion. Il ne restait à bord que le commandant et moi. Il était resté, comme tout bon capitaine. Je lui demandai alors :</p>
+<p class="dialogue no-indent">— Que s'est-il passé là-haut ? J'étais convaincu que nous allions y laisser notre peau.</p>
+<p class="dialogue no-indent">— Le pilote automatique a été réactivé au dernier moment et l'avion s'est posé de lui-même, comme je disais qu'il pouvait le faire.</p>
+<p class="dialogue no-indent">— Mais qui avait intérêt à le réactiver ? Cela ne fait aucun sens, répliquai-je, soulagé par la tournure des évènements.</p>`,
+
+`<p><span class="dropcap">E</span>n prononçant ces paroles, je réalisai que j'en avais complètement oublié ma mission de départ. Je me tournai pour regarder en direction de mon siège. La banquette semblait vide ; j'allai vérifier pour constater que la prévenue que j'accompagnais était toujours dans l'avion, au même endroit. Seulement, maintenant, elle était assise au sol et elle avait devant elle l'écran de mon ordinateur portable, qu'elle avait installé sur le siège. Je réalisai qu'elle s'était emparée de ma mallette et qu'elle avait même contourné mon code personnel d'accès.</p>
+<p>Elle me regarda droit dans les yeux. Je cliquai enfin. Je lui demandai :</p>
+<p class="dialogue no-indent">« Tu as réactivé le pilote automatique de l'avion, n'est-ce pas ? »</p>
+<p>Sur son visage s'afficha un large sourire de satisfaction.</p>`
+    ]
+  },
+
+  {
+    id: "la-crue-tant-attendue",
+    title: "La crue tant attendue",
+    requiredLevel: 4,
+    comprehension: [],
+    leaves: [
+`<p><span class="dropcap">«</span> Ah haha, rira bien qui rira le dernier ! » Je viens de terminer l'étape finale des rénovations sur ma propriété. J'attendais que les Bernier décident enfin de déguerpir. Autrement, ils m'auraient volé l'idée et je n'aurais pu acheter leur terrain. Dorénavant, je réfléchis parfois à voix haute, puisqu'il n'y a personne pour m'entendre.</p>
+<p>La valeur des propriétés dans les villes côtières ne cesse de chuter ces dernières années. Le gouvernement a tenté de mentir à la population, mais tout le monde voyait bien que le niveau des océans ne cessait de monter d'année en année. Ceux qui refusèrent de quitter leurs demeures furent dans l'obligation de les regarder perdre de la valeur chaque fois que la crue printanière arrivait. Les dommages étant considérables, plusieurs furent obligés de partir malgré eux. Ils étaient faits en chocolat ou quelque chose comme ça.</p>`,
+
+`<p><span class="dropcap">L</span>a ville de Percé est un village fantôme depuis les dix dernières années. Ils ont tenté de sauver la région en installant un champ d'éoliennes. Ils ont installé des machines à perte de vue, dans l'océan. Ils affirmaient, à l'époque, que c'était dans le but d'économiser de l'espace terrestre. Une autre de leurs mascarades. Ils avaient anticipé le coup, ils savaient que le niveau des océans allait monter et ils voulaient protéger leur investissement. Ils ont promis de créer des milliers d'emplois. Ils ont omis de préciser qu'une fois construit, un ventilateur géant ne requiert que très peu d'entretien.</p>`,
+
+`<p><span class="dropcap">M</span>ais un vieux loup de mer dans mon genre a plus d'un tour dans son sac. Depuis que ma région est inondée durant la moitié de l'année, les gens cèdent leurs propriétés pour des sommes pitoyables. Moi je les achète. J'ai monté tout mon mobilier à l'étage, l'eau ne se rend jamais à l'étage. De plus, j'ai une vue imprenable sur le rocher Percé du grenier.</p>
+<p>Tous ont le même discours lors de la transaction. « Qu'avez-vous l'intention de faire de notre propriété ? Simple curiosité » s'empressaient-ils toujours de préciser, puisqu'ils savent bien que ça ne les regarde pas. J'ai dit aux Bernier que j'allais m'en servir pour devenir millionnaire, lorsqu'il fut trop tard pour qu'ils changent d'idée. Le vieil hypocrite n'a pu s'empêcher d'esquisser un sourire de moquerie. J'ai voulu lui déballer l'entièreté de mon plan, mais j'avais trop hâte qu'ils déguerpissent pour les retenir.</p>`,
+
+`<p><span class="dropcap">J</span>e peux maintenant dire que la région m'appartient. Tous les voisins m'ont cédé leurs propriétés pour des sommes loufoques. Je vais y planter du riz, une immense plantation de riz. Le réchauffement des températures permet ce genre de culture dans les régions nordiques maintenant. Pour ce qui est de ma maison, j'ai pensé à tout. J'ai préparé mon propre ciment à l'épreuve de l'eau. « Ah ahah, vous riez ? Maintenant, dansez ! »</p>
+<p>Je ne suis pas le premier à tenter ce genre de solution pour prévenir les infiltrations d'eau. Mais les entrepreneurs en construction n'ont pas intérêt à sauver les maisons situées à proximité des côtes. Il se construit des maisons dans le Midwest américain et dans les prairies canadiennes comme jamais auparavant. Les gens veulent s'installer le plus loin possible des étendues d'eau. Qui peut leur en vouloir de ne pas posséder mon génie créatif ?</p>`,
+
+`<p><span class="dropcap">J</span>'ai attendu la fin de l'automne pour installer mon béton artisanal. J'ai dû sacrifier le sous-sol. Je n'y avais pas mis les pieds depuis plus d'une décennie de toute façon. Juste avant l'hiver, c'était le moment idéal pour couler mes nouvelles fondations. J'ai mis le paquet pour bien faire le travail. Ma maison va bientôt faire le tour du monde, lorsque les gens réaliseront ce que j'ai fait. Ce qu'ils n'ont jamais pensé faire. Les médias s'arracheront l'histoire de l'homme qui trouva la solution aux inondations planétaires.</p>`,
+
+`<p><span class="dropcap">J</span>'ai également recouvert le sol avec mon ciment imperméable. Ces idiots ne faisaient que les murs de la fondation avec leur béton supposément imperméable. Ils ont dû ne jamais réaliser que l'eau finirait par s'infiltrer, tôt ou tard, par le sol et transformerait la maison en baignoire. Lorsqu'ils réaliseront que j'ai trouvé la solution, toutes les villes voudront subitement devenir la Venise des belles années, avant que celle-ci ne soit complètement engloutie par la mer. Et moi je serai milliardaire. Je donnerais bien un million pour voir la face de Bernier lorsque la nouvelle se répandra. « J'aurais dû utiliser le mot milliardaire, ça l'aurait ébranlé davantage, peu importe. »</p>`,
+
+`<p><span class="dropcap">D</span>'ailleurs, le moment que j'attendais depuis longtemps est arrivé. La crue printanière est à son comble et l'hiver dernier nous a apporté une quantité phénoménale de neige. Le réchauffement climatique provoqua un accroissement des précipitations sur l'ensemble de l'Amérique du Nord, et ce, même en hiver. Le gouvernement a dû construire une énorme digue dans la baie, afin que les villages soient protégés des inondations printanières. La digue et les villages sont toujours debout aujourd'hui, mais aucun de ces trouillards ne veut vivre avec de l'eau au rez-de-chaussée.</p>`,
+
+`<p><span class="dropcap">J</span>e suis allé dormir, fébrile et impatient de la venue prochaine de la gloire. J'avais pris deux somnifères, c'est ce que je fais chaque fois que je vais au lit sur l'heure du midi. J'ai eu du mal à reprendre mes esprits après le réveil brutal. Le médicament m'ayant plongé dans un sommeil sans rêves.</p>
+<p>Mon lit s'est soudainement mis à cogner sur le plancher, j'étais à quelques centimètres de frapper le plafond du grenier chaque fois que le lit était propulsé dans les airs. Je me cramponnais à mes couvertures et ensuite à la tête du lit, lorsqu'une énorme vague vint frapper la fenêtre renforcée de la maison de plein fouet et me propulsa au bout du lit. Ce devait être un tsunami. La terre avait dû trembler au large. Mais pourquoi le sol continuait-il de bouger dans ce cas ?</p>`,
+
+`<p><span class="dropcap">L</span>a maison fut secouée durant plusieurs longues secondes de manière violente. Tranquillement l'intensité des secousses diminua, mais ne cessait pas complètement. Lorsque le calme revint, je regardai à la fenêtre pour tenter de comprendre ce qui pouvait provoquer ces secousses. Ce ne pouvait être un tremblement de terre.</p>
+<p>J'ai vu le rocher Percé des milliers de fois et le trou dans sa paroi n'a jamais été de ce côté auparavant. Je ne l'avais jamais vu si petit, non plus. « C'est impossible », murmurais-je à moi-même, en me précipitant pour ouvrir la trappe qui mène sur le toit de la maison. Je bondis sur le toit pour comprendre ce qui m'arriva.</p>`,
+
+`<p><span class="dropcap">À</span> l'horizon, dans la baie, la digue avait cédé. Le ciment imperméable avait transformé la maison en navire et le torrent avait propulsé celle-ci au large, à la dérive sur l'océan Atlantique.</p>`
+    ]
+  },
+
+  {
+    id: "mesurer-limpact",
+    title: "Mesurer l'impact",
+    requiredLevel: 3,
+    comprehension: [],
+    leaves: [
+`<p><span class="dropcap">F</span>idèle à mes habitudes, j'avais passé la majeure partie de la nuit à écrire. Je m'affairais à terminer mon dernier livre d'astrophysique. J'étais installé à l'étage lors de sa visite, dans mon bureau, près du foyer. J'attendais sa venue et il arriva exactement à l'heure que nous avions convenu ensemble la veille, au téléphone. J'avais insisté pour qu'il vienne souper en compagnie de son épouse, mais il avait décliné l'offre, prétextant ne pas vouloir déranger et qu'il n'en avait pas pour bien longtemps, de toute façon.</p>`,
+
+`<p><span class="dropcap">J</span>e suis allé l'accueillir en compagnie de ma femme. Nous avions affaire à un homme d'apparence plutôt banale. Vêtu d'un habit et d'une cravate, il ne prit même pas la peine d'entrer. Il me remit seulement une enveloppe avant de nous remercier et de nous saluer. Il repartit aussitôt qu'il était arrivé. J'en compris qu'il s'était déplacé seulement pour me remettre cette lettre. Intrigué, je grimpai à l'étage pour l'ouvrir immédiatement.</p>`,
+
+`<p><span class="dropcap">À</span> l'intérieur se trouvait une multitude de documents de papier. J'ai eu du mal à décoder tout son contenu, mais j'en compris la majeure partie. Il s'agissait d'un plan détaillé indiquant la marche à suivre pour mettre en orbite un objet et ensuite s'en servir comme projectile cosmique. Mais qui pouvait bien avoir élaboré cette technique et ces formules mathématiques complexes ? Et à quoi pouvait bien servir un projectile interstellaire ? Je passai la semaine suivante à vérifier les calculs présentés dans le document et à étudier l'ensemble des éléments détaillés dans celui-ci. Les calculs étaient exacts et, bien qu'inutile, cette technique pourrait certainement valoir le prix Nobel de physique à son auteur.</p>`,
+
+`<p><span class="dropcap">J</span>e tentai de retracer le mystérieux inconnu qui m'avait apporté cette intrigante lettre, mais sans succès. Je restai à l'affût des magazines scientifiques, mais rien ne ressemblait ni de près, ni de loin à ce que j'avais entre les mains. Je fus tenté de m'approprier le génie à ce moment-là, mais je ne le pouvais pas, ce serait l'équivalent de voler une œuvre à un artiste. Je rangeai le document dans mon coffre-fort. Les années s'écoulèrent et j'en vins même jusqu'à avoir oublié toute cette histoire. Jusqu'au jour où je n'ai eu d'autre choix que d'y repenser.</p>`,
+
+`<p><span class="dropcap">L</span>e 3 février 2036, les habitants du globe furent tous catastrophés d'apprendre qu'une gigantesque météorite fonçait droit sur notre planète. Sa trajectoire coïncidait avec la nôtre et un impact était jugé comme inévitable, par la communauté scientifique du monde entier. Nous n'avions qu'une vingtaine de jours pour trouver une solution ou être pulvérisés. Je possédais cette solution et j'avais la crédibilité suffisante pour qu'on m'écoute. Avec de la chance, ma technique pourrait sauver la planète, à condition qu'elle soit déployée à temps.</p>`,
+
+`<p><span class="dropcap">L</span>e président des États-Unis réunit la communauté scientifique internationale et je leur expliquai le plan que j'avais sous la main. Je leur expliquai que nous allions construire une immense boule de métal composée d'un alliage spécial que je détaillai. Nous la mettrons alors en orbite à l'aide de toutes les fusées dont nous disposons et nous la propulserons ensuite sur une trajectoire bien précise autour de la terre, que je détaillai également. Selon mes calculs, la boule que nous avons confectionnée prendra alors de la vitesse et accélérera jusqu'à ce qu'elle puisse échapper à l'attraction terrestre. Elle sera alors propulsée en direction de la météorite menaçant notre survie et ce, à grande vitesse. L'impact devrait être suffisant pour faire dévier la météorite de sa trajectoire d'un degré. Cela devrait avoir comme effet qu'elle nous évite de justesse. À condition que nous la frappions d'ici les 13 prochains jours, où il sera trop tard.</p>`,
+
+`<p><span class="dropcap">L</span>a trentaine de personnes présentes autour de la table, dont le président des États-Unis, sont tous restés bouche bée, à me regarder stupéfaits, pendant plusieurs longues secondes. Puis la stratégie fut adoptée à l'unanimité et le branle-bas de combat s'enclencha. Les équipes furent dispersées et le chantier était déjà sur pied le soir même. Mon allocution devant le conseil de sécurité eut l'effet escompté, nous avions peut-être une chance de nous en sortir.</p>
+<p>Ce furent douze journées complètement folles. Pour la première fois dans l'histoire de l'humanité, l'entièreté de la planète travaillait dans le même sens, à accomplir un objectif commun, celui de donner à nos enfants un avenir.</p>`,
+
+`<p><span class="dropcap">À</span> la fin de la douzième journée, la mission culminait et nous sommes arrivés à lancer notre projectile en direction de la météorite. La joie que j'ai ressentie lorsque la balle de métal que nous avions confectionnée atteignit la cible, exactement à l'endroit et au moment prévu par nos calculs, est impossible à décrire. La population entière du globe était en liesse, nous étions sauvés.</p>
+<p>Je fus acclamé en héros et je gagnai les prix Nobel de science, de mathématiques, de physique et même celui de la paix. J'étais l'homme le plus célèbre au monde et pourtant, je ne pouvais être fier de moi, sachant la vérité à propos de la technique qui nous avait sauvés. Quoi qu'il en fût, je n'avais eu guère le choix d'agir ainsi, ou nous ne serions pas là pour en discuter. Je profitai tout de même de mon discours devant les Nations Unies pour mettre cartes sur table. Je dévoilai au monde qu'un mystérieux inconnu m'avait un soir rendu visite chez moi pour me remettre les fameux documents. Aucun des dignitaires présents dans l'auditoire ne me prit au sérieux, ils étaient tous bien trop heureux d'être en vie pour s'en soucier, de toute façon. Je revins toutefois chez moi la conscience tranquille d'avoir dévoilé mon secret.</p>`,
+
+`<p><span class="dropcap">J</span>e venais d'enlever mon habit pour me mettre en tenue de soirée quand la sonnette d'entrée me fit sursauter. Qui cela pouvait-il bien être à cette heure tardive ? J'allai répondre. Devant la porte d'entrée, un parapluie à la main, sous la pluie se tenait le mystérieux inconnu. Celui à qui l'humanité devait sa survie.</p>
+<p class="dialogue no-indent">— Puis-je entrer, s'il vous plaît ? me demanda-t-il, toujours aussi poliment.</p>
+<p class="dialogue no-indent">— Bien entendu monsieur, vous êtes ici chez vous, mon ami, répliquai-je, en lui faisant signe d'entrer.</p>`,
+
+`<p><span class="dropcap">L</span>'homme entra et mon épouse l'aida à retirer son imperméable. Je l'invitai à s'asseoir et nous nous sommes tous les trois installés autour de la table. Il avait insisté pour que nous nous assoyions, affirmant que ce qu'il était venu nous dire allait sans aucun doute bouleverser notre existence. Intrigués, ma femme et moi avons fait comme il demandait. Il dit alors : « Maintenant que j'ai votre confiance, nous pouvons discuter. »</p>`,
+
+`<p><span class="dropcap">I</span>l se leva, recula d'un pas et retira, de son visage, le masque qu'il portait, pour révéler sa vraie identité. Il arborait de grands yeux globuleux et une petite bouche démunie de lèvres. Son crâne était chauve et visqueux en apparence. Cela ne faisait aucun doute, il venait d'ailleurs, il était extraterrestre. Mais il était également notre sauveur et notre invité. Je me levai d'un bond et dis :</p>
+<p class="dialogue no-indent">« Quel est votre nom mon ami ? Et comment pouvons-nous vous aider ? »</p>
+<p>Mon épouse, elle, venait de s'évanouir sur sa chaise, tellement elle fut estomaquée par la révélation à laquelle nous venions d'assister.</p>`,
+
+`<p><span class="dropcap">N</span>otre invité ouvrit sa valise et il prit une enveloppe, qu'il me tendit. Je l'ouvris aussitôt. Il me révélait enfin la raison de sa venue chez moi, sous la forme d'une lettre, minutieusement écrite dans notre langue, de sa main.</p>
+<p style="text-indent:0; margin-top:22px;">Mes salutations distinguées, monsieur, à vous et à votre charmante épouse.</p>
+<p style="text-indent:0;">Nous sommes venus en paix et avons parcouru la Voie lactée pour venir jusqu'ici vous rencontrer. Nous désirons établir, entre nos peuples, une communication qui nous sera mutuellement bénéfique. Pour ce faire, nous vous avons choisis pour nous aider à établir un lien de confiance entre nos dirigeants respectifs.</p>
+<p style="text-indent:0;">Depuis une cinquantaine d'années, nous vous observons à distance afin d'apprendre à connaître votre civilisation et pour cela, nous vous prions de bien vouloir nous pardonner. Si nous vous avons espionné durant toutes ces années, ce n'était guère par malice, mais bien par précautions. Nous devions d'abord mesurer l'impact qu'aurait notre venue sur le développement de votre civilisation. Nous avons patiemment attendu le bon moment avant de nous manifester et celui-ci est maintenant venu.</p>
+<p style="text-indent:0;">Je me nomme Memphis, je suis l'ambassadeur de mon peuple. Enchanté de vous connaître.</p>
+<p style="text-indent:0;">Alors, comment suggérez-vous de nous présenter à vos compatriotes, mon ami ?</p>`
+    ]
+  },
+
+  {
+    id: "rouge-bleue-et-noire",
+    title: "Rouge, bleue et noire",
+    requiredLevel: 6,
+    comprehension: [
+      { question: "Le titre de la nouvelle accorde « bleue » et « noire » au féminin, mais aucun nom féminin n'apparaît dans le titre pour justifier cet accord. Que peux-tu déduire de cette absence, une fois le récit terminé ?" },
+      { question: "Relève les passages où le rouge et le bleu apparaissent dans le texte. À qui ou à quoi ces deux couleurs sont-elles systématiquement associées ? Quel objet du récit, à l'inverse, reste sans couleur jusqu'à la toute dernière phrase du texte ?" },
+      { question: "Le mot « noir » n'apparaît que deux fois dans tout le récit comme véritable couleur, toutes deux à la fin. Pourquoi l'autrice retient-elle cette couleur si longtemps avant de la révéler ? Que représente-t-elle, comparativement au rouge et au bleu ?" },
+      { question: "Les premières phrases de la nouvelle sont racontées par une voix qui ne dit jamais « je » et qui parle des habitudes générales des gens de la Nouvelle-France. À quel moment précis cette voix disparaît-elle, et qui prend alors le relais du récit ? Pourquoi ce changement de narrateur est-il logique dans la mise en scène du conte ?" },
+      { question: "À la toute fin, le duc et la duchesse racontent chacun une version différente de la strangulation. Compare les deux versions. Selon toi, laquelle est la plus crédible, et sur quels indices précis du texte appuies-tu ta réponse ?" },
+      { question: "Relis attentivement la scène où le duc et le narrateur boivent chacun un verre de vin empoisonné. En te basant sur qui boit quelle quantité, et sur ce que dit le texte à propos de la dose fatale, détermine lequel des deux hommes est réellement empoisonné. Quel indice, donné dès le tout début de la nouvelle, confirme ta réponse ?" },
+      { question: "Le vieil homme qui raconte l'histoire au début de la nouvelle est présenté comme aveugle. En quoi la toute dernière phrase du récit — et sa dernière image — explique-t-elle directement cette cécité ?" },
+      { question: "Le duc affirme que la duchesse « complétait ainsi un sortilège de magie noire » en se pendant. La duchesse, elle, affirme avoir été étranglée par son mari. Le texte tranche-t-il clairement entre ces deux versions ? Argumente ta réponse en t'appuyant sur au moins deux éléments précis du récit (indices de mise en scène, de comportement ou de lexique)." }
+    ],
+    leaves: [
+`<p><span class="dropcap">I</span>l y a peu de quoi occuper ses soirées en Nouvelle-France. Chacun a sa petite anecdote à raconter aux autres, à la taverne. Si vous y mettez les pieds souvent, vous finissez par entendre toujours les mêmes histoires. Un soir d'été, le vieil aveugle du village raconta une histoire qu'il n'avait jamais osé raconter. À la lumière des lampes à l'huile, au bout d'une table reculée de la taverne, il décida d'enfin révéler son secret, avant de mourir. D'une voix tremblante, le vieillard raconta les évènements qui l'ont laissé aveugle, après que ses cheveux eurent tous tourné blancs prématurément, dans sa jeunesse. Il dit :</p>
+<p>Je vais vous raconter mon histoire, mais prenez note qu'elle pourrait vous donner des cauchemars. Pas une seule journée ne se passe, sans que l'événement dont je vais vous parler ne vienne me hanter.</p>`,
+
+`<p><span class="dropcap">C</span>'était quelque temps après mon arrivée sur le nouveau continent. J'avais été choisi, par Sa Majesté, pour faire partie des premiers colons français à faire le voyage, aux frais de la couronne. J'étais jeune et naïf, c'est ce qui explique comment j'ai pu me laisser convaincre que c'était une bonne idée.</p>
+<p>J'avais été convié à la résidence du duc Des Chênes. Je n'étais arrivé que depuis environ six mois sur le nouveau continent, lorsque j'ai dû faire le voyage à cheval pour me rendre chez un vieil ami. Je ne m'expliquais pas comment celui-ci s'était retrouvé sur le nouveau continent. Il possédait un luxueux château en Normandie et ses terres s'étendaient à perte de vue, en bordure de l'océan. Après le décès de son épouse, il y a quelques années, il abandonna sa somptueuse demeure, pour venir s'installer sur ce territoire inconnu et inhospitalier. Elle avait dû lui briser le cœur par sa mort, et il avait dû vouloir échapper à cette tristesse, en traversant l'océan, pour venir s'établir ici.</p>`,
+
+`<p><span class="dropcap">J</span>e suis arrivé chez lui à la tombée de la nuit, sous une pluie torrentielle. Le valet personnel du Duc est venu m'accueillir au rez-de-chaussée, pour me conduire au salon, où mon ami m'attendait impatiemment. En me voyant pénétrer dans la pièce, un verre de vin blanc à la main, il s'exclama : « Mon vieil ami ! Je suis heureux de vous voir en pleine forme ! Laissez-moi vous offrir un verre ! »</p>
+<p>J'acceptai l'offre avec plaisir. Lorsque celui-ci me tendit le verre, je remarquai que sa main tremblait. Il n'était plus jeune et il devait être malade, sans doute. Il sortit un mouchoir de tissu de sa poche de pantalon pour essuyer la sueur sur son front en s'assoyant sur le fauteuil. En me désignant le fauteuil placé en face du sien, il poursuivit, d'une voix hésitante :</p>
+<p>Allez, allez assois-toi mon ami, j'ai un énorme service à te demander.</p>
+<p class="dialogue no-indent">— Quel genre de service ? demandai-je, en prenant place devant lui, à la fois anxieux et curieux de connaître la nature de sa demande.</p>
+<p>Vous êtes le seul qui pouvez m'aider, vous êtes le seul à être déjà venu chez moi, en Normandie, poursuivit-il, en se croisant les jambes et en allumant sa pipe.</p>`,
+
+`<p class="dialogue no-indent">— Sauf votre respect, je ne vois pas en quoi cela nous aiderait de ce côté de l'Atlantique, monsieur, m'empressai-je de dire, ne saisissant pas où il voulait en venir.</p>
+<p>Le duc poursuivit, le visage caché derrière le nuage de fumée, qu'il venait de créer en expirant.</p>
+<p>Je vous demande de faire le voyage jusqu'en France, et de me ramener quelque chose de très précieux, que j'ai dû laisser derrière moi, en quittant la patrie. Je vous dédommagerai en conséquence, bien entendu. Qu'en dites-vous ?</p>
+<p class="dialogue no-indent">— Pardonnez-moi ? Vous voulez que j'effectue un voyage aller et retour jusqu'en France ? Peut-être pouvez-vous envoyer une lettre par bateau et quelqu'un amène votre bijou, ou votre pièce de collection peu importe. Pardonnez-moi monsieur, mais cela prendrait tout l'hiver je…</p>
+<p>Le duc m'interrompit, il précisa sèchement :</p>
+<p>Une bouteille de vin.</p>
+<p class="dialogue no-indent">— Pardonnez-moi, monsieur ? lui demandai-je, incapable de saisir ce qu'il voulait dire.</p>`,
+
+`<p><span class="dropcap">M</span>'offrait-il une bouteille de vin en récompense ? Il continua :</p>
+<p>Une simple bouteille de vin rouge de ma collection personnelle. Je veux que vous me la rameniez ici, intacte, bien évidemment. En retour, je vous ferai seigneur et je vous offrirai le lot de votre choix à l'intérieur du duché.</p>
+<p>J'ai hésité pendant plusieurs secondes avant de répondre à mon hôte. Il me faisait une offre que je ne pouvais refuser, à condition que je revienne de mon voyage en mer, sain et sauf. Mais que pouvait-elle bien avoir de si particulier, cette fameuse bouteille ? Je n'ai pu contenir ma curiosité.</p>
+<p class="dialogue no-indent">— Pardonnez-moi monsieur, mais, sans vouloir vous être indiscret, pourquoi cette bouteille en particulier ? demandai-je, d'une voix hésitante.</p>
+<p>Vous allez risquer votre vie pour cette bouteille, je vous dois bien la vérité, n'est-ce pas ? C'est la bouteille que j'ai offerte à mon épouse le jour de notre mariage. Elle avait refusé de l'ouvrir à l'époque, elle voulait la garder, en souvenir de notre jour de noces. J'aimerais beaucoup la récupérer, répliqua-t-il, les yeux humides, suite à l'émotion provoquée par la révélation qu'il venait de me faire. Il semblait déjà savoir que j'allais accepter son offre.</p>`,
+
+`<p><span class="dropcap">M</span>algré le danger, j'allais tenter le tout pour le tout. J'avais survécu au voyage une fois, je pouvais le refaire. Je ne comprenais toujours pas pourquoi il n'envoyait pas quelqu'un d'autre chercher sa bouteille, mais je ne voulais pas risquer de le faire changer d'avis, il m'offrait plus que je n'eusse jamais osé posséder. J'acceptai son offre et il me remit un contrat stipulant l'échange. Il était conditionnel à une chose cependant, je devais ramener la bouteille jusqu'ici, elle et son contenu. Je poursuivis l'échange verbal :</p>
+<p class="dialogue no-indent">— Je comprends monsieur, je présume que vous comptez la boire en son honneur, n'est-ce pas ? dis-je, tout en percevant un subtil changement dans le regard de mon ami, suite à ma question.</p>
+<p>Je l'avais sans doute importuné par mon indiscrétion. Il prit un moment avant de répondre, puis il affirma d'un ton léger.</p>
+<p>Vous êtes perspicace, mon ami. Allez, laissez-moi vous conduire à votre chambre, vous partirez à l'aube demain matin, j'ai tout organisé. Ne vous en faites pas, la caravelle m'appartient, vous serez un passager de prestige, je vous ai d'ailleurs fait aménager une cabine digne d'un prince.</p>`,
+
+`<p><span class="dropcap">I</span>l me conduisit à ma chambre au bout d'un long corridor éclairé d'une seule chandelle. La femme de chambre s'affairait à terminer de changer les couvertures. Alors que je remerciais mon hôte, juste avant que celui-ci monte à l'étage, il me fit une révélation qui me prit par surprise. « Lorsque vous aurez trouvé ma bouteille, ne traînez pas chez moi, mettez-la dans votre sac et quittez les lieux ». Il hésita et sa voix se mit à trembler, il poursuivit : « Je n'ai probablement pas besoin de le préciser, mais quoi que vous fassiez, une fois à l'intérieur du château, n'allez pas mettre votre nez où vous n'avez pas d'affaire. Suis-je bien clair ? »</p>
+<p>Il changea soudainement de ton, en prononçant la dernière phrase. Il avait peut-être peur que je lui dérobe ses bijoux ou bien est-il gêné à l'idée que je puisse voir la couleur de ses draps ? Peu importe, je n'étais intéressé que par le lot de terre et le titre de seigneur qu'il m'avait promis. J'allai immédiatement au lit.</p>`,
+
+`<p><span class="dropcap">L</span>e lendemain à l'aube, j'embarquai sur le vaisseau qui allait me conduire jusqu'en France. Je fus effectivement traité comme un roi à bord. Parfois, je sentais même le capitaine être jaloux de mon statut, moi qui n'avais pas à travailler, j'étais un passager honorifique sur le navire. J'ai passé la moitié du trajet, dans ma cabine, à lire et perfectionner ma maîtrise de la langue anglaise. Et l'autre moitié du temps, je l'ai passée à rêver à tout ce que j'allais bientôt pouvoir me procurer.</p>
+<p>Le duc m'avait donné un document signé de sa main en affirmant que j'allais en avoir besoin pour entrer chez lui. Bien qu'elle fût abandonnée il y a plusieurs années, l'accès sur la propriété était interdit. Des gardes armés y montaient même la garde en permanence. C'est à ces messieurs que j'allais devoir montrer le document qu'il m'avait remis.</p>`,
+
+`<p><span class="dropcap">J</span>'avais cependant imaginé que les gardes en question seraient à l'entrée de la gigantesque demeure, ils étaient plutôt positionnés à l'entrée du domaine, comme s'ils voulaient être le plus loin possible du château. C'est du moins ce que j'en conclus, après mon échange avec le chef de garde. Alors que j'approchai de l'énorme porte de fer donnant accès au chemin de terre menant au château. Quand j'étais venu quelques années plus tôt, la pelouse de chaque côté du sentier était verdoyante et les rocailles de fleurs abondaient partout sur la propriété. Désormais, derrière la lugubre clôture qui entourait la propriété, ne poussaient que de mauvaises herbes et les fleurs y étaient désormais absentes.</p>
+<p>Avant de retirer la chaîne qui servait de barrure à la porte de métal, le chef de garde me dit :</p>
+<p>Seigneur, pardonnez-moi, mais je dois vous aviser, vous devriez revenir demain, la nuit va bientôt tomber. C'était la première fois qu'on s'adressait à moi de la sorte, le duc avait dû préciser, dans le document, que j'étais seigneur dorénavant.</p>`,
+
+`<p><span class="dropcap">N</span>e soyez pas bête, mon cher ami, j'en ai que pour quelques minutes, une heure, tout au plus, répondis-je, pour lui donner l'impression d'être brave, puisque je n'avais aucunement envie de passer la nuit seul dans ce château abandonné. Il insista malgré tout :</p>
+<p>Mon seigneur, c'est qu'il est hanté, le château. Le duc a sûrement dû vous en avertir, n'est-ce pas ? me dit-il, d'un air déconcerté, alors que je traversai la barrière et m'engageai au trot, sur le chemin qui menait au château.</p>
+<p>Il ne m'avait rien dit, probablement puisqu'il savait que je n'en aurais pas cru un seul mot. Ou bien parce qu'il n'est tout simplement pas hanté. Il n'avait donc aucune raison de dire de telles sottises. Cela ramena la phrase que le duc m'avait dite en tête, avant de claquer la porte de la chambre dans laquelle il m'avait installé pour la nuit. Peut-être avait-il seulement voulu me conseiller de ne pas passer la nuit au château par peur que des esprits frappeurs viennent me dérober sa bouteille. Ou bien pensait-il que je ne reviendrais pas, si je découvrais que cette histoire de fantôme n'a pour but que d'effrayer d'éventuels cambrioleurs ?</p>`,
+
+`<p><span class="dropcap">L</span>a nuit commençait bel et bien à s'installer, alors que j'approchais de l'entrée principale du château, où un drapeau bleu, blanc et rouge déchiré flottait toujours. Le château était en piteux état, du moins comparativement à ce qu'il était avant la mort de la duchesse. On disait d'elle que si elle l'avait pu, elle aurait recouvert l'entièreté de l'Europe de fleurs bleues, rouges et blanches. Il ne restait plus aucune trace de ces fleurs dorénavant.</p>
+<p>J'attachai mon cheval devant l'entrée principale du manoir et déverrouillai l'énorme porte de bois et de fer, qui me barrait la route. En ouvrant celle-ci, je vis les deux gigantesques escaliers menant à l'étage. J'avais oublié comment ils étaient spectaculaires. Je fus étonné par la propreté des lieux. Contrairement à la façade extérieure du château, on aurait dit que l'intérieur avait été entretenu propre, après le départ du duc, pour le nouveau continent. Celui-ci avait pourtant précisé que personne n'y avait mis les pieds depuis la mort de son épouse.</p>`,
+
+`<p><span class="dropcap">J</span>e grimpai l'escalier au centre du luxueux lobby d'entrée pour ensuite arriver à l'extrémité d'un long et large corridor où se trouvait un somptueux tapis rouge et bleu, brodé de ficelles dorées. Au fond du corridor se trouvait une large porte de bois de cerisier, soigneusement décorée et sur laquelle étaient inscrites les lettres D et C. De chaque côté de la porte se trouvait un pot de fleurs en terre cuite. Contre toutes attentes, les fleurs rouges, bleues et blanches qui y poussaient semblaient être en pleine santé et en pleine floraison.</p>
+<p>La duchesse n'est peut-être pas morte ? Cela expliquerait pourquoi il voulait à tout prix m'éloigner de la chambre des maîtres. Je redescendis en vitesse au rez-de-chaussée, je devais vite trouver cette bouteille et cesser de jouer au détective. Bien sûr qu'elle était morte la duchesse, il devait y avoir une autre explication, peu importe.</p>`,
+
+`<p><span class="dropcap">A</span>près quelques détours dans les corridors, je parvins à l'époustouflante cuisine de la demeure. J'étais près du but, le duc avait mentionné que la porte de la cave à vin s'y trouvait. L'obscurité commençait à se faire de plus en plus menaçante, le soleil ne pénétrait que difficilement jusqu'à la cuisine. J'allumai ma lampe à l'huile, j'allais en avoir besoin pour descendre à la cave. La lueur me permit d'apercevoir la porte que je cherchais.</p>
+<p>En voulant ouvrir, je réalisai qu'elle était verrouillée. Le duc ne m'avait pourtant rien mentionné, l'avait-il fait alors que j'étais distrait ? Je reculai pour ensuite tenter ma chance en utilisant la force brute, je plaquai la porte avec mon épaule, pour tenter de l'enfoncer, en vain. Après trois tentatives, je devais m'avouer vaincu, je devais trouver la clef.</p>`,
+
+`<p><span class="dropcap">O</span>ù l'avait-il mise ? Je repensai aux escaliers du lobby et à la porte au fond du corridor. Et si elle était dans la chambre des maîtres ? Peut-être est-elle simplement dans l'un des tiroirs de son meuble de chevet. C'est là que je l'aurais mise, si j'avais été lui.</p>
+<p>Je rebroussai chemin en laissant ma lampe à l'huile sur une table de la cuisine. Je n'en avais que pour quelques minutes et la lumière du jour était encore au rendez-vous à l'étage. Celle-ci étant beaucoup mieux éclairée des rayons du soleil, que l'était l'étage inférieur. Je gravis les escaliers, deux marches à la fois. Le soleil était sur le point de disparaître derrière la montagne, au nord du domaine. Je parcourus le long corridor de l'étage supérieur au pas de course et ouvris la porte de la chambre des maîtres, à la recherche de la clef de la cave. Heureusement, elle n'était pas verrouillée. J'entrai dans la chambre et refermai la porte doucement derrière moi, comme si quelqu'un pouvait m'entendre, et que je ne devais pas être là.</p>`,
+
+`<p><span class="dropcap">C</span>'était une immense pièce avec de grandes fenêtres sur la façade est du château. De l'autre côté de la chambre, face aux fenêtres, se trouvaient trois magnifiques peintures de femmes, à moitié nues, portant des vêtements aux couleurs de la France. Au fond de la pièce, dans un coin, se trouvait un splendide miroir auquel était juxtaposé le lit des maîtres, au centre de la salle, la tête du lit touchait au mur. De l'autre côté de la couchette se trouvait un meuble de chevet. Je fonçai vers celui-ci et ouvris le tiroir pour n'y trouver qu'un peigne de femme. Je balayai de nouveau la chambre du regard quand je l'aperçus, assise où personne n'était assis à peine dix secondes plus tôt. Mon cœur arrêta de battre pour un bref moment, puis repartit en trombe. Je sentis mes mains devenir moites et mes genoux fléchir. Je l'ignorais, mais ma vie venait de basculer.</p>`,
+
+`<p><span class="dropcap">S</span>ur le petit tabouret de bois placé en face du miroir, de l'autre côté du lit, était assise la duchesse. Elle me fixait en regardant le miroir, je ne pouvais la quitter des yeux. Son regard était à glacer le sang et sa peau était pâle comme la neige de la Nouvelle-France. Elle était d'une beauté à couper le souffle et ses longs cheveux blancs tombaient délicatement dans son dos, jusqu'au sol. J'étais dans la chambre personnelle du fantôme de la duchesse et je n'avais pas été invité à y entrer. On m'avait même interdit d'y mettre les pieds. J'étais paralysé par la peur. J'essayai de demander pardon de l'avoir dérangée malencontreusement. Aucun son ne sortait de ma bouche ouverte. Même mes mots furent trop effrayés pour se manifester. J'étais paralysé de terreur et de fascination par son apparition spectrale. D'une voix douce et ténébreuse, elle s'adressa à moi :</p>
+<p class="dialogue no-indent">« M'apporteriez-vous mon peigne, je vous prie, cher monsieur ? Il est juste à côté de vous, dans le tiroir. C'est lui qui vous envoie, n'est-ce pas ? »</p>`,
+
+`<p><span class="dropcap">J</span>e ne pouvais détourner mon regard du sien, mais je parvins à trouver la force de répondre.</p>
+<p class="dialogue no-indent">— Oui madame, il m'a demandé de lui ramener une bouteille de vin rouge, dis-je, d'une voix à peine audible et tremblante.</p>
+<p>Je remarquai alors les traces autour de sa nuque. Seuls le rouge et le bleu des marques de strangulations qu'elle portait autour du cou contrastaient avec le blanc cadavérique de sa peau, de ses cheveux et de sa robe.</p>
+<p class="dialogue no-indent">« Les marques dans mon cou vous intriguent ? C'est lui qui me l'a fait, j'étais assise exactement où je suis assise présentement, lorsqu'il s'est approché derrière moi pour me passer ce cordon autour du cou et serrer de toutes ses forces », dit-elle, d'une voix détachée.</p>
+<p>Elle pointait une longue et luxueuse corde de soie, que l'on avait laissée sur le lit. C'était donc lui qui l'avait tué et il avait dû vouloir traverser l'océan pour éviter que l'on ne veuille lui poser des questions sur la mort de sa femme. Ou bien peut-être est-ce le fantôme de son épouse qui l'avait chassé du château, après sa mort ?</p>`,
+
+`<p><span class="dropcap">J</span>e repris possession de mes moyens suffisamment pour ouvrir le tiroir du petit meuble de chevet, y prendre le peigne et contourner le lit nuptial, pour me diriger vers elle. Elle tendit la main et je déposai le peigne dans celle-ci. Le précieux objet d'argent passa à travers les doigts délicats de la duchesse, pour finir sur le tapis de la chambre.</p>
+<p class="dialogue no-indent">« Ah comme je déteste ne plus pouvoir peigner mes cheveux », dit-elle, tout en relâchant un long soupir de sa douce bouche.</p>
+<p>J'étais à la fois terrifié et captivé par elle. Elle se regardait désormais dans le miroir et, à l'aide de ses doigts, peignait et caressait sa magnifique chevelure de soie blanche. Elle semblait si triste et seule. Mes yeux se posèrent à nouveau sur les marques qu'elle portait à la nuque, on aurait dit qu'elles étaient davantage colorées qu'elles l'étaient une minute plus tôt. Le bleu et le rouge de ses blessures étaient violents. Comment mon vieil ami avait-il pu s'en prendre à une si merveilleuse créature ?</p>`,
+
+`<p class="dialogue no-indent">« Mon mari était un monstre », précisa-t-elle, comme si elle avait lu dans mes pensées.</p>
+<p>Mon esprit était embrouillé par les évènements, je n'arrivais pas à comprendre comment il avait pu me cacher sa vraie personnalité durant toutes ces années. Comment avais-je pu venir dans ce château et dîner avec eux, sans jamais soupçonner quoi que ce soit ? On avait réussi à me berner, mais c'était du passé, j'étais devenu beaucoup moins naïf en vieillissant. Enfin, je croyais.</p>
+<p class="dialogue no-indent">« Allez chercher votre bouteille, mon beau et vaillant visiteur », poursuivit-elle, en me souriant timidement, avant de détourner son regard pour le poser à nouveau sur elle, à travers le miroir.</p>
+<p class="dialogue no-indent">— J'ignore où se trouve la clef et votre… je veux dire le duc ne m'a rien dit à propos de celle-ci, affirmai-je, d'une voix hésitante.</p>
+<p>J'étais terrifié à l'idée de pouvoir la vexer, elle avait dû tellement souffrir déjà, inutile de tourner le couteau dans la plaie.</p>`,
+
+`<p class="dialogue no-indent">« Vous l'avez déjà, allez, ne soyez pas bête, la clef que vous possédez ouvre toutes les portes de ce château. C'était d'ailleurs la mienne par le passé, regardez les initiales inscrites sur la clef », me répondit-elle, toujours affairée à caresser ses longs cheveux.</p>
+<p>Je réalisai alors ma stupidité. Bien sûr, le duc avait dû assumer que je déduirais que je devais utiliser la clef qu'il m'avait donnée chaque fois que j'allais rencontrer une porte verrouillée. Il m'avait surestimé, quelle honte. Mais c'était un monstre alors qu'importe ce qu'il pouvait dire ou penser.</p>
+<p>Je partis en direction de la cave en dévalant les escaliers jumeaux, trois marches à la fois. La nuit avait dû tomber alors que je discutais avec la duchesse puisqu'il faisait si noir que j'eus de la difficulté à retrouver la cuisine, où m'attendait toujours ma lampe à l'huile.</p>`,
+
+`<p><span class="dropcap">J</span>e pris la lampe et sortis la clef de ma poche, en l'insérant dans la serrure, je vis les initiales D.C. gravées des deux côtés, j'ai cependant eu du mal à discerner les lettres, comme si quelqu'un avait tenté de les effacer, avec un outil ou bien une pierre. Ce qui expliquait pourquoi je n'y avais jamais porté attention avant de rencontrer sa propriétaire. Je tournai la clef, et déverrouillai enfin la porte de la cave à vin.</p>
+<p>Je me précipitai en bas des étroits escaliers de bois que m'avait décrit le duc, avant mon départ. La lueur de ma lampe éclaira la pièce, qui s'illumina pour révéler un long corridor orné de plusieurs centaines de bouteilles poussiéreuses, de part et d'autre du corridor. L'état lamentable de la cave contrastait avec la propreté impeccable de la demeure, elle qui semblait être entretenue, jusque dans les moindres recoins de la cuisine.</p>`,
+
+`<p><span class="dropcap">E</span>n faisant quelques pas dans le corridor, ma lampe éclaira le socle de verre dans lequel se trouvait la bouteille que je cherchais. En la prenant, il me vint à l'esprit la pensée funeste que j'avais fait tout ce chemin pour ramener une bouteille à un meurtrier. J'avais été manipulé par le duc pour lui ramener son trophée, qu'il avait dû laisser derrière lui en prenant la poudre d'escampette, après son odieux crime. J'aurais amplement le temps de réfléchir à la question une fois sur le navire. Je mis ma lampe à l'huile au sol, le temps d'enrober la mythique bouteille, dans un linge, et de la mettre en sécurité dans mon sac. En prenant ma lampe, je remarquai que sa lueur avait faibli, elle était presque vide, j'étais à l'intérieur du château depuis beaucoup plus longtemps que prévu. Je balançai mon sac sur mon épaule, en remontant les petits escaliers menant à la cuisine du manoir.</p>`,
+
+`<p><span class="dropcap">J</span>e suis retourné dans le hall d'entrée. J'aurais dû quitter cet endroit à ce moment-là. J'aurais dû prendre la direction de la porte d'entrée principale et enfourcher ma monture, pour retourner d'où je viens. Au lieu d'agir de manière rationnelle, j'ai décidé d'emprunter l'escalier qui mène à l'étage. Je savais exactement où j'allais, sans savoir pour quelle raison je m'y rendais. Avais-je perdu la raison ? Pourquoi suis-je à l'étage et non pas sur le chemin du retour ? Je voulais aller retrouver la duchesse, j'étais tombé sous le charme d'une morte.</p>
+<p>J'avais omis de refermer la porte de la chambre en quittant l'endroit à la hâte. Je sentis la terreur m'envahir. Je n'avais guère peur d'elle maintenant, j'étais terrifié à l'idée qu'elle aurait pu s'enfuir sans me dire au revoir. Je sentis un peu de réconfort en percevant la lueur d'une chandelle, émaner de la porte entrouverte.</p>`,
+
+`<p><span class="dropcap">J</span>e l'ouvris en catastrophe, deux chandelles éclairaient faiblement la chambre des maîtres. Ils avaient pu être allumés quand je suis venu précédemment, je ne savais plus. Mon cœur arrêta de battre pour un moment, puis il repartit à tout rompre, quand je vis qu'elle était toujours assise devant son étincelant miroir. Lorsqu'elle me vit dans le cadre de porte, elle cessa soudainement de caresser ses cheveux pour s'adresser à moi, d'une voix mélodieuse :</p>
+<p class="dialogue no-indent">« Je savais que vous reviendriez, oh, mon bel amour. Accepteriez-vous de passer la nuit en ma compagnie ? »</p>
+<p>Ses mots résonnèrent dans ma tête. J'acceptai, en refermant la porte derrière moi. Je me contenterai de dire que cette nuit-là fut la nuit complètement surréaliste, en particulier pour le sceptique individu que j'étais. Je savais qu'au matin, elle allait disparaître à jamais puisqu'elle me fit promettre de venger sa mort. Ma promesse de la venger allait lui permettre de quitter ce monde, sa mort ne resterait pas impunie.</p>`,
+
+`<p><span class="dropcap">E</span>lle me supplia de lui promettre d'empoisonner le vin, avant de le remettre à son mari. Je fis la promesse de venger sa mort et d'assassiner mon ami en son nom. Elle m'embrassa pour une dernière fois en me remerciant de lui permettre de reposer en paix. Elle disparut dans mes bras, je remarquai que les draps n'avaient pas été fripés par elle, en retirant mes bras des hanches d'une femme imaginaire. J'étais seul dans le lit, le soleil fit son apparition de derrière la montagne. Le matin était venu, ma belle reposait en paix dorénavant, grâce à moi. Je ne pouvais absolument pas échouer, je devais retourner en Nouvelle-France.</p>`,
+
+`<p><span class="dropcap">J</span>e dévalai le corridor et descendis les escaliers, cette fois quatre marches à la fois. Je perdis pied et faillis finir ma descente, tête première dans la rampe de bois de l'escalier géant. Je parvins cependant à l'éviter de justesse et j'atteignis le rez-de-chaussée, pour ensuite filer vers la cave, comme elle m'avait dit. Je descendis les escaliers pour tomber de nouveau sur le gigantesque cellier, je n'avais pas ma lampe et j'avais fait abstraction du fait que le soleil matinal ne se rendait pas jusqu'au sous-sol. Je parcourus le corridor à la recherche d'une porte, comme elle me l'avait indiqué. Je devais trouver la salle d'embouteillement, située près de la chapelle du château. Cela ne semblait pas m'avoir intrigué lorsqu'elle en fit mention, la veille. Mais soudainement j'étais curieux de savoir pourquoi la chapelle était à l'étage inférieur, derrière une porte banale du cellier personnel du duc.</p>`,
+
+`<p><span class="dropcap">J</span>'utilisai la clef passe-partout et j'ouvris la petite porte, après avoir longuement cherché la serrure, avec mes doigts nerveux. J'ouvris la porte pour y trouver ce que je cherchais, la lumière du soleil éclairait dorénavant mon visage, en provenance de la chapelle, qui semblait être en haut des petits escaliers se trouvant tout juste devant moi. À ma droite, je trouvai la table qu'elle avait mentionnée. Je sortis la bouteille et la déballai de son tissu protecteur et l'ouvris en vitesse. Je pris le flacon avec les initiales D.C. Elle m'avait certifié qu'il serait sur la table et il y était. Je versai le contenu du flacon dans la bouteille de vin pour la transformer en un élixir mortel.</p>
+<p>J'insérai un nouveau bouchon en liège dans l'embouteilleur et plaçai la bouteille à la position précise qu'elle m'avait décrite, durant notre nuit magique. J'utilisai le levier pour refermer la bouteille qui avait modifié à jamais mon existence. Je pris la bouteille, m'assurai qu'elle était bien bouchonnée, je l'emballai à nouveau dans le linge et la remis dans mon sac.</p>`,
+
+`<p><span class="dropcap">C</span>ette fois encore, j'aurais dû quitter le château. J'étais intrigué de voir cette étrange chapelle secrète, ma curiosité causera ma perte. J'empruntai donc tranquillement les petites marches, qui menaient au lieu de culte. Une à une, je montais les marches à mesure que la pièce se dévoilait à moi. Je n'ai pas eu l'opportunité de voir autre chose puisque le corps était suspendu au plafond.</p>
+<p>Je n'étais qu'à la troisième marche lorsque je l'ai vue, au fond de la chapelle, elle était suspendue au bout d'une corde. Le nœud devait être très serré, puisque sa tête était gorgée de sang rouge et bleu à un point tel, qu'elle était impossible à identifier. Mon cœur s'arrêta de battre, j'ai senti une odeur de putréfaction envahir mes narines. Mon cœur redémarra tellement fort que je l'entendais battre de l'intérieur de ma poitrine. Je pris les jambes à mon cou, sans même pouvoir dire comment elle était vêtue ou quelle était la couleur de ses cheveux.</p>`,
+
+`<p><span class="dropcap">J</span>e courus pour retourner au cellier. Je filai à travers la cuisine jusqu'au hall d'entrée, j'ai jeté un dernier coup d'œil aux escaliers jumeaux et je m'empressai ensuite d'ouvrir la grande porte principale. Il faisait un temps magnifique, le soleil m'aveugla et j'entendis des hommes parler, ils étaient affairés à détacher mon cheval, lorsqu'ils sursautèrent en me voyant émerger du château en panique. C'était les gardes qui m'avaient ouvert la grille d'entrée, la veille au soir. Le chef de garde, d'un air ébahi, comme s'il venait de voir un fantôme, me dit, en reculant doucement :</p>
+<p>« Monsieur, vous avez passé la nuit au château ? Je n'en crois pas mes yeux. Nous allions récupérer votre cheval, nous étions certains de ne jamais vous revoir en vie, vous savez ? »</p>
+<p>Je n'écoutais pas vraiment ce qu'il me disait, j'étais trop pressé de retourner au navire pour écouter l'état d'âme de ces gardes sans importance. Je bondis pour attraper l'étrier et j'enfourchai mon cheval, avant de déguerpir, sans même leur dire un mot.</p>`,
+
+`<p><span class="dropcap">A</span>près deux longs jours de marche, j'arrivai à la caravelle. Ma mission touchait presque à sa fin, j'allais venger la mort de ma douce. Je m'enfermai dans ma cabine personnelle. Je n'y suis pas sorti du voyage de retour, pas une seule fois, j'étais trop amoureux pour réfléchir limpidement. On m'amenait mes repas. Quand je mangeais, ce n'était pas plus qu'une bouchée. À un certain moment, ils ont cessé de me les apporter. Au bout d'une semaine, ils sont entrés dans ma cabine pour s'assurer que j'étais vivant, je n'avais rien avalé depuis. La face qu'ils ont faite, quand je leur ai dit que je n'y avais même pas songé et qu'ils pouvaient arrêter de me nourrir, s'ils le voulaient et que cela m'était égal. Avant de quitter ma chambre, le capitaine fit une remarque sur la couleur de mes cheveux. J'ai cru comprendre qu'il s'inquiétait pour moi, je m'en fichais.</p>`,
+
+`<p><span class="dropcap">J</span>ours et nuits, je m'efforçais de ne penser qu'à la nuit d'amour que je passai en compagnie de ma belle, mais une image me revenait constamment à la mémoire. J'avais beau tenter de la chasser de mon esprit, elle revenait me hanter de plus belle la minute suivante. Mais qui pouvait-elle bien être, cette femme, suspendue au plafond de la mystérieuse chapelle maudite ? Une femme de chambre avait dû s'enlever la vie, à la suite de l'abandon du château, probablement.</p>
+<p>Lorsque la caravelle toucha la terre ferme, j'étais déjà sur le pont avec mon sac en main. Les hommes d'équipage murmuraient en me pointant, ils semblaient avoir peur de moi dorénavant. Lorsque la passerelle fut installée, je fus le premier à être sur la terre. Je n'avais pas le temps d'attendre qu'ils daignent sortir mon cheval du bateau, je devais me rendre chez le duc immédiatement.</p>`,
+
+`<p><span class="dropcap">J</span>e louai les services d'un cocher, je lui promis de payer en triple, s'il acceptait que je paie, une fois arrivé à destination. Je n'avais pas vraiment l'intention de payer, je savais que j'allais être arrêté, une fois que j'aurais assassiné mon ami. Mieux encore, s'il m'offre une coupe de vin de la bouteille de vin nuptiale, je la boirai avec lui. J'étais prêt à mourir, en mémoire de ma belle duchesse fantôme. Quoi qu'il en fût, l'histoire se terminait mal pour moi, de toute façon, je ne pourrais jamais retrouver l'amour de ma vie. J'étais foutu, et cela m'était complètement égal.</p>
+<p>J'arrivai à la demeure du duc Des Chênes, la femme qui vint m'ouvrir semblait avoir peur de moi, elle aussi.</p>`,
+
+`<p><span class="dropcap">E</span>n me voyant, le duc sursauta. Il s'exclama : « Mon ami vous semblez exténué. Le voyage vous a-t-il... » il s'arrêta, puis reprit : « Avez-vous ma bouteille ? Vous l'avez n'est-ce pas ? Dites-moi que vous l'avez. »</p>
+<p>Je le voyais déjà mort, étendu sur le sol alors que j'éclatais de rire, un rire de vengeance servie bien froide. Je m'empressai de la déballer et de lui donner, sans dire un mot. Il fit un large sourire en la voyant et la prit doucement, à l'aide de ses deux mains, comme s'il avait peur de la briser. Je l'avais transportée d'une rive à l'autre de l'océan Atlantique, j'avais risqué ma vie pour que ce monstre puisse avoir la sentence qu'il mérite, je ne pouvais plus attendre une minute de plus de le voir s'écrouler. Elle sera fière de son amoureux, même dans la mort elle sera fière de moi.</p>`,
+
+`<p><span class="dropcap">L</span>e duc s'éloigna de moi, en prenant avec lui la précieuse bouteille. J'ai voulu lui forcer la main, je voulais qu'il l'ouvre ici et maintenant. Qu'on la déguste ensemble, comme deux vieux amis. Je lui dis, d'une voix sortie d'outre-tombe : « Vous ne l'ouvrez pas, monsieur ? Je croyais que vous la boiriez, c'est ce que vous m'avez dit. »</p>
+<p>Mon affirmation lui fit froncer les sourcils. Après un court moment, il répondit :</p>
+<p>« Oui bien sûr ! Où ai-je la tête ? Allez, venez, je vous en offre un verre, je vous le dois bien. »</p>
+<p>Il se dirigea en direction du bar et remplit deux verres, à moitié, et m'en donna un des deux. Je remarquai un reflet bleuté à travers le rouge du vin, lorsqu'il me tendit la coupe en cristal. Il s'exclama, en frappant son verre contre le mien : « À la mémoire de la duchesse ! »</p>`,
+
+`<p><span class="dropcap">J</span>e frappai mon breuvage mortel contre le sien et sans rien dire, j'avalai le contenu du verre d'une gorgée. Le duc prit une gorgée timide. Ce serait suffisant pour le tuer, la duchesse m'avait certifié qu'une seule gorgée serait fatale. Nous étions tous deux des hommes morts, seulement moi, je savais que nous l'étions.</p>
+<p>En se retournant vers moi, il dit :</p>
+<p>« Vous l'avez vue ? Dites-moi, l'avez-vous vue ? Je parierais que vous l'avez vue, vous avez vu ma femme, n'est-ce pas ? »</p>
+<p>Ma belle fut prisonnière d'un château maudit, incapable de trouver la paix, faute de vengeance, pendant trop longtemps. Je lui dis, sans réfléchir, aveuglé par la haine que j'avais pour le meurtrier de ma douce :</p>`,
+
+`<p class="dialogue no-indent">« Oui et elle m'a tout raconté. »</p>
+<p>Il s'arrêta brusquement et cracha la gorgée qu'il avait prise dans son verre. Il leva les yeux sur moi et en me regardant dans les yeux me demanda :</p>
+<p>« Cette sorcière vous a parlé ? »</p>
+<p>Il semblait surpris par ce qu'il venait d'entendre alors qu'il devait bien se douter que j'irais dans la chambre des maîtres. Je sentis mes jambes fléchir et ma vision s'embrouiller. Je lui criai :</p>
+<p>« Comment oses-tu la traiter de sorcière ? C'est une femme formidable, nous avons passé la nuit ensemble. Elle m'a expliqué comment vous l'avez assassiné ! »</p>
+<p>Je tentai de me jeter sur lui, mais mes jambes me firent faux bond. Je tombai sur le sol.</p>`,
+
+`<p><span class="dropcap">L</span>e duc s'élança et projeta violemment la bouteille d'un opposé à l'autre du salon, où elle alla se fracasser en mille morceaux sur une peinture. Le vin rouge éclaboussa la pièce, même les fauteuils ne furent pas épargnés. Avant de perdre connaissance, je l'ai entendu dire la phrase qui me brisa le cœur pour toujours. Il dit, à voix basse : « Mon épouse s'est pendue, à la suite de notre nuit de noces, dans la chapelle du cellier. Elle complétait ainsi un sortilège de magie noire. Je me demandais si vous aviez vu son corps. »</p>
+<p>À mon réveil, je compris que le poison m'avait rendu aveugle. Je perdis l'usage de la vue. Pourtant, jusqu'au jour de ma mort, je continuerai de voir, du matin au soir, le corps de ma belle, suspendu au bout d'une corde de soie noire.</p>`
+    ]
+  }
+
+  /* ---- pour ajouter la prochaine nouvelle, copier ce bloc et le remplir ----
+  ,{
+    id: "identifiant-unique",
+    title: "Titre de la nouvelle",
+    leaves: [ `<p>...</p>`, `<p>...</p>` ]
+  }
+  */
+];
+
+/* Le recueil est déjà réservé aux élèves ayant atteint le rang Archimage
+   (via les Parchemins de lecture, chapitre 6). Toute nouvelle est donc
+   simplement accessible une fois qu'on est ici — plus de verrouillage
+   individuel par nouvelle, plus d'échelle de compétence séparée. */
+
+/* =========================================================================
+   Construction du livre : couverture du recueil, table des matières,
+   puis chaque nouvelle (couverture + pages + fin), en pages doubles.
+   ========================================================================= */
+function makePage(type, html, extra){ return Object.assign({type, html}, extra||{}); }
+function blankPage(){ return makePage('blank', `<div class="sigil">✦</div>`); }
+
+function buildComprehensionPages(story){
+  const hasQuestions = story.comprehension && story.comprehension.length > 0;
+
+  if(!hasQuestions){
+    const placeholder = makePage('comprehension-intro', `
+      <div class="toc-title">Compréhension de lecture</div>
+      <div class="toc-rule">❧</div>
+      <p class="intro-text" style="text-align:center; margin-top:60px; border:1px dashed var(--gold); border-radius:4px; padding:22px 16px; opacity:0.85;">✎ Section en préparation.<br>Reviens bientôt !</p>`);
+    return [placeholder];
+  }
+
+  const hasGold = story.comprehension.some(q => typeof q.gold === 'number');
+
+  const intro = makePage('comprehension-intro', `
+    <div class="toc-title">Compréhension de lecture</div>
+    <div class="toc-rule">❧</div>
+    <p class="intro-text">Réponds aux questions suivantes dans ton cahier, en t'appuyant sur ce que tu as compris du texte.${hasGold ? ' Chaque bonne réponse te rapporte des pièces d\'or.' : ''}</p>
+    <p class="intro-text">Une fois tes réponses complétées, utilise le bouton d'envoi à la dernière page de cette section.</p>`);
+
+  const qPages = story.comprehension.map((q, i) => makePage('question-page', `
+    <div class="question-head">
+      <div>
+        <div class="question-num">Question ${i+1}</div>
+        <p class="question-text">${q.question}</p>
+      </div>
+      ${typeof q.gold === 'number' ? `<div class="gold-badge">+${q.gold} 🪙</div>` : ''}
+    </div>
+    <div class="write-lines">
+      <div class="write-line"></div>
+      <div class="write-line"></div>
+      <div class="write-line"></div>
+      <div class="write-line"></div>
+    </div>`));
+
+  const submitPage = makePage('submit-page', `
+    <div class="toc-title" style="font-size:0.95em;">Remise des réponses</div>
+    <div class="toc-rule">❧</div>
+    <p class="intro-text" style="text-align:center;">As-tu bien répondu à toutes les questions dans ton cahier ?</p>
+    <button class="submit-btn" type="button" disabled title="Fonctionnalité à venir — sera connectée à l'enseignant">
+      ✉ Envoyer à l'enseignant
+    </button>
+    <p class="intro-text" style="text-align:center; font-size:0.82em; opacity:0.75; margin-top:10px;">(Fonctionnalité à venir)</p>`);
+
+  return [intro, ...qPages, submitPage];
+}
+
+const recueilCoverPage = makePage('cover', `
+  <div class="ornament">❧ ─────── ❧</div>
+  <div class="cover-frame">
+    <div class="ornament">✦</div>
+    <h1>${RECUEIL_TITLE}</h1>
+    <div class="byline">${RECUEIL_AUTHOR}</div>
+    <div class="collection">Livre virtuel</div>
+  </div>`);
+
+let spreads = [];
+
+function buildBook(){
+  const tocPage2 = makePage('toc', '');
+  spreads = [ [recueilCoverPage, tocPage2] ];
+  const tocEntries = [];
+
+  STORIES.forEach((story) => {
+    const startSpread = spreads.length; // la couverture de la nouvelle occupera ce spread
+    tocEntries.push({ title: story.title, spread: startSpread });
+
+    const storyCover = makePage('cover', `
+      <div class="ornament">❧</div>
+      <div class="cover-frame">
+        <h1>${story.title}</h1>
+        <div class="byline">par ${RECUEIL_AUTHOR}</div>
+      </div>`);
+
+    const storyEnd = makePage('story-end', `
+      <div class="fin">FIN</div>
+      <div class="sigil">❧</div>
+      <div class="meta">« ${story.title} »<br>de ${RECUEIL_AUTHOR}</div>`);
+
+    let pages = [storyCover];
+    story.leaves.forEach((html, i) => pages.push(makePage('text', html, { num: i+1 })));
+    pages.push(...buildComprehensionPages(story));
+    pages.push(storyEnd);
+
+    for(let i=0; i<pages.length; i+=2){
+      spreads.push([ pages[i], pages[i+1] || blankPage() ]);
+    }
+  });
+
+  tocPage2.html = tocEntries.length ? `
+    <div class="toc-title">Table des matières</div>
+    <div class="toc-rule">❧</div>
+    <ul class="toc-list">
+      ${tocEntries.map((e,i)=>`
+        <li class="toc-entry" data-spread="${e.spread}">
+          <span class="toc-num">${String(i+1).padStart(2,'0')}</span>
+          <span class="toc-name">${e.title}</span>
+          <span class="toc-dots"></span>
+          <span class="toc-page">p. ${e.spread+1}</span>
+        </li>`).join('')}
+    </ul>` : `<div class="toc-title">Table des matières</div><div class="toc-empty">Aucune nouvelle pour l'instant.</div>`;
+}
+
+buildBook();
+
+/* =========================================================================
+   Rendu et navigation
+   ========================================================================= */
+let idx = 0;
+const innerLeft = document.getElementById('innerLeft');
+const innerRight = document.getElementById('innerRight');
+const book = document.getElementById('book');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const tocBtn = document.getElementById('tocBtn');
+const folioIndicator = document.getElementById('folioIndicator');
+const leafLeftEl = document.getElementById('leafLeft');
+const leafRightEl = document.getElementById('leafRight');
+
+function renderPage(container, page){
+  container.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.className = 'leaf-text' + (page.type !== 'text' ? ' ' + page.type : '');
+  wrap.innerHTML = page.html;
+  container.appendChild(wrap);
+  if(page.type === 'text'){
+    const folio = document.createElement('div');
+    folio.className = 'leaf-folio';
+    folio.textContent = '— ' + page.num + ' —';
+    container.appendChild(folio);
+  }
+  if(page.type === 'toc'){
+    wrap.querySelectorAll('.toc-entry').forEach(el=>{
+      el.addEventListener('click', ()=>goTo(parseInt(el.dataset.spread,10)));
+    });
+  }
+}
+
+function render(){
+  const [left, right] = spreads[idx];
+  leafLeftEl.className = 'leaf left' + (left.type !== 'text' ? ' ' + left.type : '');
+  leafRightEl.className = 'leaf right' + (right.type !== 'text' ? ' ' + right.type : '');
+  renderPage(innerLeft, left);
+  renderPage(innerRight, right);
+  prevBtn.disabled = idx === 0;
+  nextBtn.disabled = idx === spreads.length - 1;
+  folioIndicator.textContent = `Page ${idx+1} / ${spreads.length}`;
+}
+
+function withTurn(action){
+  book.classList.add('turning');
+  setTimeout(()=>{ action(); render(); book.classList.remove('turning'); }, 220);
+}
+function turn(dir){
+  if((dir>0 && idx===spreads.length-1) || (dir<0 && idx===0)) return;
+  withTurn(()=>{ idx += dir; });
+}
+function goTo(spreadIndex){
+  if(spreadIndex < 0 || spreadIndex >= spreads.length || spreadIndex === idx) return;
+  withTurn(()=>{ idx = spreadIndex; });
+}
+function rebuildAndRender(){
+  buildBook();
+  idx = 0;
+  render();
+}
+
+prevBtn.addEventListener('click', ()=>turn(-1));
+nextBtn.addEventListener('click', ()=>turn(1));
+tocBtn.addEventListener('click', ()=>goTo(0));
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'ArrowRight') turn(1);
+  if(e.key === 'ArrowLeft') turn(-1);
+});
+
+render();
+</script>
+</body>
+</html>

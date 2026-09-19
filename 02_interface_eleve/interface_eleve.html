@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Mon Chevalier — Royaume des Savants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="config-classe.js"></script>
+<script src="stockage-classe.js"></script>
+<script src="passerelle-core.js"></script>
+<style>
+  :root{
+    --parchment:#F1E4C3; --parchment-dark:#E3D3A6; --ink:#2B2118;
+    --burgundy:#7B2D26; --burgundy-dark:#5C201B; --gold:#B8860B; --gold-light:#D9A62E;
+    --forest:#3B5D42; --iron:#5B5750; --cellbg:#FBF6E9;
+  }
+
+  /* ================= PASSERELLE D'ENTRÉE ================= */
+  #passerelleOverlay{
+    position:fixed; inset:0; z-index:999998;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at center, #241109 0%, #0d0704 75%);
+    transition:opacity 1s ease, visibility 1s ease;
+  }
+  #passerelleOverlay.masquee{ opacity:0; visibility:hidden; pointer-events:none; }
+  #passerelleOverlay .contenu{ display:flex; flex-direction:column; align-items:center; gap:24px; padding:20px; text-align:center; }
+
+  #passerelleEcranInvalide{ display:none; max-width:420px; }
+  #passerelleEcranInvalide h2{ font-family:'Cinzel', serif; color:#e3a8a0; font-size:22px; margin:0 0 12px; }
+  #passerelleEcranInvalide p{ color:var(--parchment); opacity:0.9; line-height:1.5; font-size:16px; }
+
+  #passerelleEcranChoix{ display:none; flex-direction:column; align-items:center; gap:16px; }
+  #passerelleEcranChoix h1{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:24px; margin:0 0 4px; text-shadow:0 0 16px rgba(217,166,46,0.55); }
+  #passerelleEcranChoix p.consigne{ color:var(--parchment); opacity:0.85; font-style:italic; margin:0 0 8px; }
+  .passerelle-choix-conteneur{ display:flex; gap:32px; flex-wrap:wrap; justify-content:center; }
+  .passerelleCarte{ cursor:pointer; border:none; background:none; padding:0; width:min(42vw,210px); display:flex; flex-direction:column; align-items:center; gap:10px; transition:transform .3s ease; }
+  .passerelleCarte:hover, .passerelleCarte:focus-visible{ transform:translateY(-6px) scale(1.03); }
+  .passerelleCarte .cadre{ width:100%; aspect-ratio:3/4.2; border-radius:10px; overflow:hidden; box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 0 2px rgba(217,166,46,.4); }
+  .passerelleCarte:hover .cadre, .passerelleCarte:focus-visible .cadre{ box-shadow:0 14px 36px rgba(0,0,0,.6), 0 0 0 3px var(--gold-light), 0 0 34px rgba(217,166,46,.4); }
+  .passerelleCarte img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .passerelleCarte .etiquette{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:14px; letter-spacing:1px; text-transform:uppercase; }
+
+  #passerelleEcranCouverture{ display:none; flex-direction:column; align-items:center; gap:20px; }
+  #passerelleEcranCouverture .cadre{ position:relative; width:min(70vw,320px); aspect-ratio:3/4.2; border-radius:12px; overflow:hidden; box-shadow:0 20px 55px rgba(0,0,0,.6), 0 0 36px rgba(217,166,46,.2); }
+  #passerelleEcranCouverture img{ width:100%; height:100%; object-fit:cover; display:block; }
+  #passerelleVoile{ position:absolute; left:50%; bottom:14%; width:34%; aspect-ratio:1; transform:translateX(-50%); border-radius:50%; background:radial-gradient(circle, rgba(255,225,140,.85) 0%, rgba(255,200,80,.35) 45%, transparent 70%); animation:passerellePulse 1.4s ease-in-out infinite; mix-blend-mode:screen; pointer-events:none; }
+  @keyframes passerellePulse{ 0%,100%{ opacity:.35; transform:translateX(-50%) scale(.9); } 50%{ opacity:.9; transform:translateX(-50%) scale(1.15); } }
+  #passerelleFlash{ position:absolute; inset:0; background:radial-gradient(circle at 50% 82%, rgba(255,240,200,.95) 0%, rgba(255,215,120,.4) 30%, transparent 60%); opacity:0; pointer-events:none; }
+  #passerelleFlash.actif{ animation:passerelleFlashAnim .9s ease-out forwards; }
+  @keyframes passerelleFlashAnim{ 0%{opacity:0;} 35%{opacity:1;} 100%{opacity:0;} }
+  #passerelleStatut{ font-family:'Crimson Text', serif; font-style:italic; color:var(--parchment); opacity:.85; min-height:24px; max-width:340px; }
+
+  /* ================= LIVRE À DEUX PAGES (base visuelle partagée) ================= */
+  /* Sur mobile (<760px), les deux "pages" restent empilées dans l'ordre déjà
+     éprouvé (personnage d'abord, navigation ensuite) — le format livre à deux
+     pages côte à côte ne s'active qu'à partir d'une largeur de type tablette. */
+  .livre-conteneur{
+    background: linear-gradient(180deg, var(--burgundy-dark), #3a1712 90%);
+    border-radius: 10px; overflow:hidden; margin-bottom:22px;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.35), 0 0 0 1px rgba(217,166,46,0.2);
+  }
+  .livre-bandeau-haut, .livre-bandeau-bas{
+    width:100%; height:30px; background-image:url('livre_assets/bandeau_runique.jpg');
+    background-size:cover; background-position:center;
+  }
+  .livre-bandeau-bas{ background-image:url('livre_assets/bandeau_runique_bas.jpg'); }
+  .livre-pages{ display:flex; flex-direction:column; }
+  .page-gauche, .page-droite{
+    background: var(--parchment);
+    padding: 18px 16px 22px;
+  }
+  .page-gauche{ order:2; }
+  .page-droite{ order:1; }
+  .page-gauche .eyebrow-page{ font-family:'Cinzel', serif; font-size:12px; color:var(--burgundy); opacity:0.8; margin:0 0 4px; }
+  .page-gauche h2{ font-family:'Cinzel', serif; font-size:16px; color:var(--burgundy-dark); margin:0 0 14px; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--parchment);
+    background-image:radial-gradient(circle at 15% 20%, rgba(0,0,0,0.03) 0, transparent 40%), radial-gradient(circle at 85% 80%, rgba(0,0,0,0.03) 0, transparent 40%);
+    color:var(--ink); font-family:'Crimson Text', serif; font-size:16px;
+  }
+  .frame{ max-width:480px; margin:0 auto; padding:18px 14px 50px; }
+
+  /* Sur écran large (portable/ordinateur, format paysage), le livre s'élargit,
+     affiche la vraie image du livre ouvert en fond, et les deux pages se
+     positionnent précisément dans les zones de parchemin de cette image —
+     DOIT venir après la règle .frame ci-dessus pour la remplacer correctement
+     (même sélecteur, la déclaration la plus tardive dans le fichier l'emporte). */
+  @media (min-width: 760px){
+    body{ height:100vh; overflow:hidden; padding:0 10px; display:flex; align-items:center; justify-content:center; }
+    .frame{ max-width:none; width: min(96vw, calc(94vh * 1.7778), 2048px); padding:0; margin:0; }
+
+    .livre-bandeau-haut, .livre-bandeau-bas{ display:none; }
+
+    .livre-conteneur{
+      background:
+        url('livre_assets/livre_ouvert.webp') center / contain no-repeat,
+        linear-gradient(180deg, var(--burgundy-dark), #3a1712 90%);
+      aspect-ratio: 2048 / 1152;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    }
+    .livre-pages{ position:relative; height:100%; display:block; }
+
+    /* Zones mesurées directement sur l'image livre_ouvert.webp (les deux
+       rectangles de parchemin clair) : x 11.3%-44.7% et 55.4%-88.4%,
+       y 9%-90.3%. Le défilement interne protège l'alignement de l'image
+       même si le contenu d'une page dépasse la hauteur disponible. */
+    .page-gauche, .page-droite{
+      position:absolute; top:10.5%; bottom:9.7%;
+      overflow-y:auto; background:none; padding: 2.8% 4% 2.2%;
+    }
+    .page-gauche{ left:11.3%; width:33.4%; order:initial; border-right:none; display:block; }
+    .page-droite{ left:55.4%; width:33%; order:initial; }
+  }
+  header{ display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:18px; }
+  header h1{ font-family:'Cinzel', serif; font-size:19px; margin:0; color:var(--burgundy-dark); }
+  .gold-counter{ display:flex; align-items:center; gap:6px; font-family:'Cinzel', serif; font-size:16px; color:var(--burgundy-dark); }
+  .gold-counter svg{ width:20px; height:20px; }
+  .gold-amount.bump{ animation:bump 0.25s ease; }
+  @keyframes bump{ 50%{ transform:scale(1.3); } }
+
+  /* ---- Poupée d'équipement ---- */
+  .doll-wrap{ position:relative; margin-bottom:22px; }
+  .doll{
+    display:grid;
+    grid-template-columns:64px 1fr 64px;
+    grid-template-rows:repeat(3, 112px);
+    grid-template-areas:
+      "helm    portrait armor"
+      "weapon  portrait shield"
+      "gloves  portrait boots";
+    gap:8px;
+    align-items:center;
+    justify-items:center;
+  }
+  .slot{
+    width:56px; height:56px; background:var(--cellbg); border:2px solid var(--ink);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;
+    transition:transform 0.15s ease, border-color 0.15s ease;
+  }
+  .slot:hover{ transform:translateY(-2px); border-color:var(--gold); }
+  .slot svg{ width:44px; height:52px; }
+  .slot.empty{ opacity:0.35; }
+  .slot-label{
+    position:absolute; bottom:-16px; font-size:9px; font-family:'Cinzel', serif; color:var(--iron);
+    white-space:nowrap;
+  }
+  .slot-helm{ grid-area:helm; } .slot-weapon{ grid-area:weapon; } .slot-shield{ grid-area:shield; }
+  .slot-armor{ grid-area:armor; } .slot-gloves{ grid-area:gloves; } .slot-boots{ grid-area:boots; }
+
+  .portrait-wrap{ grid-area:portrait; text-align:center; }
+  .portrait{
+    width:176px; height:228px; margin:0 auto;
+    background:var(--parchment-dark) center/cover no-repeat;
+    border:3px solid var(--ink); position:relative; cursor:pointer;
+    clip-path:polygon(50% 0%, 100% 12%, 100% 76%, 50% 100%, 0% 76%, 0% 12%);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .portrait::after{
+    content:""; position:absolute; inset:5px;
+    border:1px solid var(--gold); clip-path:polygon(50% 0%, 100% 12%, 100% 76%, 50% 100%, 0% 76%, 0% 12%);
+    pointer-events:none;
+  }
+  .portrait-placeholder{ color:var(--iron); font-size:12px; font-style:italic; padding:0 16px; text-align:center; }
+  .portrait-edit{
+    margin-top:6px; font-family:'Crimson Text', serif; font-style:italic; font-size:12px;
+    background:none; border:none; color:var(--burgundy); cursor:pointer; text-decoration:underline;
+  }
+  .stats-row{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+  .hp-badge{
+    display:inline-block; padding:4px 12px;
+    background:var(--cellbg); border:2px solid var(--burgundy);
+    font-family:'Cinzel', serif; font-size:14px; font-weight:700; color:#B5302A;
+    transition:opacity 0.15s ease;
+  }
+  .dmg-badge{
+    display:inline-block; padding:4px 12px;
+    background:var(--cellbg); border:2px solid var(--ink);
+    font-family:'Cinzel', serif; font-size:13px; font-weight:700; color:var(--burgundy-dark);
+    transition:opacity 0.15s ease;
+  }
+  .hp-badge.frozen, .dmg-badge.frozen{ opacity:0.4; color:var(--iron); }
+  .hp-badge.reveal, .dmg-badge.reveal{ animation:bump 0.3s ease; }
+
+  .freeze-overlay{
+    position:absolute; inset:0; background:rgba(43,33,24,0.55);
+    display:none; align-items:center; justify-content:center;
+    font-family:'Cinzel', serif; font-size:15px; color:var(--parchment);
+    letter-spacing:2px; z-index:999; text-shadow:0 2px 6px rgba(0,0,0,0.6);
+  }
+  .freeze-overlay.active{ display:flex; }
+  .freeze-overlay .dots span{ display:inline-block; font-size:34px; margin:0 2px; animation:pulseDots 1s ease-in-out infinite; }
+  .freeze-overlay .dots span:nth-child(2){ animation-delay:0.15s; }
+  .freeze-overlay .dots span:nth-child(3){ animation-delay:0.3s; }
+  @keyframes pulseDots{ 0%,100%{opacity:0.25; transform:translateY(0);} 50%{opacity:1; transform:translateY(-4px);} }
+
+  /* ---- Magasin ---- */
+  .store h2{ font-family:'Cinzel', serif; font-size:16px; color:var(--burgundy-dark); border-bottom:2px solid var(--ink); padding-bottom:6px; margin:0 0 10px; }
+  .tabs{ display:flex; gap:6px; overflow-x:auto; margin-bottom:14px; padding-bottom:4px; }
+  .tab{
+    font-family:'Cinzel', serif; font-size:12px; padding:7px 12px; white-space:nowrap;
+    background:var(--parchment-dark); border:1px solid var(--ink); cursor:pointer; color:var(--ink);
+  }
+  .tab.active{ background:var(--burgundy); color:var(--parchment); border-color:var(--burgundy); }
+
+  .item-row{
+    display:grid; grid-template-columns:48px 1fr auto auto; align-items:center; gap:10px;
+    padding:10px 4px; border-bottom:1px solid rgba(43,33,24,0.18);
+  }
+  .item-row:first-of-type{ border-top:1px solid rgba(43,33,24,0.18); }
+  .item-row svg{ width:40px; height:46px; }
+  .item-info .item-name{ font-weight:600; display:block; font-size:14px; }
+  .item-info .item-stat{ font-size:12px; color:var(--iron); font-style:italic; }
+  .item-price{ font-family:'Cinzel', serif; font-size:13px; color:var(--burgundy-dark); white-space:nowrap; }
+  .item-row button{
+    font-family:'Crimson Text', serif; font-size:13px; padding:6px 12px; border:1px solid var(--ink);
+    background:var(--parchment); cursor:pointer; white-space:nowrap;
+  }
+  .item-row button:hover:not(:disabled){ background:var(--gold-light); }
+  .item-row button:disabled{ opacity:0.4; cursor:not-allowed; }
+  .item-row button.equipped{ background:var(--forest); color:var(--parchment); border-color:var(--forest); }
+  .action-group{ display:flex; flex-direction:column; gap:4px; }
+  .action-group .sell-btn{ font-size:11px; color:var(--burgundy); }
+
+  .demo-earn{
+    display:block; margin:0 auto 20px; font-family:'Crimson Text', serif; font-style:italic; font-size:13px;
+    background:none; border:1px dashed var(--iron); color:var(--iron); padding:7px 14px; cursor:pointer;
+  }
+  #fileInput{ display:none; }
+
+  /* ---- Grimoire ---- */
+  .grimoire-section{ margin-top:26px; }
+  .grimoire-toggle{
+    width:100%; display:flex; align-items:center; gap:12px; text-align:left;
+    padding:14px 16px; background:linear-gradient(180deg, #2A2118, #1B150F);
+    border:2px solid var(--gold); border-radius:8px; cursor:pointer;
+    box-shadow:0 4px 10px rgba(0,0,0,0.35);
+  }
+  .grimoire-toggle:hover{ background:linear-gradient(180deg, #332818, #221A10); }
+  .grimoire-toggle-inactif, .grimoire-toggle-inactif:hover{
+    cursor:not-allowed; filter:grayscale(0.9) brightness(0.72);
+    background:linear-gradient(180deg, #2A2118, #1B150F); box-shadow:none;
+  }
+  .grimoire-icon{ font-size:26px; flex:0 0 auto; }
+  .grimoire-toggle-text{ flex:1; display:flex; flex-direction:column; gap:2px; }
+  .grimoire-title{ font-family:'Cinzel', serif; font-size:14px; color:var(--gold-light); letter-spacing:0.3px; }
+  .grimoire-subtitle{ font-family:'Crimson Text', serif; font-style:italic; font-size:12px; color:#C9BB98; }
+  .grimoire-chevron{ color:var(--gold-light); font-size:16px; transition:transform 0.25s ease; flex:0 0 auto; }
+
+  .grimoire-chevron{ color:var(--gold-light); font-size:20px; flex:0 0 auto; }
+
+  .grimoire-toggle-bonus{
+    border-color: #6B8FD9;
+    background: linear-gradient(180deg, #1a1f33, #10131f);
+    box-shadow: 0 4px 14px rgba(107,143,217,0.25);
+  }
+  .grimoire-toggle-bonus:hover{ background: linear-gradient(180deg, #222a45, #151a2b); }
+  .grimoire-toggle-bonus .grimoire-title{ color:#A9C0F5; }
+
+  .grimoire-modal{
+    position:fixed; inset:0; background:#0E0B07; z-index:9999;
+    display:none; flex-direction:column;
+  }
+  .grimoire-modal.open{ display:flex; }
+  .grimoire-modal-bar{
+    display:flex; justify-content:flex-end; padding:4px 12px;
+    background:#1B150F; border-bottom:2px solid var(--gold); flex:0 0 auto;
+  }
+  .grimoire-modal-close{
+    font-family:'Cinzel', serif; font-size:12px; color:var(--gold-light);
+    background:none; border:1px solid var(--gold); border-radius:6px;
+    padding:4px 12px; cursor:pointer;
+  }
+  .grimoire-modal-close:hover{ background:rgba(217,166,46,0.15); }
+  .grimoire-modal-frame{ flex:1; width:100%; border:none; display:block; }
+</style>
+</head>
+<body>
+
+<div id="passerelleOverlay">
+  <div class="contenu">
+
+    <div id="passerelleEcranInvalide">
+      <h2>⚠ Lien invalide</h2>
+      <p>Ce grimoire n'a pas reconnu ton identité. Demande à ton enseignant de te fournir ton lien personnel, puis ouvre-le à nouveau.</p>
+    </div>
+
+    <div id="passerelleEcranChoix">
+      <h1>Choisis ton Grimoire</h1>
+      <p class="consigne">Ce choix est définitif pour ton aventure.</p>
+      <div class="passerelle-choix-conteneur">
+        <button class="passerelleCarte" data-genre="garcon" aria-label="Choisir le grimoire du protecteur">
+          <div class="cadre"><img src="couverture_assets/couverture_garcon.webp" alt="Couverture du grimoire, version garçon"></div>
+          <span class="etiquette">Le Protecteur</span>
+        </button>
+        <button class="passerelleCarte" data-genre="fille" aria-label="Choisir le grimoire de la protectrice">
+          <div class="cadre"><img src="couverture_assets/couverture_fille.webp" alt="Couverture du grimoire, version fille"></div>
+          <span class="etiquette">La Protectrice</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="passerelleEcranCouverture">
+      <div class="cadre">
+        <img id="passerelleImage" src="" alt="Couverture de ton grimoire">
+        <div id="passerelleVoile"></div>
+        <div id="passerelleFlash"></div>
+      </div>
+      <div id="passerelleStatut">Le sceau reconnaît ta présence...</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="frame">
+  <div class="livre-conteneur">
+    <div class="livre-bandeau-haut"></div>
+    <div class="livre-pages">
+
+      <div class="page-gauche">
+        <p class="eyebrow-page">Le grimoire est ouvert</p>
+        <h2>Choisis ton chemin</h2>
+        <div class="grimoire-section" style="margin-top:0;">
+          <button class="grimoire-toggle" id="grimoireToggle">
+            <span class="grimoire-icon">📖</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Le Grimoire des Mathématiques</span>
+              <span class="grimoire-subtitle">Complète des quêtes pour gagner de l'or</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle" id="parcheminsToggle" style="margin-top:8px;">
+            <span class="grimoire-icon">🪶</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Les Parchemins de Lecture</span>
+              <span class="grimoire-subtitle">Gravis les rangs de mage</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle" id="histoireToggle" style="margin-top:8px;">
+            <span class="grimoire-icon">🏛️</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Le Livre d'Histoire</span>
+              <span class="grimoire-subtitle">Voyage à travers le temps</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle grimoire-toggle-inactif" id="exercicesSuppToggle" style="margin-top:8px;" disabled aria-disabled="true" title="Bientôt disponible">
+            <span class="grimoire-icon">✦</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Exercices supplémentaires</span>
+              <span class="grimoire-subtitle">Pratique ciblée assignée par ton enseignant</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle grimoire-toggle-bonus" id="cassiopeeToggle" style="margin-top:8px;">
+            <span class="grimoire-icon">🌀</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Cassiopée</span>
+              <span class="grimoire-subtitle">Chapitre bonus — un portail t'attend</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="page-droite">
+        <header>
+          <h1 id="rangTitre">Apprenti</h1>
+          <div class="gold-counter">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#D9A62E" stroke="#7B2D26" stroke-width="1.5"/></svg>
+            <span class="gold-amount" id="goldAmount">0</span>
+          </div>
+        </header>
+
+        <div class="doll-wrap" id="dollWrap">
+        <div class="doll" id="doll">
+          <div class="slot slot-helm" data-slot="helmet"><span class="slot-label">Casque</span></div>
+          <div class="slot slot-weapon" data-slot="weapon"><span class="slot-label">Arme</span></div>
+          <div class="slot slot-gloves" data-slot="gloves"><span class="slot-label">Gants</span></div>
+          <div class="portrait-wrap">
+            <div class="portrait" id="portrait">
+              <div class="portrait-placeholder" id="portraitPlaceholder">Touchez pour ajouter votre portrait</div>
+            </div>
+            <div class="stats-row">
+              <div class="hp-badge" id="hpBadge">40/40</div>
+              <div class="dmg-badge" id="dmgBadge">DMG: 0</div>
+            </div>
+            <button class="portrait-edit" id="portraitEditBtn">Changer l'image</button>
+            <input type="file" id="fileInput" accept="image/*">
+          </div>
+          <div class="slot slot-armor" data-slot="armor"><span class="slot-label">Armure</span></div>
+          <div class="slot slot-shield" data-slot="shield"><span class="slot-label">Bouclier</span></div>
+          <div class="slot slot-boots" data-slot="boots"><span class="slot-label">Bottes</span></div>
+        </div>
+          <div class="freeze-overlay" id="freezeOverlay"><div class="dots"><span>●</span><span>●</span><span>●</span></div></div>
+        </div>
+
+        <div class="store">
+          <h2>Le Marché</h2>
+          <div class="tabs" id="tabs"></div>
+          <div id="storeList"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="livre-bandeau-bas"></div>
+  </div>
+</div>
+
+<div class="grimoire-modal" id="grimoireModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="grimoireCloseBtn">✕ Retour à la fiche de personnage</button>
+  </div>
+  <iframe id="grimoireFrame" class="grimoire-modal-frame" title="Le Grimoire des Mathématiques"></iframe>
+</div>
+
+<div class="grimoire-modal" id="parcheminsModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="parcheminsCloseBtn">✕ Retour à la fiche de personnage</button>
+  </div>
+  <iframe id="parcheminsFrame" class="grimoire-modal-frame" title="Les Parchemins de Lecture"></iframe>
+</div>
+
+<div class="grimoire-modal" id="histoireModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="histoireCloseBtn">✕ Retour à la fiche de personnage</button>
+  </div>
+  <iframe id="histoireFrame" class="grimoire-modal-frame" title="Le Livre d'Histoire"></iframe>
+</div>
+
+<div class="grimoire-modal" id="cassiopeeModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="cassiopeeCloseBtn">✕ Retour à la fiche de personnage</button>
+  </div>
+  <iframe id="cassiopeeFrame" class="grimoire-modal-frame" title="Cassiopée"></iframe>
+</div>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="steelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EAEDF2"/><stop offset="100%" stop-color="#6E7889"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F3D98A"/><stop offset="100%" stop-color="#8C6A18"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const CELL_BG = "#FBF6E9";
+function el(tag, attrs){ const e = document.createElementNS(NS, tag); for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+/* ---------- ARMURE (VEST) ---------- */
+const VEST = "M60 10 C50 10 41 15 36 24 L27 38 L33 130 L87 130 L93 38 L84 24 C79 15 70 10 60 10 Z";
+function buildArmorBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  clip.appendChild(el("path", {d:VEST})); defs.appendChild(clip); svg.appendChild(defs);
+  svg.appendChild(el("path", {d:VEST, fill}));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  svg.appendChild(el("path", {d:VEST, fill:"none", stroke:"#2B2118", "stroke-width":2.5}));
+  return g;
+}
+function aDecorateLeather(g){
+  for(let y=38; y<=118; y+=14) for(let x=36; x<=84; x+=12) g.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#C9CDD6"}));
+  [52,78,104].forEach(y=>{
+    g.appendChild(el("rect", {x:26, y, width:68, height:7, fill:"#5A4022"}));
+    g.appendChild(el("rect", {x:44, y:y+1, width:9, height:5, fill:"#B8860B", stroke:"#3A2A10", "stroke-width":0.6}));
+  });
+}
+function aDecorateSteel(g){
+  [45,60,75,90,105,120].forEach(y=>{
+    g.appendChild(el("line", {x1:25, y1:y, x2:95, y2:y, stroke:"#5A6577", "stroke-width":1.4}));
+    [42,60,78].forEach(x=>g.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#3E4652"})));
+  });
+  g.appendChild(el("line", {x1:60, y1:16, x2:60, y2:128, stroke:"#5A6577", "stroke-width":1.2}));
+}
+function aDecorateRoyal(g){
+  g.appendChild(el("circle", {cx:60, cy:52, r:9, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.4}));
+  g.appendChild(el("circle", {cx:57, cy:49, r:2.4, fill:"#9CC3EE"}));
+  g.appendChild(el("path", {d:"M46 66 Q60 60 74 66", fill:"none", stroke:"#8C6A18", "stroke-width":1.4}));
+  g.appendChild(el("path", {d:"M32 34 Q45 26 60 30", fill:"none", stroke:"#8C6A18", "stroke-width":1.6, opacity:0.7}));
+  g.appendChild(el("path", {d:"M88 34 Q75 26 60 30", fill:"none", stroke:"#8C6A18", "stroke-width":1.6, opacity:0.7}));
+}
+
+/* ---------- CASQUE (HELM) ---------- */
+const HELM = "M60 16 C34 16 20 34 20 54 C20 68 26 76 34 82 L86 82 C94 76 100 68 100 54 C100 34 86 16 60 16 Z";
+function buildHelmBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  clip.appendChild(el("path", {d:HELM})); defs.appendChild(clip); svg.appendChild(defs);
+  svg.appendChild(el("path", {d:HELM, fill}));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  svg.appendChild(el("path", {d:HELM, fill:"none", stroke:"#2B2118", "stroke-width":2.5}));
+  return g;
+}
+function hDecorateLeather(g){
+  [30,42].forEach(y=>{
+    g.appendChild(el("circle", {cx:60, cy:y, r:2, fill:"#C9CDD6"}));
+    g.appendChild(el("circle", {cx:44, cy:y+4, r:2, fill:"#C9CDD6"}));
+    g.appendChild(el("circle", {cx:76, cy:y+4, r:2, fill:"#C9CDD6"}));
+  });
+  g.appendChild(el("rect", {x:20, y:66, width:80, height:9, fill:"#5A4022"}));
+}
+function hDecorateSteel(g){
+  g.appendChild(el("rect", {x:18, y:60, width:84, height:10, fill:"#5A6577"}));
+  g.appendChild(el("line", {x1:60, y1:18, x2:60, y2:82, stroke:"#5A6577", "stroke-width":1.6}));
+  g.appendChild(el("path", {d:"M56 16 L60 6 L64 16 Z", fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1}));
+  [40,80].forEach(x=>g.appendChild(el("circle", {cx:x, cy:65, r:1.5, fill:"#3E4652"})));
+}
+function hDecorateRoyal(g){
+  [38,50,60,70,82].forEach((x,i)=>{
+    const h = i===2 ? 14 : 9;
+    g.appendChild(el("path", {d:`M${x-4} 22 L${x} ${22-h} L${x+4} 22 Z`, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+  });
+  g.appendChild(el("circle", {cx:60, cy:26, r:4, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1}));
+  g.appendChild(el("rect", {x:26, y:66, width:68, height:9, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+}
+
+/* ---------- GANTS ---------- */
+const GLOVE_PARTS = [
+  {tag:"rect", attrs:{x:28, y:10, width:10, height:50, rx:5}},
+  {tag:"rect", attrs:{x:45, y:6,  width:10, height:54, rx:5}},
+  {tag:"rect", attrs:{x:62, y:6,  width:10, height:54, rx:5}},
+  {tag:"rect", attrs:{x:79, y:12, width:10, height:48, rx:5}},
+  {tag:"rect", attrs:{x:2,  y:55, width:14, height:32, rx:6, transform:"rotate(-35 9 55)"}},
+  {tag:"rect", attrs:{x:22, y:52, width:76, height:46, rx:14}},
+  {tag:"rect", attrs:{x:18, y:90, width:84, height:32, rx:10}},
+];
+function buildGloveBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  GLOVE_PARTS.forEach(p=>clip.appendChild(el(p.tag, p.attrs))); defs.appendChild(clip); svg.appendChild(defs);
+  GLOVE_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill}))));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  GLOVE_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill:"none", stroke:"#2B2118", "stroke-width":2}))));
+  return g;
+}
+function gDecorateLeather(g){
+  [[33,20],[50,18],[67,18],[84,24],[60,70],[40,70],[80,70]].forEach(p=>g.appendChild(el("circle", {cx:p[0], cy:p[1], r:2, fill:"#C9CDD6"})));
+  g.appendChild(el("rect", {x:16, y:96, width:88, height:8, fill:"#5A4022"}));
+}
+function gDecorateSteel(g){
+  [26,42].forEach(y=>{[28,45,62,79].forEach(x=>g.appendChild(el("line", {x1:x, y1:y, x2:x+10, y2:y, stroke:"#5A6577", "stroke-width":1.2})));});
+  g.appendChild(el("line", {x1:24, y1:64, x2:96, y2:64, stroke:"#5A6577", "stroke-width":1.4}));
+}
+function gDecorateRoyal(g){
+  [33,50,67,84].forEach(x=>g.appendChild(el("path", {d:`M${x} 28 L${x+5} 20 L${x+10} 28 L${x+5} 34 Z`, fill:"#8C6A18"})));
+  g.appendChild(el("circle", {cx:60, cy:105, r:6, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.2}));
+}
+
+/* ---------- BOTTES ---------- */
+const BOOT_PARTS = [
+  {tag:"rect", attrs:{x:34, y:6, width:52, height:78, rx:8}},
+  {tag:"path", attrs:{d:"M18 78 Q60 68 102 78 L99 106 Q90 122 60 122 Q30 122 21 106 Z"}},
+];
+function buildBootBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  BOOT_PARTS.forEach(p=>clip.appendChild(el(p.tag, p.attrs))); defs.appendChild(clip); svg.appendChild(defs);
+  BOOT_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill}))));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  BOOT_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill:"none", stroke:"#2B2118", "stroke-width":2}))));
+  return g;
+}
+function bDecorateLeather(g){
+  for(let y=12; y<=80; y+=10) for(let x=38; x<=82; x+=12) g.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#C9CDD6"}));
+  [26,46,66].forEach(y=>g.appendChild(el("rect", {x:30, y, width:60, height:7, fill:"#5A4022"})));
+}
+function bDecorateSteel(g){
+  [30,50,70].forEach(y=>g.appendChild(el("rect", {x:32, y, width:56, height:7, fill:"#5A6577"})));
+  g.appendChild(el("path", {d:"M20 100 Q60 92 100 100", fill:"none", stroke:"#8C97A6", "stroke-width":2.4}));
+}
+function bDecorateRoyal(g){
+  [40,80].forEach(x=>g.appendChild(el("path", {d:`M${x-4} 20 L${x} 12 L${x+4} 20 Z`, fill:"#D9A62E"})));
+  g.appendChild(el("path", {d:"M24 100 Q60 90 96 100", fill:"none", stroke:"#8C6A18", "stroke-width":1.6}));
+  [36,84].forEach(x=>g.appendChild(el("circle", {cx:x, cy:96, r:2.4, fill:"#2255AA"})));
+}
+
+/* ---------- BOUCLIERS ---------- */
+const KITE = "M60 8 C40 8 28 20 22 34 L22 88 Q22 128 60 150 Q98 128 98 88 L98 34 C92 20 80 8 60 8 Z";
+function buildShieldBase(svg, clipId, fill, isRound){
+  const shape = isRound ? el("circle", {cx:60, cy:80, r:52}) : el("path", {d:KITE});
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  clip.appendChild(shape.cloneNode()); defs.appendChild(clip); svg.appendChild(defs);
+  const fillShape = shape.cloneNode(); fillShape.setAttribute("fill", fill); svg.appendChild(fillShape);
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  const outlineShape = shape.cloneNode();
+  outlineShape.setAttribute("fill", "none"); outlineShape.setAttribute("stroke", "#2B2118"); outlineShape.setAttribute("stroke-width", 2.5);
+  svg.appendChild(outlineShape);
+  return g;
+}
+function sDecorateWood(g){
+  for(let i=0;i<16;i++){
+    const a = (Math.PI*2*i)/16;
+    g.appendChild(el("line", {x1:60, y1:80, x2:60+55*Math.cos(a), y2:80+55*Math.sin(a), stroke:"#5A4022", "stroke-width":1.4, opacity:0.6}));
+  }
+  g.appendChild(el("circle", {cx:60, cy:80, r:14, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.6}));
+}
+function sDecorateSteelLion(g){
+  g.appendChild(el("path", {d:"M60 60 Q70 56 68 66 Q76 72 70 80 Q74 90 66 96 L58 88 Q50 94 46 86 Q52 80 50 70 Q56 62 60 60 Z", fill:"#2255AA"}));
+}
+function sDecorateRoyal(g){
+  g.appendChild(el("path", {d:"M46 12 L50 0 L54 8 L60 -2 L66 8 L70 0 L74 12 Z", fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1.2}));
+  g.appendChild(el("rect", {x:48, y:76, width:24, height:20, rx:4, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.6}));
+  g.appendChild(el("circle", {cx:60, cy:86, r:8, fill:"#4488DD", stroke:"#0E2C55", "stroke-width":1.2}));
+}
+
+/* ---------- ARMES ---------- */
+function wGrip(x, y, w, h, color){
+  const parts = [el("rect", {x, y, width:w, height:h, rx:3, fill:color, stroke:"#2B2118", "stroke-width":1.5})];
+  for(let i=0; i<5; i++){
+    const yy = y + 3 + i*(h-6)/4;
+    parts.push(el("line", {x1:x, y1:yy, x2:x+w, y2:yy+ (h-6)/8, stroke:"#2B2118", "stroke-width":0.8, opacity:0.5}));
+  }
+  return parts;
+}
+function buildDagger(svg){
+  svg.appendChild(el("path", {d:"M60 8 L72 100 L60 112 L48 100 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M40 112 L80 112 L74 122 L46 122 Z", fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.4}));
+  wGrip(52, 122, 16, 34, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:60, cy:164, r:9, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.4}));
+}
+function buildLongsword(svg){
+  svg.appendChild(el("path", {d:"M60 4 L70 130 L60 138 L50 130 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("line", {x1:30, y1:140, x2:90, y2:140, stroke:"#8C97A6", "stroke-width":6}));
+  wGrip(52, 140, 16, 38, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:60, cy:186, r:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+}
+function buildSaber(svg){
+  svg.appendChild(el("path", {d:"M74 10 C80 50 76 90 60 118 L50 112 C64 84 68 48 58 14 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M40 118 Q30 128 40 140 Q48 132 56 126 L50 112 Z", fill:"url(#goldGrad)", stroke:"#5C4210", "stroke-width":1.6}));
+  wGrip(44, 132, 16, 30, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:52, cy:170, r:8, fill:"url(#goldGrad)", stroke:"#5C4210", "stroke-width":1.4}));
+}
+
+/* ---------- Catalogue (échantillon représentatif — pas les 65 objets) ---------- */
+const CATALOG = {
+  helmet: {
+    label:"Casque",
+    items:[
+      {id:"h_leather", name:"Casque de cuir", price:20, stat:"+8 PV", hp:8, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-leather","#8C6A3F"); hDecorateLeather(g);}},
+      {id:"h_steel", name:"Heaume d'acier", price:45, stat:"+18 PV", hp:18, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-steel","url(#steelGrad)"); hDecorateSteel(g);}},
+      {id:"h_royal", name:"Heaume royal", price:120, stat:"+40 PV", hp:40, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-royal","url(#goldGrad)"); hDecorateRoyal(g);}},
+    ]
+  },
+  armor: {
+    label:"Armure",
+    items:[
+      {id:"a_leather", name:"Plastron de cuir", price:25, stat:"+15 PV", hp:15, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-leather","#8C6A3F"); aDecorateLeather(g);}},
+      {id:"a_steel", name:"Armure d'acier", price:60, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-steel","url(#steelGrad)"); aDecorateSteel(g);}},
+      {id:"a_royal", name:"Armure royale", price:150, stat:"+100 PV", hp:100, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-royal","url(#goldGrad)"); aDecorateRoyal(g);}},
+    ]
+  },
+  gloves: {
+    label:"Gants",
+    items:[
+      {id:"g_leather", name:"Gants de cuir", price:15, stat:"+2 dégâts", dmgBonus:2, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-leather","#8C6A3F"); gDecorateLeather(g);}},
+      {id:"g_steel", name:"Gants d'acier", price:35, stat:"+4 dégâts", dmgBonus:4, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-steel","url(#steelGrad)"); gDecorateSteel(g);}},
+      {id:"g_royal", name:"Gants royaux", price:90, stat:"+8 dégâts", dmgBonus:8, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-royal","url(#goldGrad)"); gDecorateRoyal(g);}},
+    ]
+  },
+  boots: {
+    label:"Bottes",
+    items:[
+      {id:"b_leather", name:"Bottes de cuir", price:15, stat:"+15 PV · 5 combats", hp:15, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-leather","#8C6A3F"); bDecorateLeather(g);}},
+      {id:"b_steel", name:"Bottes d'acier", price:40, stat:"+25 PV · 8 combats", hp:25, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-steel","url(#steelGrad)"); bDecorateSteel(g);}},
+      {id:"b_royal", name:"Bottes royales", price:100, stat:"+60 PV · 12 combats", hp:60, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-royal","url(#goldGrad)"); bDecorateRoyal(g);}},
+    ]
+  },
+  weapon: {
+    label:"Arme",
+    items:[
+      {id:"w_dague", name:"Dague", price:18, stat:"8 dégâts", dmg:8, draw:buildDagger},
+      {id:"w_epee", name:"Épée longue", price:50, stat:"20 dégâts", dmg:20, draw:buildLongsword},
+      {id:"w_sabre", name:"Sabre", price:52, stat:"22 dégâts", dmg:22, draw:buildSaber},
+    ]
+  },
+  shield: {
+    label:"Bouclier",
+    items:[
+      {id:"s_rond", name:"Bouclier rond", price:25, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-rond","#A88B5C",true); sDecorateWood(g);}},
+      {id:"s_acier", name:"Écu d'acier", price:46, stat:"+45 PV", hp:45, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-acier","url(#steelGrad)",false); sDecorateSteelLion(g);}},
+      {id:"s_royal", name:"Bouclier royal", price:115, stat:"+120 PV", hp:120, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-royal","url(#goldGrad)",false); sDecorateRoyal(g);}},
+    ]
+  },
+};
+const SLOTS = ["helmet","armor","gloves","boots","weapon","shield"];
+const BASE_HP = 40;
+function computeStats(){
+  let hp = BASE_HP, dmg = 0;
+  SLOTS.forEach(slot=>{
+    const id = state.equipped[slot];
+    if(!id) return;
+    const found = findItem(id);
+    if(!found) return;
+    const it = found.it;
+    if(typeof it.hp === 'number') hp += it.hp;
+    if(typeof it.dmgBonus === 'number') dmg += it.dmgBonus;
+    if(typeof it.dmg === 'number') dmg += it.dmg;
+  });
+  return {hp, dmg};
+}
+
+/* ---------- État ---------- */
+// state.gold / state.inventory / state.equipped / state.portraitImage ne sont
+// plus qu'un MIROIR en mémoire du "coffre" partagé (voir passerelle-core.js),
+// qui est lui l'unique source de vérité pour l'or et l'équipement — la même
+// que celle utilisée par le Grimoire. Rien n'est chargé tant que la
+// passerelle n'a pas confirmé l'identité de l'élève (voir onPasserelleReady).
+let state = null;
+let identiteEleve = null; // { slug, nom } — fourni par la passerelle
+let busy = false; // verrou global anti-clic-frénétique
+const RESALE_RATE = 1.0; // remboursement à 100% — les prix en cascade tiennent déjà compte de la revente
+
+async function saveState(){
+  if(!identiteEleve || !state) return;
+  try{
+    const coffre = window.Passerelle.coffre || window.PasserelleCore.coffreParDefaut(identiteEleve.nom);
+    coffre.nom = identiteEleve.nom;
+    coffre.or = state.gold;
+    coffre.equipement = {
+      inventory: state.inventory,
+      equipped: state.equipped,
+      portraitImage: state.portraitImage
+    };
+    window.Passerelle.coffre = coffre;
+    await window.PasserelleCore.sauvegarderCoffre(identiteEleve.slug, coffre);
+  }catch(e){ console.error('Sauvegarde impossible', e); }
+}
+
+// Relit le coffre depuis le stockage partagé (source de vérité) et met à
+// jour l'affichage local — utilisé quand on revient du Grimoire, où l'or a
+// pu changer indépendamment de cette page (fiche de personnage).
+async function resynchroniserApresModule(){
+  if(!identiteEleve || !state) return;
+  const resultat = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
+  window.Passerelle.coffre = resultat.donnees;
+  state.gold = resultat.donnees.or;
+  state.inventory = resultat.donnees.equipement.inventory;
+  state.equipped = resultat.donnees.equipement.equipped;
+  state.portraitImage = resultat.donnees.equipement.portraitImage;
+  const rangTitreEl = document.getElementById('rangTitre');
+  if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[resultat.donnees.niveauLecture || 0] || NIVEAUX_LECTURE[0];
+  render();
+}
+
+// Appelé une seule fois par la passerelle, une fois l'identité confirmée et
+// le coffre chargé (avec restauration automatique si nécessaire).
+const NIVEAUX_LECTURE = ["Apprenti", "Novice", "Invocateur", "Magicien", "Sorcier", "Archimage"];
+
+window.onPasserelleReady = function(identite, coffre){
+  identiteEleve = identite;
+  state = {
+    gold: coffre.or, // 0 pour un nouvel élève — tout l'or se gagne, aucun cadeau de départ
+    inventory: coffre.equipement.inventory,
+    equipped: coffre.equipement.equipped,
+    portraitImage: coffre.equipement.portraitImage
+  };
+  const rangTitreEl = document.getElementById('rangTitre');
+  if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[coffre.niveauLecture || 0] || NIVEAUX_LECTURE[0];
+  render();
+};
+function bumpGold(){
+  const elGold = document.getElementById('goldAmount');
+  elGold.classList.remove('bump'); void elGold.offsetWidth; elGold.classList.add('bump');
+}
+function findItem(id){
+  for(const slot of SLOTS){ const it = CATALOG[slot].items.find(i=>i.id===id); if(it) return {slot, it}; }
+  return null;
+}
+function withLock(action){
+  if(busy) return;
+  busy = true;
+  action();
+  render();
+  const minDelay = new Promise(r=>setTimeout(r, 300)); // verrou garanti d'au moins 300ms, peu importe la vitesse du réseau
+  Promise.all([saveState(), minDelay]).finally(()=>{ busy = false; render(); });
+}
+function buy(id){
+  const found = findItem(id); if(!found) return;
+  const {slot, it} = found;
+  if(busy || state.gold < it.price || state.inventory.includes(id)) return;
+  withLock(()=>{
+    state.gold -= it.price; state.inventory.push(id); state.equipped[slot] = id;
+    bumpGold();
+  });
+}
+function equip(id){
+  const found = findItem(id); if(!found || busy) return;
+  withLock(()=>{ state.equipped[found.slot] = id; });
+}
+function sell(id){
+  const found = findItem(id); if(!found || busy) return;
+  const {slot, it} = found;
+  if(!state.inventory.includes(id)) return;
+  withLock(()=>{
+    const refund = Math.floor(it.price * RESALE_RATE);
+    state.gold += refund;
+    state.inventory = state.inventory.filter(x=>x!==id);
+    if(state.equipped[slot] === id) delete state.equipped[slot];
+    bumpGold();
+  });
+}
+
+let activeTab = "helmet";
+function renderTabs(){
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  SLOTS.forEach(slot=>{
+    const btn = document.createElement('div');
+    btn.className = 'tab' + (slot===activeTab ? ' active' : '');
+    btn.textContent = CATALOG[slot].label;
+    btn.onclick = ()=>{ activeTab = slot; render(); };
+    tabs.appendChild(btn);
+  });
+}
+function renderStoreList(){
+  const list = document.getElementById('storeList');
+  list.innerHTML = '';
+  CATALOG[activeTab].items.forEach(it=>{
+    const owned = state.inventory.includes(it.id);
+    const isEquipped = state.equipped[activeTab] === it.id;
+    const row = document.createElement('div'); row.className = 'item-row';
+    const iconWrap = document.createElement('div');
+    const svg = el("svg", {viewBox: activeTab==="weapon" ? "0 0 120 200" : (activeTab==="shield" ? "0 0 120 155" : "0 0 120 130")});
+    it.draw(svg); iconWrap.appendChild(svg);
+    const info = document.createElement('div'); info.className = 'item-info';
+    info.innerHTML = `<span class="item-name">${it.name}</span><span class="item-stat">${it.stat}</span>`;
+    const price = document.createElement('div'); price.className = 'item-price';
+    price.textContent = owned ? 'Possédé' : it.price + ' or';
+    const action = document.createElement('div'); action.className = 'action-group';
+    if(!owned){
+      const btn = document.createElement('button');
+      btn.textContent = 'Acheter';
+      btn.disabled = busy || state.gold < it.price;
+      btn.onclick = ()=>buy(it.id);
+      action.appendChild(btn);
+    } else {
+      const btn = document.createElement('button');
+      if(isEquipped){ btn.textContent = 'Équipé'; btn.classList.add('equipped'); btn.disabled = true; }
+      else { btn.textContent = 'Équiper'; btn.disabled = busy; btn.onclick = ()=>equip(it.id); }
+      action.appendChild(btn);
+      const sellBtn = document.createElement('button');
+      sellBtn.textContent = 'Vendre (' + Math.floor(it.price*RESALE_RATE) + ' or)';
+      sellBtn.className = 'sell-btn';
+      sellBtn.disabled = busy;
+      sellBtn.onclick = ()=>sell(it.id);
+      action.appendChild(sellBtn);
+    }
+    row.appendChild(iconWrap); row.appendChild(info); row.appendChild(price); row.appendChild(action);
+    list.appendChild(row);
+  });
+}
+let wasBusy = false;
+function renderDoll(){
+  document.getElementById('goldAmount').textContent = state.gold;
+  SLOTS.forEach(slot=>{
+    const slotEl = document.querySelector(`.slot[data-slot="${slot}"]`);
+    const existingSvg = slotEl.querySelector('svg'); if(existingSvg) existingSvg.remove();
+    const equippedId = state.equipped[slot];
+    if(equippedId){
+      slotEl.classList.remove('empty');
+      const found = findItem(equippedId);
+      const svg = el("svg", {viewBox: slot==="weapon" ? "0 0 120 200" : (slot==="shield" ? "0 0 120 155" : "0 0 120 130")});
+      found.it.draw(svg);
+      slotEl.insertBefore(svg, slotEl.firstChild);
+    } else {
+      slotEl.classList.add('empty');
+    }
+  });
+  // portrait
+  const portrait = document.getElementById('portrait');
+  const placeholder = document.getElementById('portraitPlaceholder');
+  if(state.portraitImage){
+    portrait.style.backgroundImage = `url(${state.portraitImage})`;
+    placeholder.style.display = 'none';
+  } else {
+    portrait.style.backgroundImage = 'none';
+    placeholder.style.display = 'block';
+  }
+  // stats HP / DMG
+  const stats = computeStats();
+  const hpBadge = document.getElementById('hpBadge');
+  const dmgBadge = document.getElementById('dmgBadge');
+  hpBadge.textContent = stats.hp + '/' + stats.hp;
+  dmgBadge.textContent = 'DMG: ' + stats.dmg;
+  hpBadge.classList.toggle('frozen', busy);
+  dmgBadge.classList.toggle('frozen', busy);
+  // gel de l'écran pendant le verrou global
+  document.getElementById('freezeOverlay').classList.toggle('active', busy);
+  if(wasBusy && !busy){
+    [hpBadge, dmgBadge].forEach(b=>{ b.classList.remove('reveal'); void b.offsetWidth; b.classList.add('reveal'); });
+  }
+  wasBusy = busy;
+}
+function render(){ renderDoll(); renderTabs(); renderStoreList(); }
+
+document.querySelectorAll('.slot').forEach(slotEl=>{
+  slotEl.addEventListener('click', ()=>{
+    activeTab = slotEl.dataset.slot; render();
+    document.querySelector('.store').scrollIntoView({behavior:'smooth'});
+  });
+});
+function openFilePicker(){ document.getElementById('fileInput').click(); }
+document.getElementById('portrait').addEventListener('click', openFilePicker);
+document.getElementById('portraitEditBtn').addEventListener('click', openFilePicker);
+document.getElementById('fileInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{ state.portraitImage = reader.result; saveState(); render(); };
+  reader.readAsDataURL(file);
+});
+
+// Construit l'URL d'un module (Grimoire, Bestiaire, Parchemins) en y
+// reportant l'identité de l'élève, pour qu'il n'ait jamais à se réidentifier.
+function urlAvecIdentite(fichier){
+  if(!identiteEleve) return fichier;
+  const params = new URLSearchParams();
+  params.set('eleve', identiteEleve.slug);
+  params.set('nom', identiteEleve.nom);
+  return fichier + '?' + params.toString();
+}
+
+// Le grimoire ne se charge qu'au premier clic — jamais chargé d'avance.
+// Il s'ouvre en plein écran, par-dessus la fiche de personnage, qui reste intacte en dessous.
+// Les "Exercices supplémentaires" vivent dans le même fichier (grimoire-des-mathematiques.html) —
+// on y ajoute juste un indicateur d'URL pour qu'il démarre directement sur cette vue.
+let grimoireLoaded = false;
+let dernierModeGrimoire = null; // 'normal' | 'supp' — pour savoir s'il faut recharger en changeant de bouton
+function ouvrirGrimoire(mode){
+  if(!grimoireLoaded || dernierModeGrimoire !== mode){
+    let url = urlAvecIdentite('grimoire-des-mathematiques.html');
+    if(mode === 'supp') url += '&vue=supp';
+    document.getElementById('grimoireFrame').src = url;
+    grimoireLoaded = true;
+    dernierModeGrimoire = mode;
+  }
+  document.getElementById('grimoireModal').classList.add('open');
+}
+document.getElementById('grimoireToggle').addEventListener('click', () => ouvrirGrimoire('normal'));
+// Exercices supplémentaires : bouton désactivé tant que les feuilles n'existent pas (attribut « disabled » dans le HTML).
+// Pour le réactiver plus tard : retirer « disabled » du bouton et la classe « grimoire-toggle-inactif ».
+document.getElementById('exercicesSuppToggle').addEventListener('click', () => ouvrirGrimoire('supp'));
+document.getElementById('grimoireCloseBtn').addEventListener('click', () => {
+  document.getElementById('grimoireModal').classList.remove('open');
+  resynchroniserApresModule(); // l'or gagné dans le Grimoire doit apparaître ici sans recharger la page
+});
+
+// Même mécanisme pour les Parchemins de Lecture (manuel de français).
+let parcheminsLoaded = false;
+document.getElementById('parcheminsToggle').addEventListener('click', () => {
+  if(!parcheminsLoaded){
+    document.getElementById('parcheminsFrame').src = urlAvecIdentite('parchemins-lecture.html');
+    parcheminsLoaded = true;
+  }
+  document.getElementById('parcheminsModal').classList.add('open');
+});
+document.getElementById('parcheminsCloseBtn').addEventListener('click', () => {
+  document.getElementById('parcheminsModal').classList.remove('open');
+});
+
+// Le Livre d'Histoire (chargé seulement au premier clic, comme les autres livres).
+let histoireLoaded = false;
+document.getElementById('histoireToggle').addEventListener('click', () => {
+  if(!histoireLoaded){
+    document.getElementById('histoireFrame').src = urlAvecIdentite('livre-histoire.html');
+    histoireLoaded = true;
+  }
+  document.getElementById('histoireModal').classList.add('open');
+});
+document.getElementById('histoireCloseBtn').addEventListener('click', () => {
+  document.getElementById('histoireModal').classList.remove('open');
+});
+
+// Chapitre bonus : le portail de Cassiopée (la bande dessinée viendra plus tard).
+let cassiopeeLoaded = false;
+document.getElementById('cassiopeeToggle').addEventListener('click', () => {
+  if(!cassiopeeLoaded){
+    document.getElementById('cassiopeeFrame').src = urlAvecIdentite('cassiopee.html');
+    cassiopeeLoaded = true;
+  }
+  document.getElementById('cassiopeeModal').classList.add('open');
+});
+document.getElementById('cassiopeeCloseBtn').addEventListener('click', () => {
+  document.getElementById('cassiopeeModal').classList.remove('open');
+});
+
+/* ================= LOGIQUE DE LA PASSERELLE (écran d'entrée) ================= */
+(function(){
+  const overlay = document.getElementById('passerelleOverlay');
+  const ecranInvalide = document.getElementById('passerelleEcranInvalide');
+  const ecranChoix = document.getElementById('passerelleEcranChoix');
+  const ecranCouverture = document.getElementById('passerelleEcranCouverture');
+  const imgCouverture = document.getElementById('passerelleImage');
+  const voile = document.getElementById('passerelleVoile');
+  const flash = document.getElementById('passerelleFlash');
+  const texteStatut = document.getElementById('passerelleStatut');
+
+  const CHEMINS_IMAGES = {
+    garcon: 'couverture_assets/couverture_garcon.webp',
+    fille: 'couverture_assets/couverture_fille.webp'
+  };
+
+  window.Passerelle = { identite: null, coffre: null };
+
+  function masquerOverlay(){
+    overlay.classList.add('masquee');
+  }
+
+  function afficherCouverture(genre){
+    ecranChoix.style.display = 'none';
+    ecranCouverture.style.display = 'flex';
+    imgCouverture.src = CHEMINS_IMAGES[genre];
+  }
+
+  function finaliser(){
+    masquerOverlay();
+    if(typeof window.onPasserelleReady === 'function'){
+      window.onPasserelleReady(window.Passerelle.identite, window.Passerelle.coffre);
+    }
+  }
+
+  async function demarrer(){
+    const identite = window.PasserelleCore.lireIdentiteUrl();
+    if(!identite){
+      ecranInvalide.style.display = 'block';
+      return;
+    }
+    window.Passerelle.identite = identite;
+
+    const resultat = await window.PasserelleCore.chargerCoffre(identite.slug, identite.nom);
+    window.Passerelle.coffre = resultat.donnees;
+
+    if(!resultat.donnees.genre){
+      // Première visite : l'élève choisit son grimoire, une fois pour toutes.
+      ecranChoix.style.display = 'flex';
+      document.querySelectorAll('.passerelleCarte').forEach(carte => {
+        carte.addEventListener('click', async () => {
+          const genre = carte.getAttribute('data-genre');
+          window.Passerelle.coffre.genre = genre;
+          await window.PasserelleCore.sauvegarderCoffre(identite.slug, window.Passerelle.coffre);
+          afficherCouverture(genre);
+          texteStatut.textContent = "Le grimoire s'ouvre...";
+          flash.classList.add('actif');
+          voile.style.display = 'none';
+          setTimeout(finaliser, 900);
+        });
+      }, { once:true });
+      return;
+    }
+
+    // Visite normale : on affiche la couverture personnelle pendant la validation.
+    afficherCouverture(resultat.donnees.genre);
+    texteStatut.textContent = resultat.restaure
+      ? "Un ancien sortilège restaure ton grimoire..."
+      : "Le sceau reconnaît ta présence...";
+    setTimeout(() => {
+      voile.style.display = 'none';
+      flash.classList.add('actif');
+      texteStatut.textContent = "Le grimoire s'ouvre...";
+      setTimeout(finaliser, 700);
+    }, 1100);
+  }
+
+  demarrer();
+})();
+</script>
+</body>
+</html>

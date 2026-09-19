@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parchemins de Lecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="config-classe.js"></script>
+<script src="stockage-classe.js"></script>
+<script src="passerelle-core.js"></script>
+<script src="types-de-reponse.js"></script>
+<script src="evocations-data.js"></script>
+<style>
+  :root{
+    --parchment:#EFE3C4;
+    --ink:#3B2A1A;
+    --ink-soft:#5C4630;
+    --gold:#B8860B;
+    --gold-bright:#E3B23C;
+    --gold-dark:#8A6314;
+    --green:#3F6B3A;
+    --green-bg:#DCE9D3;
+    --red:#8C3B32;
+    --red-bg:#F0DAD5;
+    --amber:#9A6A14;
+    --amber-bg:#F3E6C6;
+    --border:#6B4A28;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    height:100vh; overflow:hidden;
+    font-family:'EB Garamond', serif;
+    color:var(--ink);
+    background:
+      radial-gradient(ellipse at 20% 15%, rgba(255,255,255,0.25), transparent 45%),
+      radial-gradient(ellipse at 85% 80%, rgba(0,0,0,0.08), transparent 50%),
+      var(--parchment);
+    background-attachment:fixed;
+    padding:10px 12px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .wrap{max-width:1500px;margin:0 auto;}
+  .masthead{text-align:center;margin-bottom:26px;}
+  .masthead .flourish{color:var(--gold-dark); font-size:15px; letter-spacing:6px;}
+  h1{
+    font-family:'Cinzel Decorative', serif;
+    font-weight:700;
+    font-size:clamp(24px,5vw,34px);
+    margin:8px 0 4px;
+  }
+  .subtitle{font-style:italic;color:var(--ink-soft);font-size:16px;margin:0;}
+  .rank-badge{
+    display:inline-block;
+    padding:3px 12px;
+    border-radius:999px;
+    border:1.5px solid var(--gold-dark);
+    background:linear-gradient(180deg, rgba(227,178,60,0.25), rgba(138,99,20,0.12));
+    color:var(--gold-dark);
+    font-family:'Cinzel Decorative', serif;
+    font-size:12.5px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    white-space:nowrap;
+  }
+  .rank-badge.locked{
+    border-color:var(--ink-soft);
+    background:rgba(107,74,40,0.08);
+    color:var(--ink-soft);
+  }
+
+  .back-link{
+    display:inline-block;margin-bottom:14px;color:var(--ink-soft);
+    text-decoration:none;font-size:15px;cursor:pointer;
+    border-bottom:1px dotted var(--ink-soft);
+  }
+  .back-link:hover{color:var(--ink);}
+
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.12));
+    border:2px solid var(--border);
+    border-radius:8px;
+    padding:24px 22px;
+    position:relative;
+    margin-bottom:18px;
+  }
+  .card::before,.card::after{content:"✦";position:absolute;color:var(--gold-dark);font-size:14px;top:8px;}
+  .card::before{left:10px;} .card::after{right:10px;}
+
+  .chapter-row{
+    display:flex;align-items:center;gap:14px;
+    padding:16px 18px;
+    background:linear-gradient(180deg, rgba(255,255,255,0.35), rgba(255,255,255,0.08));
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    margin-bottom:12px;
+  }
+  .chapter-row:hover{transform:translateX(3px);}
+  .chapter-row.locked{cursor:default;}
+  .chapter-row.locked .chapter-info, .chapter-row.locked .rank-badge{opacity:.55;filter:grayscale(.4);}
+  .chapter-num{font-family:'Cinzel Decorative', serif;font-size:19px;color:var(--gold-dark);width:30px;text-align:center;flex:none;}
+  .seal-icon{ width:44px; height:44px; object-fit:contain; vertical-align:middle; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.45)); }
+  .chapter-info{flex:1;}
+  .chapter-name{font-weight:600;font-size:18px;}
+  .chapter-sub{font-size:14px;color:var(--ink-soft);font-style:italic;margin-top:2px;}
+
+  .text-row{
+    display:flex;align-items:center;gap:14px;
+    padding:13px 16px;
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    cursor:pointer;
+    margin-bottom:10px;
+    background:rgba(255,255,255,0.25);
+  }
+  .text-row:hover{transform:translateX(3px);}
+  .text-row.locked{cursor:default;}
+  .text-row.locked .text-title, .text-row.locked .text-status{opacity:.55;filter:grayscale(.4);}
+  .text-row.locked:hover{transform:none;}
+  .text-icon{font-size:20px;flex:none;width:26px;text-align:center;}
+  .text-title{font-weight:600;font-size:16px;flex:1;}
+  .kind-tag{
+    display:block;
+    font-family:'EB Garamond', serif;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--gold-dark);
+    font-weight:600;
+    margin-bottom:2px;
+  }
+  .text-status{font-size:13px;font-weight:600;flex:none;}
+  .text-status.a-faire{color:var(--ink-soft);}
+  .text-status.soumis{color:var(--amber);}
+  .text-status.reussi{color:var(--green);}
+
+  .reading-body{
+    font-size:17px;line-height:1.75;
+    max-height:340px;overflow-y:auto;
+    padding:4px 6px 4px 2px;
+    margin-bottom:20px;
+    border-bottom:1.5px dashed var(--border);
+  }
+  .reading-body h4{
+    font-family:'EB Garamond', serif;
+    font-weight:700;
+    font-size:17px;
+    margin:16px 0 4px;
+    color:var(--ink);
+  }
+  .reading-body p{margin:0 0 12px;}
+
+  .question-block{margin-bottom:20px;}
+
+  /* ---------- Matching activity (dates ↔ events) ---------- */
+  .matching-wrap{
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    padding:14px 14px 16px;
+    background:rgba(255,255,255,0.25);
+    margin-top:8px;
+  }
+  .matching-cols{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  @media (max-width:520px){
+    .matching-cols{grid-template-columns:1fr;}
+  }
+  .matching-col-label{
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    color:var(--ink-soft);
+    font-weight:600;
+    margin-bottom:6px;
+  }
+  .match-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:8px 10px;
+    border:1.5px solid var(--border);
+    border-radius:5px;
+    background:#FBF6E7;
+    margin-bottom:7px;
+    cursor:pointer;
+    font-size:14.5px;
+    line-height:1.35;
+  }
+  .match-item:hover{background:#F5EBD0;}
+  .match-item.selected{background:var(--gold-bright);border-color:var(--gold-dark);}
+  .match-item.paired{border-color:var(--gold-dark);}
+  .match-item.correct{background:var(--green-bg);border-color:var(--green);}
+  .match-item.incorrect{background:var(--red-bg, #f0dad5);border-color:#8C3B32;}
+  .match-item.locked{cursor:default;}
+  .match-badge{
+    flex:none;
+    width:22px;height:22px;
+    border-radius:50%;
+    border:1.5px solid var(--border);
+    background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:12px;font-weight:700;color:var(--ink-soft);
+  }
+  .match-item.paired .match-badge, .match-item.correct .match-badge, .match-item.incorrect .match-badge{
+    background:var(--gold-dark);color:#fff;border-color:var(--gold-dark);
+  }
+  .match-item.correct .match-badge{background:var(--green);border-color:var(--green);}
+  .match-item.incorrect .match-badge{background:#8C3B32;border-color:#8C3B32;}
+  .matching-controls{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    margin-top:6px;
+  }
+  .matching-controls .next-btn.small{padding:6px 16px;font-size:14px;}
+  .matching-score{font-weight:700;color:var(--gold-dark);font-size:14.5px;}
+
+  /* ---------- Writing / composition activity ---------- */
+  .prompt-card{
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    padding:14px 16px;
+    margin-bottom:14px;
+    background:rgba(255,255,255,0.3);
+  }
+  .prompt-card h4{
+    font-family:'Cinzel Decorative', serif;
+    font-size:16px;
+    margin:0 0 6px;
+  }
+  .prompt-card p{font-size:15px;line-height:1.55;margin:0 0 12px;}
+  .chosen-prompt{
+    border:1.5px solid var(--gold-dark);
+    border-radius:6px;
+    padding:12px 16px;
+    margin-bottom:14px;
+    background:var(--amber-bg);
+  }
+  .chosen-prompt h4{font-family:'Cinzel Decorative', serif;font-size:15.5px;margin:0 0 4px;color:var(--gold-dark);}
+  .chosen-prompt p{font-size:14.5px;line-height:1.5;margin:0;}
+  .change-prompt-link{font-size:13px;color:var(--ink-soft);text-decoration:underline;cursor:pointer;display:inline-block;margin-top:8px;}
+
+  .write-toolbar{
+    display:flex;gap:8px;flex-wrap:wrap;align-items:center;
+    margin-bottom:8px;
+  }
+  .write-toolbar button{
+    font-family:'EB Garamond', serif;
+    font-size:13.5px;
+    padding:5px 12px;
+    border-radius:5px;
+    border:1.5px solid var(--border);
+    background:#fff8ea;
+    cursor:pointer;
+  }
+  .write-toolbar button:hover{background:#fdeecb;}
+  .write-toolbar button.underline-btn{text-decoration:underline;}
+  .write-toolbar button.circle-btn{border-radius:999px;}
+
+  .word-counter{font-size:13.5px;font-weight:600;color:var(--ink-soft);margin-left:auto;}
+  .word-counter.ok{color:var(--green);}
+
+  .write-editor{
+    min-height:200px;
+    border:1.5px solid var(--border);
+    border-radius:6px;
+    padding:12px 14px;
+    background:#FBF6E7;
+    font-size:16px;
+    line-height:1.7;
+    color:var(--ink);
+    outline:none;
+    margin-bottom:14px;
+  }
+  .write-editor[contenteditable="false"]{background:#EFE7D0;color:var(--ink-soft);}
+  .write-editor u{text-decoration-color:var(--gold-dark);text-decoration-thickness:2px;}
+  .write-editor .circled{
+    border:2px solid var(--gold-dark);
+    border-radius:999px;
+    padding:0 6px;
+  }
+  .write-hint{font-size:13px;color:var(--ink-soft);font-style:italic;margin:-8px 0 14px;}
+  .question-num{
+    font-family:'Cinzel Decorative', serif;
+    font-size:15px;color:var(--gold-dark);
+    margin-bottom:4px;
+  }
+  .question-prompt{font-size:16px;margin-bottom:8px;}
+  textarea{
+    width:100%;
+    font-family:'EB Garamond', serif;
+    font-size:16px;
+    padding:8px 10px;
+    border:1.5px solid var(--border);
+    border-radius:5px;
+    background:#FBF6E7;
+    color:var(--ink);
+    resize:vertical;
+    min-height:52px;
+  }
+  textarea:disabled{background:#EFE7D0;color:var(--ink-soft);}
+  .note-box{
+    font-style:italic;
+    color:var(--ink-soft);
+    background:var(--amber-bg);
+    border:1.5px dashed var(--amber);
+    border-radius:5px;
+    padding:10px 14px;
+    font-size:15px;
+  }
+
+  .status-banner{
+    text-align:center;
+    padding:10px 14px;
+    border-radius:6px;
+    font-weight:600;
+    margin-bottom:18px;
+  }
+  .status-banner.soumis{background:var(--amber-bg);color:var(--amber);}
+  .status-banner.reussi{background:var(--green-bg);color:var(--green);}
+
+  .btn-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:8px;}
+  .next-btn{
+    font-family:'EB Garamond', serif;font-weight:600;font-size:16px;
+    padding:9px 26px;background:var(--gold-dark);color:#fff;
+    border:none;border-radius:5px;cursor:pointer;
+  }
+  .next-btn:hover{background:var(--gold);}
+  .next-btn:disabled{background:#B7A98A;cursor:not-allowed;}
+  .next-btn.secondary{background:none;color:var(--ink-soft);border:1.5px solid var(--border);}
+  .next-btn.secondary:hover{background:rgba(255,255,255,.4);}
+
+  /* ---------- Épreuve de promotion (homophones) ---------- */
+  .text-row.promotion-ready{
+    border-color:var(--gold); background:linear-gradient(180deg, rgba(227,178,60,0.28), rgba(227,178,60,0.1));
+  }
+  .text-row.promotion-ready .text-title{ color:var(--gold-dark); font-weight:700; }
+  .text-row.promo-done{ opacity:0.6; filter:grayscale(0.6); }
+  .ex-header{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
+  .ex-title{ font-family:'Cinzel Decorative', serif; font-size:20px; color:var(--ink); }
+  .ex-progress{ font-size:14px; color:var(--ink-soft); font-weight:600; }
+  .progress-track{ height:8px; background:rgba(107,74,40,0.18); border-radius:4px; overflow:hidden; margin-bottom:22px; }
+  .progress-fill{ height:100%; background:linear-gradient(90deg, var(--gold-dark), var(--gold-bright)); transition:width .3s ease; }
+  .sentence{ font-size:22px; line-height:1.7; text-align:center; margin:30px 0 36px; color:var(--ink); }
+  .choices{ display:flex; justify-content:center; gap:34px; flex-wrap:wrap; margin-bottom:10px; }
+  .choice-word{
+    font-family:'EB Garamond', serif; font-size:24px; font-weight:600; background:none; border:none;
+    color:var(--ink); cursor:pointer; padding:6px 4px; position:relative;
+  }
+  .choice-word .ring{ position:absolute; inset:-10px -16px; border:3px solid transparent; border-radius:50% / 45%; transform:rotate(-3deg); pointer-events:none; }
+  .choice-word:nth-child(2) .ring{ transform:rotate(2deg); }
+  .choice-word.selected .ring{ border-color:var(--gold-dark); }
+  .choice-word.selected{ color:var(--gold-dark); }
+  .feedback-row{ text-align:center; min-height:28px; font-weight:600; font-size:15px; margin-top:8px; color:var(--ink-soft); }
+  .results-list{ list-style:none; margin:0 0 22px; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .result-row{ padding:10px 14px; border-radius:6px; border:1.5px solid var(--border); background:rgba(255,255,255,0.3); }
+  .result-row.correct{ border-color:var(--green); background:var(--green-bg); }
+  .result-row.incorrect{ border-color:var(--red); background:var(--red-bg); }
+  .result-sentence{ font-size:16px; margin-bottom:4px; }
+  .result-sentence b{ font-weight:700; }
+  .result-your-answer{ font-size:14px; color:var(--ink-soft); }
+  .result-row.correct .result-your-answer{ color:var(--green); }
+  .result-row.incorrect .result-your-answer{ color:var(--red); }
+  .result-your-answer .correct-word{ color:var(--green); font-weight:700; }
+  .score-banner{ text-align:center; margin:6px 0 22px; }
+  .score-banner .big-score{ font-family:'Cinzel Decorative', serif; font-size:30px; color:var(--ink); }
+  .score-banner .pass-msg{ margin-top:10px; font-style:italic; color:var(--green); font-weight:600; }
+  .score-banner .retry-msg{ margin-top:10px; font-style:italic; color:var(--red); font-weight:600; }
+
+  /* ---------- Overlay de promotion de rang (plein écran) ---------- */
+  .levelup-overlay{
+    display:none; position:fixed; inset:0; z-index:400; background:rgba(6,4,2,0.92);
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .levelup-overlay.open{ display:flex; }
+  .levelup-card{
+    position:relative; width:min(90vw, 480px); max-height:92vh; overflow-y:auto;
+    background:var(--parchment); border-radius:14px; border:2px solid var(--gold);
+    box-shadow:0 20px 60px rgba(0,0,0,0.6); text-align:center; padding:22px 22px 26px;
+  }
+  .levelup-card img{ width:100%; border-radius:10px; display:block; margin-bottom:16px; }
+  .levelup-card h2{ font-family:'Cinzel Decorative', serif; color:var(--gold-dark); font-size:26px; margin:0 0 8px; }
+  .levelup-card p{ color:var(--ink-soft); font-size:16px; margin:0 0 18px; }
+
+  /* teacher panel */
+  .teacher-panel{position:fixed;inset:0;background:rgba(30,20,10,.55);display:none;align-items:center;justify-content:center;z-index:50;}
+  .teacher-panel.open{display:flex;}
+  .teacher-box{background:var(--parchment);border:2px solid var(--border);border-radius:8px;padding:22px 24px;max-width:420px;width:90%;}
+  .teacher-box h3{font-family:'Cinzel Decorative', serif;font-size:18px;margin-top:0;text-align:center;}
+  .teacher-item{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 10px;border:1px solid var(--border);border-radius:5px;margin-bottom:8px;
+    font-size:14px;background:#fff8ea;
+  }
+  .teacher-item .ti-title{flex:1;}
+  .teacher-item button{
+    font-size:12.5px;padding:5px 9px;border-radius:4px;border:1px solid var(--border);
+    background:#fff;cursor:pointer;
+  }
+  .teacher-item button.approve{background:var(--green-bg);}
+  .teacher-item button.reject{background:var(--amber-bg);}
+  .teacher-box .util-btn{
+    display:block;width:100%;margin-top:10px;padding:8px;border-radius:5px;
+    border:1.5px solid var(--border);background:#fff8ea;cursor:pointer;font-family:'EB Garamond', serif;font-size:15px;
+  }
+  .teacher-box .util-btn:hover{background:#fdeecb;}
+  .teacher-box .close{color:var(--ink-soft);font-size:13px;margin-top:14px;text-align:center;cursor:pointer;text-decoration:underline;}
+  .empty-note{color:var(--ink-soft);font-style:italic;font-size:14px;text-align:center;}
+
+  footer.note{text-align:center;color:var(--ink-soft);font-size:12.5px;margin-top:30px;opacity:.75;}
+
+  /* ---------- Special external chapter overlay ---------- */
+  .special-overlay{
+    position:fixed;inset:0;
+    background:var(--parchment);
+    z-index:100;
+    display:none;
+    flex-direction:column;
+  }
+  .special-overlay.open{display:flex;}
+  .special-overlay-bar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 16px;
+    background:#3B2A1A;
+    color:#EFE3C4;
+    font-family:'Cinzel Decorative', serif;
+    font-size:15px;
+    flex:none;
+  }
+  .special-close-btn{
+    cursor:pointer;
+    background:none;border:1px solid #EFE3C4;color:#EFE3C4;
+    border-radius:4px;padding:5px 12px;font-family:'EB Garamond', serif;font-size:14px;
+  }
+  .special-close-btn:hover{background:rgba(255,255,255,.15);}
+  .special-overlay iframe{flex:1;border:none;width:100%;height:100%;}
+
+/* ===================================================================
+   APPENDICE "ÉVOCATIONS" — vocabulaire, séparé des chapitres à rang
+   =================================================================== */
+.evoc-btn{
+  display:block; width:100%; margin:0 0 22px; text-align:left;
+  background:linear-gradient(180deg,#1a1f33,#10131f); border:1.5px solid #6B8FD9;
+  color:#A9C0F5; border-radius:8px; padding:14px 18px; cursor:pointer;
+  box-shadow:0 4px 14px rgba(107,143,217,0.25); font-family:'EB Garamond', serif;
+}
+.evoc-btn:hover{ background:linear-gradient(180deg,#222a45,#151a2b); }
+.evoc-btn .evoc-btn-title{ font-family:'Cinzel Decorative', serif; font-size:17px; display:block; margin-bottom:3px; }
+.evoc-btn .evoc-btn-sub{ font-size:13px; opacity:0.85; }
+
+.evoc-liste-item{
+  display:flex; align-items:center; gap:14px; padding:14px 16px; margin-bottom:10px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.4), rgba(255,255,255,0.12));
+  border:1.5px solid var(--border); border-radius:6px; cursor:pointer;
+}
+.evoc-liste-item:hover{ transform:translateX(3px); }
+.evoc-liste-item.locked{ cursor:default; opacity:0.55; filter:grayscale(0.4); }
+.evoc-liste-item.locked:hover{ transform:none; }
+.evoc-liste-item.promotion-ready{
+  border-color:var(--gold); background:linear-gradient(180deg, rgba(227,178,60,0.28), rgba(227,178,60,0.1));
+}
+.evoc-liste-item.promotion-ready .evoc-liste-titre{ color:var(--gold-dark); font-weight:700; }
+.evoc-liste-item.promo-done{ opacity:0.6; filter:grayscale(0.6); cursor:pointer; }
+.evoc-liste-num{
+  font-family:'Cinzel Decorative', serif; font-size:20px; color:var(--gold-dark);
+  width:34px; text-align:center; flex:none;
+}
+.evoc-liste-num img.seal-icon{ width:26px; height:26px; }
+.evoc-liste-titre{ flex:1; font-weight:600; }
+.evoc-liste-score{ font-size:13px; color:var(--ink-soft); flex:none; }
+
+/* Grand parchemin générique (bannière "PARCHEMINS") — fond de toutes les
+   pages de cette section (table des matières, chapitres, textes,
+   rédactions...) à l'exception des pages Vocabulaire, qui ont leur propre
+   bannière "VOCABULAIRE" (voir .evoc-conteneur / .vocab-popup plus bas).
+   Image large (1568×1328) plutôt qu'un rouleau étroit, pour pouvoir
+   occuper une bien plus grande partie de l'écran en largeur tout en
+   restant aussi haut que possible verticalement. */
+.parchemin-conteneur{
+  position:relative; width:min(90vw, calc(97vh * 1.1807), 1568px); margin:0 auto;
+  aspect-ratio: 1568 / 1328;
+  background: url('livre_assets/parchemin_scroll.jpg') center / contain no-repeat;
+}
+.parchemin-conteneur > #app{
+  position:absolute; left:12%; right:11%; top:27%; bottom:10%;
+  overflow-y:auto; padding:1% 2%; text-align:left;
+}
+/* Désactivée pour les pages Vocabulaire : celles-ci fournissent leur
+   propre grand parchemin (.evoc-conteneur) et #app redevient un simple
+   conteneur de flux normal. */
+.parchemin-conteneur.sans-fond{
+  width:100%; max-width:none; aspect-ratio:auto; background:none;
+}
+.parchemin-conteneur.sans-fond > #app{
+  position:static; overflow:visible; padding:0; left:auto; right:auto; top:auto; bottom:auto;
+}
+
+/* Conteneur en forme de parchemin réel — même grand format que les autres
+   parchemins de cette section (voir vocab-popup), contenu positionné dans
+   la zone claire mesurée sous la bannière, défilement interne pour ne
+   jamais casser l'alignement peu importe la longueur. */
+.evoc-conteneur{
+  position:relative; width:min(92vw, calc(84vh * 1.5), 1920px); margin:0 auto;
+  aspect-ratio: 1920 / 1280;
+  background: url('livre_assets/vocabulaire_scroll.png') center / contain no-repeat;
+}
+.evoc-contenu{
+  position:absolute; left:8%; right:7%; top:27%; bottom:15%;
+  overflow-y:auto; padding:1% 2%; text-align:left;
+}
+.evoc-contenu .back-link{ margin-bottom:10px; }
+.evoc-contenu h2{ font-family:'Cinzel Decorative', serif; font-size:1.15rem; text-align:center; margin:2px 0 14px; }
+.evoc-texte{ line-height:1.75; font-size:0.96rem; margin-bottom:16px; }
+.evoc-texte u{ text-decoration:underline; text-decoration-color:var(--gold); text-decoration-thickness:2px; text-underline-offset:3px; font-weight:600; }
+.evoc-vocab-open-btn{
+  display:block; width:100%; margin:0 0 18px; text-align:center;
+  font-family:'Cinzel Decorative', serif; font-size:13px; letter-spacing:0.03em;
+  background:var(--parchment); border:1.5px solid var(--gold); color:var(--gold-dark);
+  border-radius:6px; padding:10px; cursor:pointer;
+}
+.evoc-vocab-open-btn:hover{ background:var(--gold-bright); color:#fff; }
+
+.evoc-cat-title{
+  font-family:'Cinzel Decorative', serif; font-size:0.95rem; color:var(--ink);
+  border-bottom:2px solid var(--gold); padding-bottom:4px; margin:18px 0 10px;
+  grid-column: 1 / -1;
+}
+#evocExosWrap{ display:grid; grid-template-columns: 1fr 1fr; gap:2px 28px; }
+.evoc-question{ display:flex; align-items:center; gap:10px; margin-bottom:9px; font-size:0.92rem; flex-wrap:wrap; }
+.evoc-question .evoc-q-indice{ flex:0 1 auto; }
+.evoc-question .reponse-mot{
+  width:130px; font-family:'EB Garamond', serif; font-size:0.95rem; padding:5px 8px;
+  border:1px solid var(--border); border-radius:5px; background:#fff;
+}
+.evoc-question.correcte .reponse-mot{ border-color:var(--green); background:var(--green-bg); }
+.evoc-question.incorrecte .reponse-mot{ border-color:#a33; background:#fbe6e6; }
+.evoc-q-verite{ font-size:0.82rem; color:var(--ink-soft); font-style:italic; flex:none; }
+
+@media (max-width:720px){
+  #evocExosWrap{ grid-template-columns: 1fr; }
+}
+
+.evoc-submit-btn{
+  display:block; width:100%; margin-top:18px; font-family:'Cinzel Decorative', serif;
+  font-size:15px; background:var(--gold); border:none; border-radius:8px; padding:12px;
+  cursor:pointer; color:#2b1c08;
+}
+.evoc-submit-btn:disabled{ opacity:0.5; cursor:default; }
+.evoc-score{ text-align:center; font-family:'Cinzel Decorative', serif; font-size:1rem; margin-top:14px; }
+
+/* Panneau flottant et déplaçable pour la liste de vocabulaire — un document
+   compagnon que l'élève garde sous les yeux pendant qu'il fait l'exercice,
+   pas une fenêtre modale qui bloque tout. S'ouvre automatiquement à
+   l'entrée d'une section et ne se ferme que si l'élève termine la section
+   ou retourne à la liste des sections (jamais de bouton fermer). */
+.vocab-panel{
+  display:none; position:fixed; z-index:250; flex-direction:column;
+  width:min(92vw, 560px); height:min(82vh, 700px);
+  border-radius:10px; overflow:hidden;
+  box-shadow:0 14px 34px rgba(0,0,0,0.5), 0 0 0 1px rgba(122,88,42,0.4);
+}
+.vocab-panel.open{ display:flex; }
+.vocab-panel-header{
+  flex:0 0 auto; height:62px; cursor:grab; user-select:none; touch-action:none;
+  background:url('livre_assets/vocabulaire_bandeau.png') center 62% / cover no-repeat;
+  background-color:#3a1712;
+}
+.vocab-panel-header:active{ cursor:grabbing; }
+.vocab-panel-body{
+  flex:1 1 auto; overflow-y:auto; padding:14px 20px 18px;
+  background:url('livre_assets/texture_parchemin.jpg') center/cover;
+  border:1px solid rgba(122,88,42,0.4); border-top:none;
+  box-shadow: inset 0 0 0 6px rgba(122,88,42,0.12), inset 0 0 22px rgba(90,60,20,0.15);
+  display:flex; flex-direction:column; align-items:center;
+}
+.vocab-panel-hint{
+  text-align:center; font-size:11px; color:var(--ink-soft); opacity:0.75;
+  margin:0 0 10px; font-style:italic;
+}
+.vocab-popup-grid{
+  display:grid; grid-template-columns:1fr 1fr; gap:8px 30px; font-size:0.92rem;
+  text-align:center; width:100%; max-width:340px;
+}
+.vocab-popup-grid div{ padding:2px 0; border-bottom:1px dotted rgba(0,0,0,0.15); overflow-wrap:break-word; }
+
+@media (max-width:480px){
+  .vocab-panel{ width:92vw; height:44vh; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="parchemin-conteneur" id="parcheminConteneur"><div id="app"></div></div>
+  <footer class="note">Une fois remis, un texte attend la correction de l'enseignant avant d'être marqué réussi.</footer>
+</div>
+
+<div class="teacher-panel" id="teacherPanel">
+  <div class="teacher-box">
+    <h3>Panneau de l'enseignant</h3>
+    <div id="teacherList"></div>
+    <button class="util-btn" id="unlockAllBtn">Débarrer tous les chapitres</button>
+    <button class="util-btn" id="resetBtn">Réinitialiser toute la progression</button>
+    <div class="close" id="closeTeacher">Fermer</div>
+  </div>
+</div>
+
+<div class="special-overlay" id="specialOverlay">
+  <div class="special-overlay-bar">
+    <span id="specialOverlayTitle"></span>
+    <button class="special-close-btn" id="closeSpecialOverlay">Fermer ✕</button>
+  </div>
+  <iframe id="specialOverlayFrame"></iframe>
+</div>
+
+<div class="vocab-panel" id="vocabPanel">
+  <div class="vocab-panel-header" id="vocabPanelHeader"></div>
+  <div class="vocab-panel-body">
+    <p class="vocab-panel-hint">↕ Déplaçable — glisse la bannière</p>
+    <div class="vocab-popup-grid" id="vocabPopupGrid"></div>
+  </div>
+</div>
+
+<div class="levelup-overlay" id="levelupOverlay">
+  <div class="levelup-card">
+    <img id="levelupImg" src="" alt="Passage de niveau">
+    <h2>Bravo ! Tu gravis les échelons !</h2>
+    <p id="levelupSousTitre"></p>
+    <button class="next-btn" id="levelupConfirmBtn" type="button">Retourner à ma fiche de personnage</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   DONNÉES
+   ============================================================ */
+const DATA = [
+  { title: "Chapitre 1: Invocations", isInvocations: true,
+    texts: [ { kind: "promotion", title: "Épreuve de promotion", paireIndex: 0 } ] },
+  { title:"Chapitre 2: Conjurations",
+    texts: [
+      { kind:"conjugaison", title:"Conjure Chrono-Bot !", emoji:"🤖", sousTitre:"ÊTRE & AVOIR — présent, imparfait, futur",
+        serie1:"chapitre2_conjugaison/chapitre2-theme1-chrono-bot-serie1.html",
+        serie2:"chapitre2_conjugaison/chapitre2-theme1-chrono-bot-serie2.html" },
+      { kind:"conjugaison", title:"Conjure M. Pizza !", emoji:"🍕", sousTitre:"AIMER & MANGER — présent, imparfait, futur",
+        serie1:"chapitre2_conjugaison/chapitre2-theme2-m-pizza-serie1.html",
+        serie2:"chapitre2_conjugaison/chapitre2-theme2-m-pizza-serie2.html" },
+      { kind:"conjugaison", title:"Conjure Le Tyran !", emoji:"👑", sousTitre:"POUVOIR & VOULOIR — présent, imparfait, futur",
+        serie1:"chapitre2_conjugaison/chapitre2-theme3-tyran-serie1.html",
+        serie2:"chapitre2_conjugaison/chapitre2-theme3-tyran-serie2.html" },
+      { kind:"conjugaison", title:"Conjure Albert Einstein !", emoji:"🧪", sousTitre:"APPRENDRE & COMPRENDRE — présent, imparfait, futur",
+        serie1:"chapitre2_conjugaison/chapitre2-theme4-einstein-serie1.html",
+        serie2:"chapitre2_conjugaison/chapitre2-theme4-einstein-serie2.html" },
+      { kind:"conjugaison", title:"Conjure La Faucheuse !", emoji:"💀", sousTitre:"FINIR & MOURIR — présent, imparfait, futur",
+        serie1:"chapitre2_conjugaison/chapitre2-theme5-faucheuse-serie1.html",
+        serie2:"chapitre2_conjugaison/chapitre2-theme5-faucheuse-serie2.html" },
+      { kind:"conjugaison", title:"Conjure le Petit Castor !", placeholder:true, emoji:"🦫", sousTitre:"DÉFAIRE & REFAIRE — présent, imparfait, futur" },
+      { kind: "promotion", title: "Épreuve de promotion", paireIndex: 1 }
+    ] },
+  {
+    title: "Chapitre 3",
+    texts: [
+      {
+        kind: "texte",
+        title: "Les Vieilles Forges",
+        body: [
+          {h:"Légende 1A — Le Trou du Diable et les Forges"},
+          {p:"On dit qu'aux Vieilles Forges du Saint-Maurice, il y a un trou qui ne finit jamais. On l'appelle le Trou du Diable."},
+          {p:"Au temps des premières forges, un forgeron aurait voulu forger plus vite que tous les autres. Il aurait fait un pacte. En échange de son âme, le diable lui donnait un feu qui ne s'éteignait jamais."},
+          {p:"Une nuit, le feu est devenu trop fort. La terre s'est ouverte sous la forge et le forgeron a disparu avec son enclume. Depuis, on entend encore parfois le marteau qui frappe au fond du trou."},
+          {p:"Les vieux disent qu'il ne faut jamais se pencher au-dessus, parce que le diable attend encore en bas."},
+          {p:"Je ne sais pas si tu crois à ces histoires, mais moi, j'ai de forts doutes."},
+          {h:"Légende 1B — Chhi'quiita et la porte d'argent"},
+          {p:"Il y avait une porte. Au fond. En argent. Juchée au bout des vieilles forges."},
+          {p:"Je ne l'avais jamais vue avant. Elle n'était pas là l'été passé."},
+          {p:"J'ai voulu y aller. C'était plus fort que moi."},
+          {p:"Mais je me suis rappelé. L'araignée. Chhi'quiita."},
+          {p:"Elle attendait. En haut de la porte. Immobile, à la croisée des mondes. Là où le jour de la maison rencontre la nuit du dehors."},
+          {p:"Quelle autre porte pouvait-il y avoir ? Qui pouvait m'aider ? Personne ne va au fond des forges le soir."},
+          {p:"La porte s'est ouverte avant que je ne l'ouvre. Toute seule. Sans bruit."},
+          {p:"Et j'ai traversé."}
+        ],
+        questions: [
+          {num:"1", prompt:"Où se trouve exactement la porte d'argent ?"},
+          {num:"2", prompt:"Qui est Chhi'quiita et où se tient-elle ?"},
+          {num:"3", prompt:"Que veut dire l'expression « à la croisée des mondes » selon toi ?"},
+          {num:"4", prompt:"Selon la légende, que risque-t-il d'arriver à quelqu'un qui passe sous Chhi'quiita sans la regarder ?"},
+          {num:"5", prompt:"Quelle atmosphère l'auteur veut-il créer avec les phrases très courtes ?"},
+          {num:"6", prompt:"Pourquoi la porte n'était-elle pas là l'été passé ?"},
+          {num:"7", prompt:"À ton avis, le narrateur est-il encore dans notre monde après avoir traversé ?"},
+          {num:"8", prompt:"Quel lien fais-tu entre cette porte et le nom des Vieilles Forges ?"},
+          {heading:"Classes de mots — Exercice 1 (légende de Chhi'quiita)",
+            prompt:"Classe chacun de ces mots dans un tableau à quatre colonnes (Déterminants / Noms / Verbes / Adjectifs) : une, porte, vieilles, attendait, la, forges, immobile, traversé."},
+          {heading:"Classes de mots — Exercice 2 (légende du Trou du Diable)",
+            prompt:"Classe chacun de ces mots dans un tableau à quatre colonnes (Déterminants / Noms / Verbes / Adjectifs) : le, diable, vieilles, hurlait, un, trou, maudit, forgeait."},
+          {heading:"Pronoms",
+            prompt:"Souligne les pronoms dans : « Il aurait fait un pacte... Elle attendait... Ils disent qu'il ne faut jamais... Elle s'est ouverte avant que je ne l'ouvre. On l'appelle le Trou du Diable. » Ensuite, remplace : Chhi'quiita attendait → ___ attendait / Le forgeron a disparu → ___ a disparu / Les vieux racontent → Les vieux ___ racontent / La porte brillait → ___ brillait."},
+          {heading:"Types de phrases",
+            prompt:"Donne le type de chaque phrase : « Où se trouve la porte ? » / « Quelle porte terrifiante ! » / « As-tu entendu le marteau ? » Ensuite, transforme en phrase interrogative : « La porte s'est ouverte toute seule. »"},
+          {heading:"La virgule",
+            prompt:"Ajoute les virgules manquantes : « Dans la forge il y avait un marteau une enclume et un feu... » / « La porte était froide sombre et silencieuse. »"},
+          {heading:"Synonymes",
+            prompt:"Donne un synonyme pour chacun des mots suivants : finit, éteignait, frappe, froide, immobile, terrifiante."}
+        ]
+      },
+      {
+        kind: "redaction",
+        type: "writing",
+        title: "Rédaction",
+        instructions: "Écris le nombre de mots demandé. Ensuite, relis-toi et souligne les groupes du nom et entoure les adjectifs.",
+        wordTarget: 200,
+        prompts: [
+          {
+            title: "Continue la légende",
+            body: "Continue la légende de la porte d'argent en deux à trois paragraphes. Tu viens de traverser. Raconte ce que tu vois de l'autre côté."
+          }
+        ]
+      },
+      {
+        kind: "invocation",
+        title: "Invocation",
+        placeholder: true
+      },
+      {
+        kind: "texte",
+        title: "Les Trois Petits Cochons 2026",
+        body: [
+          {p:"Il était une fois trois petits cochons qui devaient quitter la maison familiale pour construire leur propre maison. En deux mille vingt-six, ce n'était plus si simple."},
+          {p:"Le premier petit cochon, pressé d'aller jouer à sa console, construisit sa maison en paille recyclée. C'était léger, rapide, et livré en vingt-quatre heures par drone. Il posa un petit panneau solaire décoratif et se dit : « Ça va tenir ! »"},
+          {p:"Le deuxième petit cochon, un peu plus bricoleur, commanda une maison en bois préfabriqué. Il la monta en regardant un tutoriel en accéléré. Il ajouta une porte intelligente qui s'ouvrait avec son groin. Il était fier. « C'est solide et écologique », dit-il."},
+          {p:"Le troisième petit cochon, la plus patiente, prit son temps. Elle dessina des plans, calcula l'isolation et construisit sa maison en briques, avec des panneaux solaires qui fonctionnaient vraiment et un toit vert, plein de plantes. Pas de cheminée. Justement, parce que c'est une maison verte, on ne fait pas de cheminée qui pollue."},
+          {p:"Arriva le grand méchant loup. En 2026, ce n'était plus le loup d'avant. C'était un influenceur qui voulait faire le buzz. Il portait des lunettes connectées et soufflait dans un vieux ventilateur industriel pour faire plus de bruit."},
+          {p:"Il alla à la maison de paille. « Petit cochon, petit cochon, laisse-moi entrer ! » — « Pas question, loup ! » — « Alors je vais souffler, souffler, et ta maison va s'envoler ! » Il alluma son ventilateur. Pffff ! La paille s'envola partout, jusque dans le compost. Le premier cochon courut chez son frère."},
+          {p:"Il alla à la maison de bois. « Petits cochons, laissez-moi entrer ! » — « Jamais ! » Il souffla encore plus fort. La maison en kit craqua, les vis sautèrent, et la porte intelligente se déconnecta. Les deux cochons filèrent chez leur sœur."},
+          {p:"Il arriva à la maison de briques. « Petits cochons, j'ai trois millions d'abonnés qui attendent que je souffle votre maison ! » La troisième petite cochonne répondit calmement : « Essaie si tu veux, mais ici on a construit pour durer. » Le loup souffla, souffla, activa le mode turbo de son ventilateur. Rien ne bougea. La brique tenait. Les panneaux solaires brillaient."},
+          {p:"Furieux, il grimpa sur le toit vert pour passer par la cheminée, comme dans le vieux conte. Il chercha la cheminée. Il chercha encore. Il n'y en avait pas."},
+          {p:"À suivre... C'est à toi d'écrire la suite !"}
+        ],
+        questions: [
+          {num:"1", prompt:"Quelle est la différence entre les trois maisons au début du conte ?"},
+          {num:"2", prompt:"Comment le loup de 2026 est-il différent du loup du conte original ?"},
+          {num:"3", prompt:"Pourquoi la maison de briques résiste-t-elle alors que les deux autres s'envolent ?"},
+          {num:"4", prompt:"Quel objet moderne remplace le souffle naturel du loup ?"},
+          {num:"5", prompt:"Quelle morale se cache derrière la version 2026 du conte ?"},
+          {num:"6", prompt:"Pourquoi la troisième petite cochonne, la sœur, prend-elle plus de temps pour construire ?"},
+          {num:"7", prompt:"Que va faire le loup maintenant qu'il se rend compte qu'il n'y a pas de cheminée sur la maison verte ?"},
+          {num:"8", prompt:"Si tu devais construire ta maison verte en 2026, tu choisirais quels matériaux et pourquoi ?"},
+          {heading:"Classes de mots — Cochons 2026",
+            prompt:"Classe chacun de ces mots dans un tableau à quatre colonnes (Déterminants / Noms / Verbes / Adjectifs) : trois, petits, maison, construisit, sa, solide, souffler, rapidement."},
+          {heading:"Pronoms",
+            prompt:"Souligne les pronoms dans : « Il posa un panneau et se dit... Elle dessina des plans... Ils coururent chez leur sœur... On l'appelle le loup influenceur. » Ensuite, remplace : Le premier cochon construisit → ___ construisit / Les trois cochons vivent ensemble → ___ vivent ensemble / La maison verte résistait → ___ résistait."},
+          {heading:"Types de phrases",
+            prompt:"Donne le type de chaque phrase : « Petit cochon, laisse-moi entrer ! » / « Où est passée la maison de paille ? » / « Quelle tempête ce loup a provoquée ! » / « Comment va-t-il entrer sans cheminée ? »"},
+          {heading:"La virgule",
+            prompt:"Ajoute les virgules manquantes : « Le premier cochon a utilisé de la paille du carton et un panneau... » / « La maison était solide écologique et bien isolée. » / « Le loup a soufflé hurlé et activé son ventilateur. »"},
+          {heading:"Synonymes",
+            prompt:"Donne un synonyme pour chacun des mots suivants : construire, solide, s'enfuit, pressé, fier."}
+        ]
+      },
+      {
+        kind: "redaction",
+        type: "writing",
+        title: "Rédaction",
+        instructions: "Écris le nombre de mots demandé. Ensuite, relis-toi et souligne les groupes du nom et entoure les adjectifs.",
+        wordTarget: 250,
+        prompts: [
+          {
+            title: "La suite en suspens",
+            body: "Le conte s'arrête au moment où le loup cherche la cheminée et se rend compte qu'il n'y en a pas. C'est une maison verte ! Continue la légende en deux à trois paragraphes. Que fait le loup sur le toit vert plein de plantes ? Que font les deux frères et la sœur cochonne à l'intérieur ? Est-ce que le loup abandonne ou trouve une autre idée pour entrer ? Est-ce qu'il apprend quelque chose ? Utilise au moins une phrase interrogative, une phrase exclamative et une énumération avec des virgules. Termine par une morale. Garde la touche 2026 : drone, toit vert, panneau solaire, porte intelligente, lunettes connectées, etc."
+          }
+        ]
+      },
+      {
+        kind: "invocation",
+        title: "Invocation",
+        placeholder: true
+      },
+      {
+        kind: "promotion",
+        title: "Épreuve de promotion",
+        paireIndex: 2
+      }
+    ]
+  },
+  {
+    title: "Chapitre 4",
+    texts: [
+      {
+        kind: "texte",
+        title: "La formation du système solaire",
+        body: [
+          {p:"Il y a 4,6 milliards d'années, à la place de notre système solaire, il n'y avait qu'un vaste nuage froid de gaz et de poussière : la nébuleuse solaire. C'est à partir de cette matière que tout va se construire."},
+          {h:"1. L'effondrement"},
+          {p:"Sous l'effet de sa propre gravité, peut-être déclenché par l'onde de choc d'une supernova voisine, ce nuage s'effondre sur lui-même. En se contractant, il se met à tourner de plus en plus vite et s'aplatit pour former un immense disque."},
+          {h:"2. La naissance du Soleil"},
+          {p:"Au centre de ce disque, la matière s'accumule. La pression et la température augmentent jusqu'à devenir extrêmes. Les atomes d'hydrogène commencent à fusionner. Une étoile s'allume : le Soleil. Il concentre à lui seul plus de 99 % de la masse totale du système."},
+          {h:"3. La formation des planètes"},
+          {p:"Autour du jeune Soleil, le reste du disque protoplanétaire continue de tourner. De minuscules grains de poussière s'attirent et s'assemblent. Ils forment des cailloux, puis des planétésimaux de plusieurs kilomètres, puis des embryons de planètes."},
+          {p:"La température fait le tri. Près du Soleil, il fait trop chaud pour que les gaz restent. Seuls les métaux et les roches survivent. Cela donne les 4 planètes telluriques, petites et denses : Mercure, Vénus, Terre et Mars."},
+          {p:"Plus loin, au-delà de la ligne des glaces, le froid permet aux gaz et à la glace de subsister. Les embryons deviennent assez massifs pour capturer l'hydrogène et l'hélium autour d'eux. Ils deviennent les 4 géantes : Jupiter et Saturne, géantes gazeuses, puis Uranus et Neptune, géantes de glace."},
+          {h:"4. Le système actuel"},
+          {p:"En environ 100 millions d'années, le système se nettoie. Les collisions se font plus rares et 8 planètes évoluent sur des orbites stables autour du Soleil. Les débris restants forment la ceinture d'astéroïdes et la ceinture de Kuiper."}
+        ],
+        questions: [
+          {num:"1", prompt:"Le texte énumère 2 groupes de 4 planètes. Nomme les 4 planètes telluriques dans l'ordre où elles apparaissent."},
+          {num:"2", prompt:"Nomme les 4 géantes et précise les 2 sous-groupes donnés dans l'énumération : lesquelles sont des géantes gazeuses et lesquelles sont des géantes de glace ?"},
+          {num:"3", prompt:"À la toute fin, le texte fait une dernière énumération de 2 ceintures. Lesquelles ?"},
+          {num:"4", prompt:"Pourquoi utilise-t-on le mot ceinture, selon toi ?"},
+          {num:"5", prompt:"Dans tes mots, qu'est-ce que la nébuleuse solaire du début du texte ?"},
+          {num:"7", prompt:"Donne un synonyme au mot tellurique."},
+          {num:"8", prompt:"Mot référent : dans la phrase « Il concentre à lui seul plus de 99 % de la masse totale du système », à qui renvoie le pronom Il ?"},
+          {num:"9", prompt:"Mot référent : dans la phrase « Ils deviennent les 4 géantes », qui remplace Ils ? Et dans la phrase « C'est à partir de cette matière que tout va se construire », que remplace cette matière ?"},
+          {num:"10 a)", prompt:"Famille de mots : donne 1 verbe de la même famille que le nom formation et 1 verbe de la même famille que effondrement."},
+          {num:"10 b)", prompt:"Famille de mots : dans le texte, trouve 1 verbe de la même famille que le nom accumulation et 1 verbe de la même famille que contraction."}
+        ]
+      },
+      {
+        kind: "redaction",
+        type: "writing",
+        title: "Rédaction",
+        instructions: "Écris le nombre de mots demandé. Ensuite, relis-toi et souligne les groupes du nom et entoure les adjectifs.",
+        wordTarget: 200,
+        prompts: [
+          {
+            title: "Texte un",
+            body: "Raconte dans tes mots comment est né le système solaire. Explique ce qu'était la nébuleuse solaire au départ, comment le Soleil s'est allumé et comment les poussières se sont assemblées pour former des planètes. Utilise au moins trois mots vus dans le chapitre : nébuleuse, gravité et tellurique."
+          },
+          {
+            title: "Texte deux",
+            body: "Explique la différence entre les quatre planètes telluriques et les quatre géantes. Pourquoi les unes sont-elles petites et rocheuses et les autres grandes et gazeuses ? Termine en expliquant ce que deviennent les débris restants, comme la ceinture d'astéroïdes."
+          }
+        ]
+      },
+      {
+        kind: "invocation",
+        title: "Invocation",
+        placeholder: true
+      },
+      {
+        kind: "texte",
+        title: "Des plantes aux dinosaures",
+        body: [
+          {p:"La vie apparaît il y a environ 3,8 milliards d'années, dans les océans. Ce ne sont pas des plantes, mais des bactéries microscopiques. Parmi elles, les cyanobactéries, aussi appelées algues bleues, inventent une révolution : la photosynthèse. Elles utilisent la lumière du Soleil pour produire de l'énergie et rejettent de l'oxygène. Pendant plus de 2 milliards d'années, elles enrichissent l'atmosphère et rendent possible l'apparition d'autres formes de vie."},
+          {p:"Dans l'eau, les premières vraies plantes apparaissent il y a environ 1 milliard d'années : les algues vertes. Elles sont aquatiques et n'ont ni racines ni feuilles."},
+          {p:"Il y a environ 470 millions d'années, certaines algues sortent de l'eau et colonisent la terre ferme. Ce sont les premières plantes terrestres, proches des mousses actuelles. Elles doivent résister à la sécheresse. Vers 380 millions d'années, apparaissent les fougères et les premières forêts. Les arbres atteignent 30 mètres. Leurs débris s'accumulent et formeront plus tard le charbon."},
+          {p:"Ensuite, les plantes évoluent. Il y a 300 millions d'années, les conifères et les plantes à graines apparaissent. Elles n'ont plus besoin d'eau pour se reproduire."},
+          {p:"Les dinosaures apparaissent il y a 230 millions d'années. Pendant leur règne, le monde végétal change encore. Il y a 140 millions d'années, les plantes à fleurs apparaissent et explosent en diversité."},
+          {p:"Il y a 66 millions d'années, une météorite de 10 kilomètres s'écrase au Mexique. L'impact soulève un immense nuage de poussière qui bloque le Soleil pendant des mois. Sans lumière, la photosynthèse s'arrête. Les chaînes alimentaires s'effondrent. Environ 75 % des espèces disparaissent, dont tous les dinosaures non aviens. Les plantes à fleurs, plus résistantes, survivent et vont dominer le monde actuel."}
+        ],
+        questions: [
+          {num:"1", prompt:"Le texte énumère plusieurs groupes de plantes. Nomme dans l'ordre chronologique les 4 grands groupes qui suivent les algues vertes."},
+          {num:"2", prompt:"À la fin du texte, le texte énumère 2 conséquences directes du nuage de poussière. Lesquelles ?"},
+          {num:"3", type:"matching",
+            prompt:"Relie chaque date à l'événement qui lui correspond.",
+            leftLabel:"Dates",
+            rightLabel:"Événements (dans le désordre)",
+            left: [
+              {label:"3,8 milliards d'années", sub:"3,8 Ga"},
+              {label:"1 milliard d'années", sub:"1 Ga"},
+              {label:"470 millions d'années", sub:"470 Ma"},
+              {label:"380 millions d'années", sub:"380 Ma"},
+              {label:"300 millions d'années", sub:"300 Ma"},
+              {label:"230 millions d'années", sub:"230 Ma"},
+              {label:"140 millions d'années", sub:"140 Ma"},
+              {label:"66 millions d'années", sub:"66 Ma"}
+            ],
+            right: [
+              {text:"Apparition des conifères et des plantes à graines", correctLeftIdx:4},
+              {text:"Extinction des dinosaures non aviens (météorite au Mexique)", correctLeftIdx:7},
+              {text:"Premières forêts de fougères", correctLeftIdx:3},
+              {text:"Apparition des plantes à fleurs", correctLeftIdx:6},
+              {text:"Premières algues vertes aquatiques", correctLeftIdx:1},
+              {text:"Colonisation de la terre ferme par les mousses", correctLeftIdx:2},
+              {text:"Apparition de la vie dans les océans (bactéries)", correctLeftIdx:0},
+              {text:"Apparition des dinosaures", correctLeftIdx:5}
+            ]
+          },
+          {num:"4", prompt:"Pourquoi utilise-t-on le mot coloniser pour parler des premières plantes qui sortent de l'eau, selon toi ?"},
+          {num:"5", prompt:"Vocabulaire : dans tes mots, qu'est-ce que la photosynthèse et que font les cyanobactéries ?"},
+          {num:"6", prompt:"Donne un synonyme au mot aquatique."},
+          {num:"7", prompt:"Mot référent : dans la phrase « Elles enrichissent l'atmosphère », à qui renvoie le pronom Elles ?"},
+          {num:"8", prompt:"Mot référent : dans « Leurs débris s'accumulent et formeront plus tard le charbon », à qui renvoie Leurs ? Et dans « Elles n'ont plus besoin d'eau pour se reproduire », qui sont Elles ?"},
+          {num:"9 a)", prompt:"Famille de mots : donne 1 verbe de la même famille que le nom apparition et 1 nom de la même famille que le verbe disparaissent."},
+          {num:"9 b)", prompt:"Famille de mots : trouve dans le texte 1 verbe de la même famille que accumulation et 1 adjectif de la même famille que terrestre."}
+        ]
+      },
+      {
+        kind: "redaction",
+        type: "writing",
+        title: "Rédaction",
+        instructions: "Écris le nombre de mots demandé. Ensuite, relis-toi et souligne les groupes du nom et entoure les adjectifs.",
+        wordTarget: 250,
+        prompts: [
+          {
+            title: "Texte un",
+            body: "Explique le rôle des cyanobactéries. Qu'est-ce que la photosynthèse et pourquoi a-t-elle changé l'atmosphère de la Terre ? Montre comment cette révolution a permis l'apparition des algues vertes."
+          },
+          {
+            title: "Texte deux",
+            body: "Raconte le grand voyage des plantes, de l'eau jusqu'à la terre ferme. Parle de quatre étapes vues dans le texte : les mousses, les fougères, les conifères et les plantes à fleurs. Termine en expliquant comment la météorite de 66 millions d'années a provoqué l'extinction des dinosaures non aviens."
+          }
+        ]
+      },
+      {
+        kind: "invocation",
+        title: "Invocation",
+        placeholder: true
+      },
+      {
+        kind: "promotion",
+        title: "Épreuve de promotion",
+        paireIndex: 3
+      }
+    ]
+  },
+  {
+    title: "Chapitre 5",
+    texts: [
+      {
+        kind: "texte",
+        title: "Pourquoi faire un stage, c'est utile ?",
+        body: [
+          {h:"Léa, 16 ans — Garderie CPE Les Petits Pas"},
+          {p:"Au début, je pensais que ce serait juste surveiller des enfants. En fait, j'ai appris à organiser une activité, à gérer un conflit et à parler calmement. Ça m'a vraiment aidée à avoir plus confiance. Maintenant, je sais que je veux devenir éducatrice. Si tu hésites sur ton orientation, un stage te donne une vraie réponse, pas juste une idée."},
+          {h:"Samira, 16 ans — Clinique vétérinaire"},
+          {p:"Je suis passionnée par les animaux depuis toujours. Pendant deux semaines, la vétérinaire m'a laissé assister à deux soins et accueillir les clients. J'ai vu que ce métier demande du sang-froid et beaucoup de rigueur. Cette expérience a confirmé mon projet. Faire un stage, c'est le meilleur argument pour savoir si un métier est fait pour toi avant de choisir tes cours."},
+          {h:"Mathis, 16 ans — Garage de vélos communautaire"},
+          {p:"À l'école, je ne suis pas le meilleur. Au garage, j'ai compris que j'étais capable. J'ai appris à réparer un frein, à classer des outils et à travailler en équipe. Le responsable m'a dit que j'étais minutieux. Pour la première fois, j'ai senti que j'avais une compétence utile. Un stage prouve que tu peux réussir autrement que par les notes."},
+          {h:"Yacine, 16 ans — Café-boulangerie du quartier"},
+          {p:"Moi, j'étais très gêné. Au café, j'ai dû parler à des clients, encaisser et gérer le stress du matin. Ils reviennent chaque matin, donc tu dois créer un lien. J'ai développé ma communication et mon réseau dans le quartier. Depuis, je participe plus en classe. Un stage, ça motive parce que tu vois à quoi sert ce que tu apprends."}
+        ],
+        questions: [
+          {num:"1", prompt:"Énumération : nomme les quatre lieux de stage cités dans les quatre témoignages."},
+          {num:"2", prompt:"Énumération : chaque ado donne un bienfait principal différent. Nomme les quatre bienfaits."},
+          {num:"3 a)", type:"matching",
+            prompt:"Association : relie chaque prénom à son lieu de stage.",
+            leftLabel:"Prénoms",
+            rightLabel:"Lieux de stage (dans le désordre)",
+            left: [{label:"Léa"},{label:"Samira"},{label:"Mathis"},{label:"Yacine"}],
+            right: [
+              {text:"Café-boulangerie du quartier", correctLeftIdx:3},
+              {text:"Garderie CPE Les Petits Pas", correctLeftIdx:0},
+              {text:"Garage de vélos communautaire", correctLeftIdx:2},
+              {text:"Clinique vétérinaire", correctLeftIdx:1}
+            ]
+          },
+          {num:"3 b)", type:"matching",
+            prompt:"Association : relie chaque prénom à son bienfait principal.",
+            leftLabel:"Prénoms",
+            rightLabel:"Bienfaits (dans le désordre)",
+            left: [{label:"Léa"},{label:"Samira"},{label:"Mathis"},{label:"Yacine"}],
+            right: [
+              {text:"Gagner en confiance et en autonomie", correctLeftIdx:0},
+              {text:"Confirmer son orientation professionnelle", correctLeftIdx:1},
+              {text:"Découvrir qu'on est compétent autrement qu'à l'école", correctLeftIdx:2},
+              {text:"Développer ses habiletés de communication et son réseau", correctLeftIdx:3}
+            ]
+          },
+          {num:"4", prompt:"Noms propres : relève les quatre prénoms des ados. Pourquoi ce sont des noms propres ? Relève aussi deux noms propres de lieux de stage."},
+          {num:"5", prompt:"Pourquoi utilise-t-on le mot stage dans ce contexte ? Que représente ce mot pour un ado de 16 ans, selon toi ?"},
+          {num:"6", prompt:"Vocabulaire argumentatif : explique en tes mots ce que veut dire : un argument, convaincre, une compétence."},
+          {num:"7", prompt:"Donne un synonyme pour chacun des mots suivants : bienfait et confiance."},
+          {num:"8", prompt:"Mot référent : dans le témoignage de Léa, « Ça m'a vraiment aidée », à quoi renvoie Ça ? Et dans celui de Mathis, « J'ai compris que j'étais capable », qui est j' ?"},
+          {num:"9", prompt:"Mot référent : dans celui de Samira, « Elle m'a laissé assister à deux soins », qui est Elle ? Dans celui de Yacine, « Ils reviennent chaque matin », qui sont Ils ?"},
+          {num:"10 a)", prompt:"Famille de mots : donne un verbe de la même famille que orientation et un nom de la même famille que compétent."},
+          {num:"10 b)", prompt:"Famille de mots : trouve dans les textes un verbe de la même famille que communication et un adjectif de la même famille que professionnel."}
+        ]
+      },
+      {
+        kind: "redaction",
+        type: "writing",
+        title: "Rédaction",
+        instructions: "Écris le nombre de mots demandé. Ensuite, relis-toi et souligne les groupes du nom et entoure les adjectifs.",
+        wordTarget: 200,
+        prompts: [
+          {
+            title: "Texte un",
+            body: "Ton ami dit que faire un stage au secondaire ne sert à rien. Convaincs-le du contraire. Donne au moins trois arguments différents vus dans les témoignages : gagner en confiance, confirmer son orientation, découvrir une compétence, développer sa communication. Utilise des connecteurs comme d'abord, ensuite, donc."
+          },
+          {
+            title: "Texte deux",
+            body: "Imagine ton stage idéal. Décris le lieu, deux tâches que tu ferais et trois bienfaits que tu aimerais en retirer. Explique en quoi ce stage t'aiderait pour ton avenir scolaire ou professionnel. Adresse-toi directement à un ado qui hésite."
+          }
+        ]
+      },
+      {
+        kind: "invocation",
+        title: "Invocation",
+        placeholder: true
+      },
+      {
+        kind: "texte",
+        title: "Quatre cartes pour Émilie et Antoine",
+        body: [
+          {p:"Couple fictif : Émilie et Antoine. Voici quatre cartes reçues lors de leur mariage."},
+          {h:"Carte un — De Sophie, amie d'enfance d'Émilie"},
+          {p:"Ma chère Émilie, mon cher Antoine, je repense à nos cabanes construites à huit ans derrière l'école. Tu étais déjà celle qui voulait que tout le monde se sente bien. Vous voir vous dire oui aujourd'hui me bouleverse. Votre complicité est la plus belle preuve que l'amitié d'enfance peut devenir une famille. Je vous aime fort. — Sophie"},
+          {h:"Carte deux — De Karim, collègue d'Antoine"},
+          {p:"Antoine, Émilie, on en a griffonné des idées sur un coin de table à la pause, entre deux cafés. Ton sérieux, ton humour discret et ta loyauté m'ont beaucoup appris. Avec Émilie à tes côtés, tu rayonnes encore plus. Merci pour votre amitié sincère. Je vous souhaite une vie à la hauteur de votre générosité. — Karim"},
+          {h:"Carte trois — De Chloé, cousine d'Émilie"},
+          {p:"Mes deux amours, je garderai toujours nos longues discussions jusqu'à deux heures du matin sur le balcon de tante Marie. Tu me confiais tout, Émilie, et Antoine écoutait avec ce calme qui rassure. Vous formez un couple chaleureux et solide. Que votre maison reste toujours ouverte comme votre cœur. — Chloé"},
+          {h:"Carte quatre — De M. Lavoie, voisin du couple"},
+          {p:"Chers Émilie et Antoine, vous nous avez accueillis avec tant de gentillesse depuis votre arrivée. Les barbecues improvisés l'été dans le jardin, votre petite attention pour ma femme malade, tout cela compte énormément. Vous incarnez le respect et la bienveillance. Tous mes vœux de bonheur pour cette nouvelle étape. Avec toute mon affection, — M. Lavoie"}
+        ],
+        questions: [
+          {num:"1", prompt:"Énumération : nomme les quatre auteurs des cartes et précise leur lien avec les mariés."},
+          {num:"2", prompt:"Énumération : chaque carte évoque un souvenir différent. Nomme les quatre souvenirs."},
+          {num:"3 a)", type:"matching",
+            prompt:"Association : relie chaque auteur à son souvenir.",
+            leftLabel:"Auteurs",
+            rightLabel:"Souvenirs (dans le désordre)",
+            left: [
+              {label:"Sophie", sub:"amie d'enfance d'Émilie"},
+              {label:"Karim", sub:"collègue d'Antoine"},
+              {label:"Chloé", sub:"cousine d'Émilie"},
+              {label:"M. Lavoie", sub:"voisin du couple"}
+            ],
+            right: [
+              {text:"Les barbecues improvisés l'été dans le jardin", correctLeftIdx:3},
+              {text:"Les longues discussions jusqu'à deux heures du matin sur le balcon", correctLeftIdx:2},
+              {text:"Les cabanes construites ensemble à huit ans derrière l'école", correctLeftIdx:0},
+              {text:"Les projets d'entreprise griffonnés sur un coin de table à la pause", correctLeftIdx:1}
+            ]
+          },
+          {num:"3 b)", type:"matching",
+            prompt:"Association : relie chaque auteur au ton principal de sa carte.",
+            leftLabel:"Auteurs",
+            rightLabel:"Tons (dans le désordre)",
+            left: [
+              {label:"Sophie", sub:"amie d'enfance d'Émilie"},
+              {label:"Karim", sub:"collègue d'Antoine"},
+              {label:"Chloé", sub:"cousine d'Émilie"},
+              {label:"M. Lavoie", sub:"voisin du couple"}
+            ],
+            right: [
+              {text:"Chaleureux et familial", correctLeftIdx:2},
+              {text:"Respectueux et plein de gratitude", correctLeftIdx:3},
+              {text:"Nostalgique et complice", correctLeftIdx:0},
+              {text:"Amical et plein d'humour complice", correctLeftIdx:1}
+            ]
+          },
+          {num:"4", prompt:"Noms propres : relève les deux prénoms des mariés et les quatre prénoms d'auteurs. Pourquoi ce sont des noms propres ?"},
+          {num:"5", prompt:"Pourquoi utilise-t-on le mot amitié pour qualifier ces quatre cartes, selon toi ?"},
+          {num:"6", prompt:"Vocabulaire : explique en tes mots ce que veut dire : chaleureux, complice, personnel."},
+          {num:"7", prompt:"Donne un synonyme pour chacun des mots suivants : amitié et gratitude."},
+          {num:"8", prompt:"Mot référent : dans la carte de Sophie, « Je les revois encore », à quoi renvoie les ? Et dans celle de M. Lavoie, « Vous nous avez accueillis », qui est Vous ?"},
+          {num:"9", prompt:"Mot référent : dans la carte de Karim, « On en a griffonné des idées », que remplace en ? Dans celle de Chloé, « Elles me manqueront », à quoi renvoie Elles ?"},
+          {num:"10 a)", prompt:"Famille de mots : donne un verbe de la même famille que amitié et un nom de la même famille que chaleureux."},
+          {num:"10 b)", prompt:"Famille de mots : trouve dans les textes un adjectif de la même famille que mariage et un verbe de la même famille que souvenir."}
+        ]
+      },
+      {
+        kind: "redaction",
+        type: "writing",
+        title: "Rédaction",
+        instructions: "Écris le nombre de mots demandé. Ensuite, relis-toi et souligne les groupes du nom et entoure les adjectifs.",
+        wordTarget: 250,
+        prompts: [
+          {
+            title: "Texte un",
+            body: "Écris une carte courte et chaleureuse pour un couple fictif qui se marie. Elle doit être différente des quatre déjà lues. Évoque un souvenir personnel précis, utilise un vocabulaire correct et chaleureux et termine par un vœu de bonheur. N'oublie pas que la carte témoigne de ton amitié."
+          },
+          {
+            title: "Texte deux",
+            body: "Qu'est-ce que représente l'amitié pour toi ? Explique en t'inspirant des quatre cartes lues. Donne deux souvenirs personnels qui montrent ce qu'est une vraie amitié et explique pourquoi le mot amitié est plus fort que le mot copain. Utilise au moins deux adjectifs vus dans les cartes : chaleureux, complice, sincère, bienveillant."
+          }
+        ]
+      },
+      {
+        kind: "invocation",
+        title: "Invocation",
+        placeholder: true
+      },
+      {
+        kind: "promotion",
+        title: "Épreuve de promotion",
+        paireIndex: 4
+      }
+    ]
+  },
+  {
+    title: "Chapitre Interdit",
+    special: true,
+    externalFile: "recueil-de-nouvelles.html",
+    description: "Un recueil de nouvelles interdit. Le compléter rapporte des pièces d'or plutôt qu'un rang supérieur."
+  }
+];
+
+const LEVELS = ["Apprenti", "Novice", "Invocateur", "Magicien", "Sorcier", "Archimage"];
+
+const HOMOPHONES_TOPICS = [
+  {
+    title:"son / sont",
+    rule:"« son » est un déterminant possessif placé devant un nom (on peut dire « son » = « le sien »). « sont » est le verbe être conjugué (on peut le remplacer par « étaient »).",
+    options:["son","sont"],
+    sentences:[
+      ["Marie a perdu ___ chapeau au parc.","son"],
+      ["Les enfants ___ arrivés en retard ce matin.","sont"],
+      ["Il range ___ vélo dans le garage.","son"],
+      ["Où ___ tes parents en ce moment ?","sont"],
+      ["Elle a oublié ___ sac à l'école.","son"],
+      ["Mes amis ___ très contents du spectacle.","sont"],
+      ["Le chien a mangé ___ repas rapidement.","son"],
+      ["Les fleurs ___ magnifiques ce printemps.","sont"],
+      ["Julien cherche ___ ballon dans la cour.","son"],
+      ["Les élèves ___ prêts pour l'examen.","sont"],
+      ["Le chat dort sur ___ coussin préféré.","son"],
+      ["Les livres ___ rangés sur l'étagère.","sont"],
+      ["Elle a rangé ___ cahier dans son sac.","son"],
+      ["Ils ___ partis tôt ce matin.","sont"],
+      ["Le pêcheur remonte ___ filet plein de poissons.","son"]
+    ]
+  },
+  {
+    title:"on / ont",
+    rule:"« on » est un pronom sujet (on peut le remplacer par « il »). « ont » est le verbe avoir conjugué (on peut le remplacer par « avaient »).",
+    options:["on","ont"],
+    sentences:[
+      ["___ va au cinéma ce soir ?","On"],
+      ["Les voisins ___ acheté une nouvelle voiture.","ont"],
+      ["___ ne sait jamais ce qui va arriver.","On"],
+      ["Mes cousins ___ déjà mangé.","ont"],
+      ["Est-ce qu'___ peut sortir jouer dehors ?","on"],
+      ["Les joueurs ___ gagné le match.","ont"],
+      ["Quand ___ travaille fort, on réussit.","on"],
+      ["Ils ___ oublié leurs devoirs à la maison.","ont"],
+      ["___ devrait partir avant qu'il pleuve.","On"],
+      ["Les élèves ___ terminé leur projet.","ont"],
+      ["Dans cette classe, ___ respecte tout le monde.","on"],
+      ["Mes parents ___ organisé une fête surprise.","ont"],
+      ["Si ___ arrive en avance, on aura les meilleures places.","on"],
+      ["Les chevaux ___ couru toute la journée.","ont"],
+      ["___ raconte que ce château est hanté.","On"]
+    ]
+  },
+  {
+    title:"a / à",
+    rule:"« a » est le verbe avoir conjugué (on peut le remplacer par « avait »). « à » est une préposition qui ne se remplace pas.",
+    options:["a","à"],
+    sentences:[
+      ["Elle ___ terminé son repas.","a"],
+      ["Nous allons ___ la bibliothèque.","à"],
+      ["Il n'y ___ personne dans la salle.","a"],
+      ["Le trésor est caché ___ l'intérieur de la grotte.","à"],
+      ["Ma sœur ___ un nouveau vélo.","a"],
+      ["Ils partent ___ six heures.","à"],
+      ["Ce chevalier ___ une armure brillante.","a"],
+      ["Le magicien parle ___ voix basse.","à"],
+      ["L'équipe ___ remporté la victoire.","a"],
+      ["Nous jouons ___ des jeux vidéo.","à"],
+      ["Elle ___ peur des araignées.","a"],
+      ["Le dragon habite ___ côté de la montagne.","à"],
+      ["Mon frère ___ oublié son cahier.","a"],
+      ["On donne les pièces d'or ___ celui qui gagne.","à"],
+      ["Cette histoire ___ un dénouement surprenant.","a"]
+    ]
+  },
+  {
+    title:"et / est",
+    rule:"« et » est une conjonction (on peut la remplacer par « et puis »). « est » est le verbe être conjugué (on peut le remplacer par « était »).",
+    options:["et","est"],
+    sentences:[
+      ["Le loup ___ méchant dans cette histoire.","est"],
+      ["Marie ___ Julien jouent ensemble.","et"],
+      ["Ce livre ___ passionnant du début à la fin.","est"],
+      ["J'aime les pommes ___ les poires.","et"],
+      ["Le trésor ___ enfoui sous le vieux chêne.","est"],
+      ["Elle mange une pomme ___ boit du jus.","et"],
+      ["Le château ___ entouré de douves.","est"],
+      ["Nous avons pris nos crayons ___ nos cahiers.","et"],
+      ["Ce chevalier ___ très courageux.","est"],
+      ["Léo ___ Sofia partent en voyage.","et"],
+      ["Le repas ___ prêt à être servi.","est"],
+      ["Le soleil brille ___ le ciel est bleu.","et"],
+      ["Cette potion ___ magique.","est"],
+      ["Il faut du courage ___ de la sagesse.","et"],
+      ["Ce sort ___ interdit dans le royaume.","est"]
+    ]
+  },
+  {
+    title:"ou / où",
+    rule:"« ou » est une conjonction (on peut la remplacer par « ou bien »). « où » indique un lieu ou un moment et ne se remplace pas de la même façon.",
+    options:["ou","où"],
+    sentences:[
+      ["Veux-tu du jus ___ de l'eau ?","ou"],
+      ["___ as-tu rangé ton livre ?","Où"],
+      ["Choisis un chapeau rouge ___ bleu.","ou"],
+      ["Je ne sais pas ___ se trouve la clé.","où"],
+      ["On peut lire ___ dessiner cet après-midi.","ou"],
+      ["Voici le village ___ vit le sorcier.","où"],
+      ["Préfères-tu le chocolat ___ la vanille ?","ou"],
+      ["Dis-moi ___ tu vas après l'école.","où"],
+      ["Il faut choisir entre courir ___ marcher.","ou"],
+      ["C'est l'endroit ___ le dragon dort.","où"],
+      ["Veux-tu venir avec moi ___ rester ici ?","ou"],
+      ["La forêt ___ nous marchons est immense.","où"],
+      ["On peut prendre le bus ___ le train.","ou"],
+      ["Je me souviens du jour ___ j'ai appris à nager.","où"],
+      ["Tu peux écrire au crayon ___ au stylo.","ou"]
+    ]
+  },
+  {
+    title:"ces / ses",
+    rule:"« ces » est un déterminant démonstratif pluriel (on peut le remplacer par « ceux-là »). « ses » est un déterminant possessif pluriel (on peut le remplacer par « les siens »).",
+    options:["ces","ses"],
+    sentences:[
+      ["Regarde ___ magnifiques étoiles dans le ciel !","ces"],
+      ["Le roi a réuni ___ chevaliers autour de la table.","ses"],
+      ["___ exercices sont vraiment difficiles.","Ces"],
+      ["Elle a rangé ___ crayons dans sa trousse.","ses"],
+      ["___ élèves travaillent très fort.","Ces"],
+      ["Le dragon garde ___ trésors jalousement.","ses"],
+      ["As-tu vu ___ nuages étranges ?","ces"],
+      ["Il a perdu ___ clés encore une fois.","ses"],
+      ["___ montagnes sont couvertes de neige.","Ces"],
+      ["La sorcière prépare ___ potions dans son chaudron.","ses"],
+      ["Je n'oublierai jamais ___ vacances.","ces"],
+      ["Le magicien range ___ livres de sorts.","ses"],
+      ["___ animaux vivent dans la forêt enchantée.","Ces"],
+      ["Elle a invité ___ amies à la fête.","ses"],
+      ["___ questions me semblent justes.","Ces"]
+    ]
+  },
+  {
+    title:"ce / se",
+    rule:"« ce » est un déterminant ou pronom démonstratif (souvent devant un nom : « ce chevalier »). « se » précède un verbe pronominal (on peut le remplacer par « lui-même »).",
+    options:["ce","se"],
+    sentences:[
+      ["___ chevalier porte une armure dorée.","Ce"],
+      ["Le dragon ___ cache dans sa caverne.","se"],
+      ["___ livre appartient à la bibliothèque.","Ce"],
+      ["Les élèves ___ préparent pour l'examen.","se"],
+      ["___ matin, il fait très froid.","Ce"],
+      ["Elle ___ lave les mains avant de manger.","se"],
+      ["___ jeu est vraiment amusant.","Ce"],
+      ["Les chevaliers ___ battent en duel.","se"],
+      ["___ trésor est caché depuis des siècles.","Ce"],
+      ["Il ___ demande pourquoi le ciel est bleu.","se"],
+      ["___ sorcier connaît des sorts puissants.","Ce"],
+      ["Les enfants ___ amusent dans la cour.","se"],
+      ["___ château est très ancien.","Ce"],
+      ["Le dragon ___ réveille au lever du soleil.","se"],
+      ["___ problème est facile à résoudre.","Ce"]
+    ]
+  },
+  {
+    title:"la / là",
+    rule:"« la » est un article ou un pronom (on peut le remplacer par « une » ou « celle-ci »). « là » indique un lieu et prend toujours un accent grave.",
+    options:["la","là"],
+    sentences:[
+      ["Pose ___ boîte sur la table.","la"],
+      ["Le trésor est caché ___-bas, derrière la colline.","là"],
+      ["Je vois ___ tour du château.","la"],
+      ["Viens ___, j'ai besoin de ton aide.","là"],
+      ["Elle regarde ___ carte avant de partir.","la"],
+      ["Ton livre est ___, sur l'étagère.","là"],
+      ["___ princesse habite dans ce château.","La"],
+      ["Reste ___ pendant que je vérifie.","là"],
+      ["On aperçoit ___ forêt au loin.","la"],
+      ["C'est ___ que le dragon dort.","là"],
+      ["Il a fermé ___ porte doucement.","la"],
+      ["Va ___-bas chercher de l'eau.","là"],
+      ["___ potion est prête à être bue.","La"],
+      ["Assieds-toi ___, près du feu.","là"],
+      ["Elle range ___ vaisselle après le repas.","la"]
+    ]
+  },
+  {
+    title:"leur / leurs",
+    rule:"« leur », invariable, devant un verbe (on peut le remplacer par « lui »). « leur/leurs » devant un nom s'accorde selon qu'un ou plusieurs objets sont possédés.",
+    options:["leur","leurs"],
+    sentences:[
+      ["Les élèves rangent ___ cahiers.","leurs"],
+      ["Je vais ___ expliquer la règle du jeu.","leur"],
+      ["Les chevaliers montent sur ___ chevaux.","leurs"],
+      ["Le professeur ___ donne un exercice.","leur"],
+      ["Les enfants adorent ___ nouveau jeu.","leur"],
+      ["Les dragons protègent ___ trésors.","leurs"],
+      ["Nous allons ___ rendre visite demain.","leur"],
+      ["Les sorciers rangent ___ baguettes magiques.","leurs"],
+      ["Les élèves montrent ___ dessins à la classe.","leurs"],
+      ["Le roi ___ a offert des cadeaux.","leur"],
+      ["Les enfants attachent ___ chaussures.","leurs"],
+      ["Je ___ ai raconté une histoire.","leur"],
+      ["Les chevaliers nettoient ___ armures.","leurs"],
+      ["On doit ___ dire la vérité.","leur"],
+      ["Les oiseaux construisent ___ nids.","leurs"]
+    ]
+  },
+  {
+    title:"mes / mais",
+    rule:"« mes » est un déterminant possessif pluriel (on peut le remplacer par « mon » ou « ma » au singulier). « mais » est une conjonction qui marque une opposition.",
+    options:["mes","mais"],
+    sentences:[
+      ["J'ai rangé ___ livres dans mon sac.","mes"],
+      ["Je voulais venir, ___ j'étais malade.","mais"],
+      ["___ amis viennent à ma fête.","Mes"],
+      ["Il est fort, ___ il manque de patience.","mais"],
+      ["J'ai oublié ___ crayons à la maison.","mes"],
+      ["Le trésor est proche, ___ il est bien gardé.","mais"],
+      ["___ parents m'accompagnent à l'école.","Mes"],
+      ["Je veux gagner, ___ je dois m'entraîner.","mais"],
+      ["___ chaussures sont neuves.","Mes"],
+      ["Elle est petite, ___ très courageuse.","mais"],
+      ["___ devoirs sont terminés.","Mes"],
+      ["Il pleut, ___ nous sortons quand même.","mais"],
+      ["___ cousins habitent loin d'ici.","Mes"],
+      ["Le dragon est grand, ___ il est gentil.","mais"],
+      ["___ jouets sont rangés dans le coffre.","Mes"]
+    ]
+  }
+];
+// 5 paires ordonnées (2 sujets d'homophones chacune) — une paire par chapitre.
+const HOMOPHONE_PAIRES = [[0,1],[2,3],[4,5],[6,7],[8,9]];
+
+
+/* ============================================================
+   ÉTAT (en mémoire seulement)
+   textState[chapterIdx][textIdx] = {status:"a-faire"|"soumis"|"reussi", answers:{}}
+   ============================================================ */
+let textState = {};
+let view = {mode:"toc"};
+
+const app = document.getElementById("app");
+
+/* ============================================================
+   APPENDICE "ÉVOCATIONS" — identité, progression, rendu
+   ============================================================ */
+const identiteEleve = window.PasserelleCore ? window.PasserelleCore.lireIdentiteUrl() : null;
+let evocProgression = {}; // { [sectionId]: { meilleurScore, derniereTentative } } — rechargé au besoin
+let evocReponsesSaisies = {}; // état des réponses en cours pour la section ouverte
+let invocationsToutesTerminees = false; // recalculé avant chaque rendu qui en a besoin
+
+// Formule une consigne claire pour chaque type d'exercice de vocabulaire,
+// plutôt que d'afficher le seul mot-indice sans contexte.
+function formulerConsigneEvoc(categorie, indice){
+  switch(categorie){
+    case "Famille de mots": return `Trouve un mot de la même famille que : <b>${indice}</b>`;
+    case "Synonymes": return `Trouve un synonyme de : <b>${indice}</b>`;
+    case "Antonymes": return `Trouve un antonyme (le contraire) de : <b>${indice}</b>`;
+    case "Féminin": return `Écris ce mot au féminin : <b>${indice}</b>`;
+    default: return indice;
+  }
+}
+
+function cleEvoc(sectionId){
+  return "evoc_" + identiteEleve.slug + "_" + sectionId;
+}
+async function chargerProgressionEvoc(sectionId){
+  if(!identiteEleve) return { meilleurScore:null, derniereTentative:null };
+  try{
+    const res = await window.storage.get(cleEvoc(sectionId), true);
+    return (res && res.value) ? JSON.parse(res.value) : { meilleurScore:null, derniereTentative:null };
+  }catch(e){ return { meilleurScore:null, derniereTentative:null }; }
+}
+async function sauvegarderProgressionEvoc(sectionId, donnees){
+  if(!identiteEleve) return;
+  try{ await window.storage.set(cleEvoc(sectionId), JSON.stringify(donnees), true); }
+  catch(e){ /* pas grave si ça échoue — l'élève verra son score quand même cette session-ci */ }
+}
+
+// Souligne, dans un texte, chaque occurrence des mots fournis (insensible à la casse,
+// sans toucher aux mots déjà à l'intérieur d'une balise).
+function souligneMots(texte, mots){
+  let html = texte;
+  mots.forEach(mot => {
+    if(!mot) return;
+    const echappe = mot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('(' + echappe + ')', 'gi');
+    html = html.replace(re, '<u>$1</u>');
+  });
+  return html;
+}
+
+
+function ensureState(ci, ti){
+  textState[ci] = textState[ci] || {};
+  textState[ci][ti] = textState[ci][ti] || {status:"a-faire", answers:{}, matching:{}, promptIdx:null, content:""};
+  const st = textState[ci][ti];
+  st.matching = st.matching || {};
+  if(st.promptIdx === undefined) st.promptIdx = null;
+  if(st.content === undefined) st.content = "";
+  return st;
+}
+
+function countWords(html){
+  const div = document.createElement("div");
+  div.innerHTML = html || "";
+  const text = (div.textContent || "").trim();
+  return text.length === 0 ? 0 : text.split(/\s+/).length;
+}
+
+function ensureMatchState(st, q){
+  if(!st.matching[q.num]){
+    const order = q.right.map((e, i) => i);
+    for(let i = order.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+    st.matching[q.num] = {pairs:{}, eventOrder: order, checked:false, selectedDate:null, selectedEvent:null};
+  }
+  return st.matching[q.num];
+}
+
+function renderMatchingHtml(q, st, locked){
+  const m = ensureMatchState(st, q);
+  const pairedEventForDate = (di) => m.pairs[di];
+  const pairedDateForEvent = (ei) => Object.keys(m.pairs).find(di => m.pairs[di] === ei);
+
+  const datesHtml = q.left.map((d, di) => {
+    const eventIdx = pairedEventForDate(di);
+    const isPaired = eventIdx !== undefined;
+    let cls = "match-item date-item";
+    if(m.selectedDate === di) cls += " selected";
+    if(isPaired) cls += " paired";
+    if(m.checked && isPaired) cls += (q.right[eventIdx].correctLeftIdx === di) ? " correct" : " incorrect";
+    if(locked) cls += " locked";
+    const badge = isPaired ? (di + 1) : "";
+    return `<div class="${cls}" data-role="date" data-idx="${di}">
+      <div class="match-badge">${badge}</div>
+      <div>${d.label}${d.sub ? ` <span style="color:var(--ink-soft);font-size:12.5px;">(${d.sub})</span>` : ""}</div>
+    </div>`;
+  }).join("");
+
+  const eventsHtml = m.eventOrder.map(ei => {
+    const dateIdx = pairedDateForEvent(ei);
+    const isPaired = dateIdx !== undefined;
+    let cls = "match-item event-item";
+    if(m.selectedEvent === ei) cls += " selected";
+    if(isPaired) cls += " paired";
+    if(m.checked && isPaired) cls += (q.right[ei].correctLeftIdx === parseInt(dateIdx,10)) ? " correct" : " incorrect";
+    if(locked) cls += " locked";
+    const badge = isPaired ? (parseInt(dateIdx,10) + 1) : "";
+    return `<div class="${cls}" data-role="event" data-idx="${ei}">
+      <div class="match-badge">${badge}</div>
+      <div>${q.right[ei].text}</div>
+    </div>`;
+  }).join("");
+
+  const total = q.right.length;
+  const pairCount = Object.keys(m.pairs).length;
+  const correctCount = m.checked ? Object.keys(m.pairs).filter(di => q.right[m.pairs[di]].correctLeftIdx === parseInt(di,10)).length : null;
+
+  return `<div class="matching-wrap" data-qnum="${q.num}">
+    <div class="matching-cols">
+      <div>
+        <div class="matching-col-label">${q.leftLabel || "Gauche"}</div>
+        ${datesHtml}
+      </div>
+      <div>
+        <div class="matching-col-label">${q.rightLabel || "Droite"}</div>
+        ${eventsHtml}
+      </div>
+    </div>
+    <div class="matching-controls">
+      ${locked ? "" : `<button class="next-btn secondary small" data-action="clear-match">Effacer</button>
+      <button class="next-btn small" data-action="check-match">Vérifier</button>`}
+      <span class="matching-score">${m.checked ? correctCount + "/" + total + " correctes" : pairCount + "/" + total + " reliées"}</span>
+    </div>
+  </div>`;
+}
+
+function wireMatching(q, st, locked){
+  const m = ensureMatchState(st, q);
+  const wrap = document.querySelector(`.matching-wrap[data-qnum="${q.num}"]`);
+  if(!wrap) return;
+
+  if(!locked){
+    wrap.querySelectorAll(".match-item").forEach(item => {
+      item.addEventListener("click", () => {
+        const role = item.dataset.role;
+        const idx = parseInt(item.dataset.idx, 10);
+        m.checked = false;
+
+        if(role === "date"){
+          const existingEvent = m.pairs[idx];
+          if(existingEvent !== undefined){ delete m.pairs[idx]; m.selectedDate = null; render(); return; }
+          if(m.selectedEvent !== null){
+            Object.keys(m.pairs).forEach(di => { if(m.pairs[di] === m.selectedEvent) delete m.pairs[di]; });
+            m.pairs[idx] = m.selectedEvent;
+            m.selectedDate = null; m.selectedEvent = null;
+          } else {
+            m.selectedDate = (m.selectedDate === idx) ? null : idx;
+          }
+        } else {
+          const existingDate = Object.keys(m.pairs).find(di => m.pairs[di] === idx);
+          if(existingDate !== undefined){ delete m.pairs[existingDate]; m.selectedEvent = null; render(); return; }
+          if(m.selectedDate !== null){
+            delete m.pairs[m.selectedDate];
+            m.pairs[m.selectedDate] = idx;
+            m.selectedDate = null; m.selectedEvent = null;
+          } else {
+            m.selectedEvent = (m.selectedEvent === idx) ? null : idx;
+          }
+        }
+        render();
+      });
+    });
+
+    const clearBtn = wrap.querySelector('[data-action="clear-match"]');
+    if(clearBtn) clearBtn.addEventListener("click", () => {
+      m.pairs = {}; m.checked = false; m.selectedDate = null; m.selectedEvent = null;
+      render();
+    });
+    const checkBtn = wrap.querySelector('[data-action="check-match"]');
+    if(checkBtn) checkBtn.addEventListener("click", () => { m.checked = true; render(); });
+  }
+}
+
+function chapter1Done(){
+  const ch = DATA[0];
+  if(!ch || !ch.texts) return false;
+  return ch.texts.every((t, ti) => itemDone(0, ti, t));
+}
+
+function notifyParent(){
+  if(window.parent && window.parent !== window){
+    const ch1 = DATA[0];
+    if(!ch1 || !ch1.texts) return; // Chapitre 1 est désormais les Invocations — rien à notifier ici
+    const texteIndexes = ch1.texts.map((t, ti) => t.kind === "texte" ? ti : null).filter(ti => ti !== null);
+    const isReussi = (ti) => !!(ti !== undefined && textState[0] && textState[0][ti] && textState[0][ti].status === "reussi");
+    window.parent.postMessage({
+      source:"parchemins-comprehension",
+      chapter1: {
+        text0: isReussi(texteIndexes[0]),
+        text1: isReussi(texteIndexes[1])
+      }
+    }, "*");
+  }
+}
+
+const KIND_LABELS = { texte:"Texte", redaction:"Rédaction", invocation:"Invocation", promotion:"Promotion", conjugaison:"Conjugaison" };
+
+function ensurePromotionState(ci, ti){
+  const st = ensureState(ci, ti);
+  if(!st.sousExercices) st.sousExercices = { 0:{statut:"a-faire"}, 1:{statut:"a-faire"} };
+  return st;
+}
+
+function itemDone(ci, ti, t){
+  if(t.placeholder) return true;
+  if(t.kind === "promotion"){
+    const st = textState[ci] && textState[ci][ti];
+    return !!(st && st.sousExercices && st.sousExercices[0].statut === "reussi" && st.sousExercices[1].statut === "reussi");
+  }
+  return !!(textState[ci] && textState[ci][ti] && textState[ci][ti].status === "reussi");
+}
+
+function chapterUnlocked(ci){
+  if(ci === 0) return true;
+  const prev = DATA[ci - 1];
+  if(!prev) return false;
+  if(prev.isInvocations) return invocationsToutesTerminees && prev.texts.every((t, ti) => itemDone(ci-1, ti, t));
+  if(prev.placeholder) return false;
+  return prev.texts.every((t, ti) => itemDone(ci-1, ti, t));
+}
+
+function openSpecialChapter(ci){
+  const ch = DATA[ci];
+  document.getElementById("specialOverlayTitle").textContent = ch.title;
+  document.getElementById("specialOverlayFrame").src = ch.externalFile;
+  document.getElementById("specialOverlay").classList.add("open");
+}
+document.getElementById("closeSpecialOverlay").addEventListener("click", () => {
+  document.getElementById("specialOverlay").classList.remove("open");
+});
+
+function render(){
+  const conteneur = document.getElementById('parcheminConteneur');
+  const estVocabulaire = view.mode === 'evoc-liste' || view.mode === 'evoc-section';
+  if(conteneur) conteneur.classList.toggle('sans-fond', estVocabulaire);
+  if(view.mode === "toc") renderTOC();
+  else if(view.mode === "chapter") renderChapterView();
+  else if(view.mode === "text") renderTextView();
+  else if(view.mode === "evoc-liste") renderEvocationsListe();
+  else if(view.mode === "evoc-section") renderEvocationsSection();
+  else if(view.mode === "promotion-hub") renderPromotionHub();
+  else if(view.mode === "promotion-exercise") renderPromotionExercise();
+  else if(view.mode === "promotion-results") renderPromotionResults();
+  else if(view.mode === "conjugaison-hub") renderConjugaisonHub();
+  renderTeacherList();
+}
+
+/* ---------------- Table of contents ---------------- */
+async function renderTOC(){
+  const invocationsFaites = await calculerInvocationsTerminees();
+  let html = `<p style="text-align:center;color:var(--ink-soft);margin-bottom:20px;">Clique sur un chapitre pour voir ses textes. Termine-le pour gravir un rang de mage.</p>`;
+  DATA.forEach((ch, ci) => {
+    const level = LEVELS[ci] || "?";
+    if(ch.isInvocations){
+      html += `<div class="chapter-row" data-invocations="1">
+        <div class="chapter-num">${ci+1}</div>
+        <div class="chapter-info">
+          <div class="chapter-name">${ch.title}</div>
+          <div class="chapter-sub">${invocationsFaites}/${EVOCATIONS_DATA.length} terminé(s)</div>
+        </div>
+        <div class="rank-badge">${level}</div>
+      </div>`;
+      return;
+    }
+    if(ch.placeholder){
+      const debloque = chapterUnlocked(ci);
+      html += `<div class="chapter-row ${debloque ? "" : "locked"}"><div class="chapter-num">${debloque ? "📜" : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</div><div class="chapter-info"><div class="chapter-name">${ch.title}</div><div class="chapter-sub">${debloque ? "Contenu à venir" : "Termine le chapitre précédent pour débarrer celui-ci"}</div></div><div class="rank-badge ${debloque?"":"locked"}">${level}</div></div>`;
+      return;
+    }
+    if(ch.special){
+      const unlocked = chapterUnlocked(ci);
+      html += `<div class="chapter-row ${unlocked ? "" : "locked"}" data-special="${ci}">
+        <div class="chapter-num">${unlocked ? "🕮" : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</div>
+        <div class="chapter-info">
+          <div class="chapter-name">${ch.title}</div>
+          <div class="chapter-sub">${unlocked ? ch.description : "Termine le chapitre précédent pour débarrer celui-ci"}</div>
+        </div>
+        <div class="rank-badge ${unlocked ? "" : "locked"}">${level}</div>
+      </div>`;
+      return;
+    }
+    const unlocked = chapterUnlocked(ci);
+    let countableTotal = 0, countableDone = 0;
+    ch.texts.forEach((t, ti) => {
+      if(t.placeholder) return;
+      countableTotal++;
+      if(itemDone(ci, ti, t)) countableDone++;
+    });
+    html += `<div class="chapter-row ${unlocked ? "" : "locked"}" data-ch="${ci}">
+      <div class="chapter-num">${unlocked ? (ci+1) : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</div>
+      <div class="chapter-info">
+        <div class="chapter-name">${ch.title}</div>
+        <div class="chapter-sub">${unlocked ? countableDone + "/" + countableTotal + " terminé(s)" : "Termine le chapitre précédent pour débarrer celui-ci"}</div>
+      </div>
+      <div class="rank-badge ${unlocked ? "" : "locked"}">${level}</div>
+    </div>`;
+  });
+  app.innerHTML = html;
+  app.querySelectorAll(".chapter-row[data-invocations]").forEach(row => {
+    row.addEventListener("click", () => { view = {mode:"evoc-liste"}; render(); });
+  });
+  app.querySelectorAll(".chapter-row[data-special]").forEach(row => {
+    row.addEventListener("click", () => {
+      const ci = parseInt(row.dataset.special,10);
+      if(!chapterUnlocked(ci)) return;
+      openSpecialChapter(ci);
+    });
+  });
+  app.querySelectorAll(".chapter-row[data-ch]").forEach(row => {
+    row.addEventListener("click", () => {
+      const ci = parseInt(row.dataset.ch,10);
+      if(!chapterUnlocked(ci)) return;
+      view = {mode:"chapter", ch: ci}; render();
+    });
+  });
+}
+
+/* ---------------- Chapter view (list of texts) ---------------- */
+/* ---------------- Évocations : liste des 10 sections ---------------- */
+async function renderEvocationsListe(){
+  app.innerHTML = `<div class="evoc-conteneur"><div class="evoc-contenu">
+    <div class="back-link" id="backToTocFromEvoc">← Retour à la table des matières</div>
+    <h2>🔷 Invocations</h2>
+    <p style="text-align:center;color:var(--ink-soft);font-size:0.85rem;margin-bottom:16px;">Vocabulaire par thème — complète les 10 sections pour gravir ton premier rang de mage.</p>
+    <div id="evocListeItems">Chargement...</div>
+  </div></div>`;
+  document.getElementById("backToTocFromEvoc").addEventListener("click", () => { view = {mode:"toc"}; render(); });
+
+  const zone = document.getElementById("evocListeItems");
+  let html = "";
+  let precedenteTerminee = true;
+  for(const section of EVOCATIONS_DATA){
+    const prog = await chargerProgressionEvoc(section.id);
+    const terminee = prog.meilleurScore != null;
+    const debloquee = precedenteTerminee;
+    const scoreTxt = terminee ? `Meilleur score : ${prog.meilleurScore}/20` : (debloquee ? "Pas encore fait" : "Termine la section précédente");
+    html += `<div class="evoc-liste-item${debloquee ? "" : " locked"}" ${debloquee ? `data-id="${section.id}"` : ""}>
+      <span class="evoc-liste-num">${debloquee ? section.id : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</span>
+      <span class="evoc-liste-titre">${section.titre}</span>
+      <span class="evoc-liste-score">${scoreTxt}</span>
+    </div>`;
+    precedenteTerminee = terminee;
+  }
+  // Épreuve de promotion — le « boss final » du chapitre, débarré une fois
+  // les 10 sections terminées. Même mécanique que dans les autres chapitres.
+  const bossTexte = DATA[0].texts[0];
+  const bossDebloque = precedenteTerminee;
+  const bossFait = bossDebloque && itemDone(0, 0, bossTexte);
+  let bossNb = 0;
+  if(bossDebloque){
+    const st = ensurePromotionState(0, 0);
+    bossNb = (st.sousExercices[0].statut === "reussi" ? 1 : 0) + (st.sousExercices[1].statut === "reussi" ? 1 : 0);
+  }
+  const bossStatus = !bossDebloque ? "Termine les 10 sections" : bossFait ? "Réussi ✓" : `${bossNb}/2 réussi(s)`;
+  html += `<div class="evoc-liste-item ${!bossDebloque ? "locked" : bossFait ? "promo-done" : "promotion-ready"}" ${bossDebloque ? `data-boss="1"` : ""}>
+    <span class="evoc-liste-num">${bossDebloque ? "🏅" : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</span>
+    <span class="evoc-liste-titre">Épreuve de promotion</span>
+    <span class="evoc-liste-score">${bossStatus}</span>
+  </div>`;
+  zone.innerHTML = html;
+  zone.querySelectorAll(".evoc-liste-item[data-id]").forEach(item => {
+    item.addEventListener("click", () => {
+      view = {mode:"evoc-section", id: parseInt(item.dataset.id,10)};
+      render();
+    });
+  });
+  const bossRow = zone.querySelector(".evoc-liste-item[data-boss]");
+  if(bossRow) bossRow.addEventListener("click", () => { view = {mode:"promotion-hub", ch:0, text:0}; render(); });
+}
+
+/* ---------------- Évocations : texte + exercices d'une section ---------------- */
+async function renderEvocationsSection(){
+  const section = EVOCATIONS_DATA.find(s => s.id === view.id);
+  if(!section){ view = {mode:"evoc-liste"}; render(); return; }
+  evocReponsesSaisies = {};
+
+  const texteSouligne = souligneMots(section.texte, section.motsUtilises);
+
+  let exercicesHtml = "";
+  let dernierCategorie = null;
+  section.exercices.forEach((ex, i) => {
+    if(ex.categorie !== dernierCategorie){
+      exercicesHtml += `<div class="evoc-cat-title">${ex.categorie}</div>`;
+      dernierCategorie = ex.categorie;
+    }
+    exercicesHtml += `<div class="evoc-question" id="evocQ-${i}">
+      <span class="evoc-q-indice">${i+1}. ${formulerConsigneEvoc(ex.categorie, ex.indice)}</span>
+      ${window.TypesDeReponse.obtenir('mot').rendreChamps({}, i)}
+    </div>`;
+  });
+
+  app.innerHTML = `<div class="evoc-conteneur"><div class="evoc-contenu">
+    <div class="back-link" id="backToEvocListe">← Retour aux Invocations</div>
+    <h2>${section.titre}</h2>
+    <div class="evoc-texte">${texteSouligne}</div>
+    <div id="evocExosWrap">${exercicesHtml}</div>
+    <button class="evoc-submit-btn" id="evocSubmitBtn">Corriger mes réponses</button>
+    <div id="evocScoreZone"></div>
+  </div></div>`;
+
+  document.getElementById("backToEvocListe").addEventListener("click", () => {
+    fermerVocabPanel();
+    view = {mode:"evoc-liste"}; render();
+  });
+  afficherVocabPanel(section);
+  document.getElementById("evocSubmitBtn").addEventListener("click", () => corrigerEvocations(section));
+}
+
+function corrigerEvocations(section){
+  const typeDef = window.TypesDeReponse.obtenir('mot');
+  let score = 0;
+  section.exercices.forEach((ex, i) => {
+    const valeurs = typeDef.lireValeurs(i);
+    const q = { reponse: { val: ex.reponse } };
+    const correcte = typeDef.estCorrecte(q, valeurs);
+    if(correcte) score++;
+    const row = document.getElementById("evocQ-" + i);
+    row.classList.remove("correcte", "incorrecte");
+    row.classList.add(correcte ? "correcte" : "incorrecte");
+  });
+
+  document.getElementById("evocScoreZone").innerHTML =
+    `<div class="evoc-score">Score : ${score} / 20</div>`;
+  fermerVocabPanel();
+
+  (async () => {
+    const prog = await chargerProgressionEvoc(section.id);
+    const meilleurScore = (prog.meilleurScore == null || score > prog.meilleurScore) ? score : prog.meilleurScore;
+    await sauvegarderProgressionEvoc(section.id, { meilleurScore, derniereTentative: score });
+    await verifierPromotionRangInvocations();
+  })();
+}
+
+// Calcule combien des 10 sections d'Évocations sont terminées (score déjà
+// enregistré au moins une fois), et met à jour le cache utilisé par
+// chapterUnlocked() pour savoir si le Chapitre 2 doit se débarrer.
+async function calculerInvocationsTerminees(){
+  let n = 0;
+  for(const section of EVOCATIONS_DATA){
+    const prog = await chargerProgressionEvoc(section.id);
+    if(prog.meilleurScore != null) n++;
+  }
+  invocationsToutesTerminees = n >= EVOCATIONS_DATA.length;
+  return n;
+}
+
+// Recalcule combien des 10 sections d'Évocations sont terminées et met à
+// jour le cache utilisé par chapterUnlocked(). Le rang, lui, n'est plus
+// accordé ici : il vient de la réussite du boss (l'épreuve de promotion),
+// comme pour tous les autres chapitres — voir promouvoirRang().
+async function verifierPromotionRangInvocations(){
+  await calculerInvocationsTerminees();
+}
+
+/* ---------------- Panneau flottant de la liste de vocabulaire ----------------
+   Document compagnon non-bloquant : s'ouvre automatiquement à l'entrée d'une
+   section, reste déplaçable (glisser la bannière), et ne se ferme que si
+   l'élève corrige ses réponses ou retourne à la liste des sections. */
+let vocabPanelPos = null; // { left, top } en px, mémorisé tant que la page reste ouverte
+
+function afficherVocabPanel(section){
+  const grid = document.getElementById("vocabPopupGrid");
+  const mots = [...section.vocabulaire];
+  const parDeux = Math.ceil(mots.length / 2);
+  const colonnes = [mots.slice(0, parDeux), mots.slice(parDeux)];
+  grid.innerHTML = colonnes.map(col => "<div>" + col.map(m => `<div>${m}</div>`).join("") + "</div>").join("");
+
+  const panel = document.getElementById("vocabPanel");
+  panel.classList.add("open");
+
+  if(vocabPanelPos){
+    panel.style.left = vocabPanelPos.left + "px";
+    panel.style.top = vocabPanelPos.top + "px";
+    panel.style.right = "auto";
+  } else if(!panel.style.left){
+    // Position par défaut : coin supérieur droit, sous la barre du navigateur.
+    const marge = 18;
+    panel.style.top = marge + "px";
+    panel.style.left = (window.innerWidth - panel.offsetWidth - marge) + "px";
+  }
+  clampVocabPanelPosition();
+}
+
+function fermerVocabPanel(){
+  document.getElementById("vocabPanel").classList.remove("open");
+}
+
+function clampVocabPanelPosition(){
+  const panel = document.getElementById("vocabPanel");
+  const marge = 6;
+  const maxLeft = window.innerWidth - panel.offsetWidth - marge;
+  const maxTop = window.innerHeight - panel.offsetHeight - marge;
+  let left = parseFloat(panel.style.left) || 0;
+  let top = parseFloat(panel.style.top) || 0;
+  left = Math.min(Math.max(left, marge), Math.max(marge, maxLeft));
+  top = Math.min(Math.max(top, marge), Math.max(marge, maxTop));
+  panel.style.left = left + "px";
+  panel.style.top = top + "px";
+  panel.style.right = "auto";
+  vocabPanelPos = { left, top };
+}
+
+(function initVocabPanelDrag(){
+  const panel = document.getElementById("vocabPanel");
+  const poignee = document.getElementById("vocabPanelHeader");
+  let entrain = false, decalX = 0, decalY = 0;
+
+  poignee.addEventListener("pointerdown", (e) => {
+    entrain = true;
+    poignee.setPointerCapture(e.pointerId);
+    const rect = panel.getBoundingClientRect();
+    decalX = e.clientX - rect.left;
+    decalY = e.clientY - rect.top;
+  });
+  poignee.addEventListener("pointermove", (e) => {
+    if(!entrain) return;
+    panel.style.left = (e.clientX - decalX) + "px";
+    panel.style.top = (e.clientY - decalY) + "px";
+    panel.style.right = "auto";
+  });
+  function relacher(){ if(entrain){ entrain = false; clampVocabPanelPosition(); } }
+  poignee.addEventListener("pointerup", relacher);
+  poignee.addEventListener("pointercancel", relacher);
+  window.addEventListener("resize", () => { if(document.getElementById("vocabPanel").classList.contains("open")) clampVocabPanelPosition(); });
+})();
+
+/* ---------------- Chapter view (list of texts) ---------------- */
+function renderChapterView(){
+  const ci = view.ch;
+  const chapter = DATA[ci];
+  const level = LEVELS[ci] || "?";
+  const chapterDone = chapter.texts.every((t, ti) => itemDone(ci, ti, t));
+  const nextLevel = LEVELS[ci + 1];
+  let html = `<div class="back-link" id="backToToc">← Retour à la table des matières</div><div class="card">
+    <div style="text-align:center;margin-bottom:6px;"><span class="rank-badge">Niveau : ${level}</span></div>
+    <div style="font-family:'Cinzel Decorative', serif;font-size:20px;text-align:center;margin-bottom:16px;">${chapter.title}</div>`;
+  chapter.texts.forEach((t, ti) => {
+    const kindLabel = KIND_LABELS[t.kind] || "";
+    if(t.placeholder){
+      html += `<div class="text-row locked">
+        <div class="text-icon"><img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé"></div>
+        <div class="text-title">${kindLabel ? `<span class="kind-tag">${kindLabel}</span>` : ""}${t.title}</div>
+        <div class="text-status a-faire">À venir</div>
+      </div>`;
+      return;
+    }
+    if(t.kind === "promotion"){
+      const debloque = chapter.texts.every((autre, ai) => ai === ti || itemDone(ci, ai, autre));
+      const st = debloque ? ensurePromotionState(ci, ti) : null;
+      const fait = debloque && itemDone(ci, ti, t);
+      const nbReussis = debloque ? (st.sousExercices[0].statut === "reussi" ? 1 : 0) + (st.sousExercices[1].statut === "reussi" ? 1 : 0) : 0;
+      const statusTxt = !debloque ? "Termine le contenu précédent" : fait ? "Réussi ✓" : `${nbReussis}/2 réussi(s)`;
+      html += `<div class="text-row ${!debloque ? "locked" : fait ? "promo-done" : "promotion-ready"}" ${debloque ? `data-promo="${ti}"` : ""}>
+        <div class="text-icon">${debloque ? "🏅" : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</div>
+        <div class="text-title">${kindLabel ? `<span class="kind-tag">${kindLabel}</span>` : ""}${t.title}</div>
+        <div class="text-status ${fait ? "reussi" : "a-faire"}">${statusTxt}</div>
+      </div>`;
+      return;
+    }
+    const s = ensureState(ci, ti).status;
+    const icon = s === "reussi" ? "✅" : s === "soumis" ? "⏳" : "📜";
+    const label = s === "reussi" ? "Réussi ✓" : s === "soumis" ? "En attente de correction" : "À faire";
+    html += `<div class="text-row" data-t="${ti}">
+      <div class="text-icon">${icon}</div>
+      <div class="text-title">${kindLabel ? `<span class="kind-tag">${kindLabel}</span>` : ""}${t.title}</div>
+      <div class="text-status ${s}">${label}</div>
+    </div>`;
+  });
+  if(chapterDone && nextLevel){
+    html += `<p style="text-align:center;color:var(--green);font-weight:600;margin-top:14px;">🎉 Chapitre complété — tu es ${nextLevel} !</p>`;
+  }
+  html += `</div>`;
+  app.innerHTML = html;
+  document.getElementById("backToToc").addEventListener("click", () => { view = {mode:"toc"}; render(); });
+  app.querySelectorAll(".text-row[data-t]").forEach(row => {
+    row.addEventListener("click", () => {
+      const ti = parseInt(row.dataset.t,10);
+      const kind = chapter.texts[ti].kind;
+      view = { mode: kind === "conjugaison" ? "conjugaison-hub" : "text", ch:ci, text: ti };
+      render();
+    });
+  });
+  app.querySelectorAll(".text-row[data-promo]").forEach(row => {
+    row.addEventListener("click", () => { view = {mode:"promotion-hub", ch:ci, text: parseInt(row.dataset.promo,10)}; render(); });
+  });
+}
+
+/* ---------------- Text + questionnaire view ---------------- */
+/* ---------------- Épreuve de promotion (paires d'homophones) ----------------
+   Insérée en toute fin de chapitre, verrouillée jusqu'à ce que le reste du
+   chapitre soit terminé. Contient 2 exercices (une paire de sujets
+   d'homophones) ; réussir les deux (10/15 chacun) complète le chapitre et
+   accorde le rang suivant — sans or, sans autre récompense. */
+function renderPromotionHub(){
+  const ci = view.ch, ti = view.text;
+  const chapter = DATA[ci];
+  const t = chapter.texts[ti];
+  const paire = HOMOPHONE_PAIRES[t.paireIndex];
+  const st = ensurePromotionState(ci, ti);
+  let html = `<div class="back-link" id="backToChapter">← Retour au chapitre</div><div class="card">
+    <div style="font-family:'Cinzel Decorative', serif;font-size:20px;text-align:center;margin-bottom:6px;">🏅 Épreuve de promotion</div>
+    <p style="text-align:center;color:var(--ink-soft);margin-bottom:18px;">Réussis les 2 exercices (10/15 chacun) pour gravir un échelon.</p>`;
+  paire.forEach((topicIdx, subIdx) => {
+    const topic = HOMOPHONES_TOPICS[topicIdx];
+    const sousSt = st.sousExercices[subIdx];
+    const dispo = subIdx === 0 || st.sousExercices[0].statut === "reussi";
+    const fait = sousSt.statut === "reussi";
+    const label = fait ? "Réussi ✓" : dispo ? "À faire" : "Termine l'exercice précédent";
+    html += `<div class="text-row ${!dispo ? "locked" : fait ? "promo-done" : ""}" ${dispo ? `data-sub="${subIdx}"` : ""}>
+      <div class="text-icon">${!dispo ? '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">' : fait ? "✅" : "📜"}</div>
+      <div class="text-title">Exercice ${subIdx+1} — ${topic.title}</div>
+      <div class="text-status ${fait ? "reussi" : "a-faire"}">${label}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  app.innerHTML = html;
+  document.getElementById("backToChapter").addEventListener("click", () => {
+    view = DATA[ci].isInvocations ? {mode:"evoc-liste"} : {mode:"chapter", ch:ci};
+    render();
+  });
+  app.querySelectorAll(".text-row[data-sub]").forEach(row => {
+    row.addEventListener("click", () => startPromotionExercise(ci, ti, parseInt(row.dataset.sub,10)));
+  });
+}
+
+function startPromotionExercise(ci, ti, subIdx){
+  const t = DATA[ci].texts[ti];
+  const paire = HOMOPHONE_PAIRES[t.paireIndex];
+  const topicIdx = paire[subIdx];
+  view = {
+    mode:"promotion-exercise", ch:ci, text:ti, sub:subIdx, topicIdx, q:0,
+    answers: new Array(15).fill(null),
+    optionOrder: HOMOPHONES_TOPICS[topicIdx].sentences.map(() => (Math.random() < 0.5 ? [1,0] : [0,1]))
+  };
+  render();
+}
+
+function renderPromotionExercise(){
+  const { topicIdx, q, answers, optionOrder } = view;
+  const topic = HOMOPHONES_TOPICS[topicIdx];
+  const [sentence] = topic.sentences[q];
+  const parts = sentence.split("___");
+  const opts = optionOrder[q].map(idx => topic.options[idx]);
+  const selected = answers[q];
+
+  app.innerHTML = `<div class="card">
+    <div class="ex-header">
+      <div class="ex-title">${topic.title}</div>
+      <div class="ex-progress">Question ${q+1} / 15</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" style="width:${(q/15)*100}%"></div></div>
+    <div class="sentence">${parts[0]}<span class="blank-space">&nbsp;&nbsp;&nbsp;</span>${parts[1]||""}</div>
+    <div class="choices">
+      ${opts.map(o => `<button class="choice-word ${selected===o ? "selected" : ""}" data-word="${o}"><span class="ring"></span>${o}</button>`).join("")}
+    </div>
+    <div class="feedback-row">${selected ? "Réponse choisie." : "Choisis ta réponse."}</div>
+  </div>`;
+
+  app.querySelectorAll(".choice-word").forEach(btn => {
+    btn.addEventListener("click", () => {
+      view.answers[q] = btn.dataset.word;
+      render();
+      if(q < 14) setTimeout(() => { view.q = q + 1; render(); }, 250);
+      else setTimeout(() => finishPromotionExercise(), 250);
+    });
+  });
+}
+
+function finishPromotionExercise(){
+  const { ch:ci, text:ti, sub, topicIdx, answers } = view;
+  const topic = HOMOPHONES_TOPICS[topicIdx];
+  let score = 0;
+  topic.sentences.forEach(([sentence, answer], i) => {
+    if(answers[i] && answers[i].toLowerCase() === answer.toLowerCase()) score++;
+  });
+  const passed = score >= 10;
+  const st = ensurePromotionState(ci, ti);
+  if(passed) st.sousExercices[sub].statut = "reussi";
+
+  view = {mode:"promotion-results", ch:ci, text:ti, sub, topicIdx, answers, score, passed};
+  render();
+
+  if(passed && st.sousExercices[0].statut === "reussi" && st.sousExercices[1].statut === "reussi"){
+    const chapter = DATA[ci];
+    if(chapter.texts.every((t2, tii) => itemDone(ci, tii, t2))) promouvoirRang(ci);
+  }
+}
+
+function renderPromotionResults(){
+  const { ch:ci, text:ti, topicIdx, answers, score, passed } = view;
+  const topic = HOMOPHONES_TOPICS[topicIdx];
+
+  let rowsHtml = "";
+  topic.sentences.forEach(([sentence, answer], i) => {
+    const parts = sentence.split("___");
+    const given = answers[i];
+    const correct = given && given.toLowerCase() === answer.toLowerCase();
+    rowsHtml += `<li class="result-row ${correct ? "correct" : "incorrect"}">
+      <div class="result-sentence">${parts[0]}<b>${answer}</b>${parts[1]||""}</div>
+      <div class="result-your-answer">${correct
+        ? "Ta réponse : " + given + " ✓"
+        : "Ta réponse : " + (given || "(aucune)") + " ✗ — la bonne réponse était « <span class=\"correct-word\">" + answer + "</span> »"}</div>
+    </li>`;
+  });
+
+  const bannerExtra = passed
+    ? `<div class="pass-msg">Bravo, 10/15 ou plus !</div>`
+    : `<div class="retry-msg">Il te faut au moins 10/15. Tu dois recommencer cet exercice depuis le début.</div>`;
+
+  app.innerHTML = `<div class="card">
+    <div class="ex-title" style="text-align:center;margin-bottom:6px;">Correction — ${topic.title}</div>
+    <div class="score-banner">
+      <div class="big-score">${score} / 15</div>
+      ${bannerExtra}
+    </div>
+    <ul class="results-list">${rowsHtml}</ul>
+    <div class="btn-row">
+      <button class="next-btn" id="promoBackBtn">Retour à l'épreuve de promotion</button>
+    </div>
+  </div>`;
+
+  document.getElementById("promoBackBtn").addEventListener("click", () => {
+    view = {mode:"promotion-hub", ch:ci, text:ti};
+    render();
+  });
+}
+
+/* Accorde le rang suivant (une seule fois) et affiche la célébration plein écran. */
+async function promouvoirRang(ci){
+  const nextLevel = LEVELS[ci + 1];
+  if(!nextLevel || !identiteEleve || !window.PasserelleCore) return;
+  let genre = null;
+  try{
+    const resultat = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
+    const coffre = resultat.donnees;
+    genre = coffre.genre;
+    if((coffre.niveauLecture || 0) < (ci + 1)){
+      coffre.niveauLecture = ci + 1;
+      coffre.nom = identiteEleve.nom;
+      await window.PasserelleCore.sauvegarderCoffre(identiteEleve.slug, coffre);
+    }
+  }catch(e){ /* la promotion sera revérifiée à la prochaine visite du menu */ }
+  afficherLevelUp(genre, nextLevel);
+}
+
+function afficherLevelUp(genre, nextLevel){
+  const img = document.getElementById("levelupImg");
+  img.src = "couverture_assets/levelup_" + (genre === "fille" ? "fille" : "garcon") + ".jpg";
+  document.getElementById("levelupSousTitre").textContent = "Tu es maintenant " + nextLevel + " !";
+  document.getElementById("levelupOverlay").classList.add("open");
+}
+document.getElementById("levelupConfirmBtn").addEventListener("click", () => {
+  if(!identiteEleve) return;
+  window.location.href = "interface_eleve.html?eleve=" + encodeURIComponent(identiteEleve.slug) + "&nom=" + encodeURIComponent(identiteEleve.nom);
+});
+
+/* ---------------- Conjugaison (feuilles imprimables externes, 2 séries) ----------------
+   Chaque thème ouvre ses deux séries dans la même fenêtre-iframe que le
+   Chapitre Interdit. Comme pour les textes/rédactions, la remise à
+   l'enseignant est manuelle (pas de correction automatique). */
+function renderConjugaisonHub(){
+  const ci = view.ch, ti = view.text;
+  const t = DATA[ci].texts[ti];
+  const st = ensureState(ci, ti);
+  const locked = st.status !== "a-faire";
+  let banner = "";
+  if(st.status === "soumis") banner = `<div class="status-banner soumis">⏳ Remis — en attente de correction par l'enseignant.</div>`;
+  if(st.status === "reussi") banner = `<div class="status-banner reussi">✅ Réussi !</div>`;
+
+  app.innerHTML = `<div class="back-link" id="backToChapter">← Retour au chapitre</div><div class="card">
+    <div style="text-align:center;font-size:38px;margin-bottom:4px;">${t.emoji || "📘"}</div>
+    <div style="font-family:'Cinzel Decorative', serif;font-size:19px;text-align:center;margin-bottom:4px;">${t.title}</div>
+    <p style="text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:18px;">${t.sousTitre || ""}</p>
+    ${banner}
+    <div class="btn-row" style="margin-bottom:14px;">
+      <button class="next-btn" id="ouvrirSerie1">Ouvrir la Série 1</button>
+      <button class="next-btn secondary" id="ouvrirSerie2">Ouvrir la Série 2</button>
+    </div>
+    <div class="btn-row">
+      ${locked ? "" : `<button class="next-btn" id="submitBtn">Remettre à l'enseignant</button>`}
+      ${st.status === "soumis" ? `<button class="next-btn secondary" id="editBtn">Rouvrir cette section</button>` : ""}
+    </div>
+  </div>`;
+
+  document.getElementById("backToChapter").addEventListener("click", () => { view = {mode:"chapter", ch:ci}; render(); });
+  document.getElementById("ouvrirSerie1").addEventListener("click", () => ouvrirFeuilleConjugaison(t.title + " — Série 1", t.serie1));
+  document.getElementById("ouvrirSerie2").addEventListener("click", () => ouvrirFeuilleConjugaison(t.title + " — Série 2", t.serie2));
+  const submitBtn = document.getElementById("submitBtn");
+  if(submitBtn) submitBtn.addEventListener("click", () => { st.status = "soumis"; notifyParent(); render(); });
+  const editBtn = document.getElementById("editBtn");
+  if(editBtn) editBtn.addEventListener("click", () => { st.status = "a-faire"; render(); });
+}
+
+function ouvrirFeuilleConjugaison(titre, url){
+  document.getElementById("specialOverlayTitle").textContent = titre;
+  document.getElementById("specialOverlayFrame").src = url;
+  document.getElementById("specialOverlay").classList.add("open");
+}
+
+function renderTextView(){
+  const {ch, text} = view;
+  const t = DATA[ch].texts[text];
+  if(t.type === "writing"){ renderWritingView(ch, text); return; }
+  const st = ensureState(ch, text);
+  const locked = st.status !== "a-faire";
+
+  let bodyHtml = "";
+  t.body.forEach(block => {
+    if(block.h) bodyHtml += `<h4>${block.h}</h4>`;
+    else bodyHtml += `<p>${block.p}</p>`;
+  });
+
+  let banner = "";
+  if(st.status === "soumis") banner = `<div class="status-banner soumis">⏳ Remis — en attente de correction par l'enseignant.</div>`;
+  if(st.status === "reussi") banner = `<div class="status-banner reussi">✅ Réussi !</div>`;
+
+  let qHtml = "";
+  t.questions.forEach(q => {
+    const header = q.heading || ("Question " + q.num);
+    if(q.type === "matching"){
+      qHtml += `<div class="question-block"><div class="question-num">${header}</div><div class="question-prompt">${q.prompt}</div>${renderMatchingHtml(q, st, locked)}</div>`;
+    } else if(q.note){
+      qHtml += `<div class="question-block"><div class="question-num">${header}</div><div class="note-box">${q.note}</div></div>`;
+    } else {
+      const key = q.num || q.heading;
+      const val = st.answers[key] || "";
+      qHtml += `<div class="question-block">
+        <div class="question-num">${header}</div>
+        <div class="question-prompt">${q.prompt}</div>
+        <textarea data-q="${key}" ${locked ? "disabled" : ""} rows="2">${val}</textarea>
+      </div>`;
+    }
+  });
+
+  app.innerHTML = `<div class="back-link" id="backToChapter">← Retour aux textes du chapitre</div>
+  <div class="card">
+    <div style="font-family:'Cinzel Decorative', serif;font-size:19px;text-align:center;margin-bottom:14px;">${t.title}</div>
+    <div class="reading-body">${bodyHtml}</div>
+    ${banner}
+    ${qHtml}
+    <div class="btn-row">
+      ${locked ? "" : `<button class="next-btn" id="submitBtn">Remettre à l'enseignant</button>`}
+      ${st.status === "soumis" ? `<button class="next-btn secondary" id="editBtn">Modifier mes réponses</button>` : ""}
+    </div>
+  </div>`;
+
+  document.getElementById("backToChapter").addEventListener("click", () => { view = {mode:"chapter", ch}; render(); });
+
+  app.querySelectorAll("textarea").forEach(ta => {
+    ta.addEventListener("input", () => { st.answers[ta.dataset.q] = ta.value; });
+  });
+
+  t.questions.forEach(q => { if(q.type === "matching") wireMatching(q, st, locked); });
+
+  const submitBtn = document.getElementById("submitBtn");
+  if(submitBtn) submitBtn.addEventListener("click", () => {
+    st.status = "soumis";
+    notifyParent();
+    render();
+  });
+  const editBtn = document.getElementById("editBtn");
+  if(editBtn) editBtn.addEventListener("click", () => {
+    st.status = "a-faire";
+    render();
+  });
+}
+
+/* ---------------- Writing / composition view ---------------- */
+function renderWritingView(ci, ti){
+  const chapter = DATA[ci];
+  const t = chapter.texts[ti];
+  const st = ensureState(ci, ti);
+  const locked = st.status !== "a-faire";
+
+  if(st.promptIdx === null && t.prompts.length === 1) st.promptIdx = 0;
+
+  let banner = "";
+  if(st.status === "soumis") banner = `<div class="status-banner soumis">⏳ Remis — en attente de correction par l'enseignant.</div>`;
+  if(st.status === "reussi") banner = `<div class="status-banner reussi">✅ Réussi !</div>`;
+
+  let inner = "";
+
+  if(st.promptIdx === null){
+    // Choice screen
+    inner += `<p style="margin-bottom:14px;">${t.instructions}</p>`;
+    t.prompts.forEach((p, pi) => {
+      inner += `<div class="prompt-card">
+        <h4>${p.title}</h4>
+        <p>${p.body}</p>
+        <button class="next-btn" data-choose="${pi}">Choisir ce sujet</button>
+      </div>`;
+    });
+  } else {
+    const p = t.prompts[st.promptIdx];
+    inner += `<div class="chosen-prompt">
+      <h4>${p.title}</h4>
+      <p>${p.body}</p>
+      ${(locked || t.prompts.length === 1) ? "" : `<div class="change-prompt-link" id="changePromptLink">Changer de sujet</div>`}
+    </div>`;
+    inner += `<p class="write-hint">Objectif : ${t.wordTarget} mots. Une fois ton brouillon terminé, relis-toi : souligne les groupes du nom et entoure les adjectifs directement dans le texte ci-dessous.</p>`;
+    if(!locked){
+      inner += `<div class="write-toolbar">
+        <button type="button" class="underline-btn" id="underlineBtn">Souligner (groupe du nom)</button>
+        <button type="button" class="circle-btn" id="circleBtn">Entourer (adjectif)</button>
+        <button type="button" id="clearMarkBtn">Effacer le marquage</button>
+        <span class="word-counter" id="wordCounter">0 / ${t.wordTarget} mots</span>
+      </div>`;
+    } else {
+      inner += `<div class="write-toolbar"><span class="word-counter">${countWords(st.content)} / ${t.wordTarget} mots</span></div>`;
+    }
+    inner += `<div class="write-editor" id="writeEditor" contenteditable="${locked ? "false" : "true"}">${st.content || ""}</div>`;
+  }
+
+  app.innerHTML = `<div class="back-link" id="backToChapter">← Retour aux textes du chapitre</div>
+  <div class="card">
+    <div style="font-family:'Cinzel Decorative', serif;font-size:19px;text-align:center;margin-bottom:14px;">${t.title}</div>
+    ${banner}
+    ${inner}
+    <div class="btn-row">
+      ${(!locked && st.promptIdx !== null) ? `<button class="next-btn" id="submitBtn">Remettre à l'enseignant</button>` : ""}
+      ${st.status === "soumis" ? `<button class="next-btn secondary" id="editBtn">Modifier mon texte</button>` : ""}
+    </div>
+  </div>`;
+
+  document.getElementById("backToChapter").addEventListener("click", () => { view = {mode:"chapter", ch:ci}; render(); });
+
+  app.querySelectorAll("[data-choose]").forEach(btn => {
+    btn.addEventListener("click", () => { st.promptIdx = parseInt(btn.dataset.choose, 10); render(); });
+  });
+
+  const changeLink = document.getElementById("changePromptLink");
+  if(changeLink) changeLink.addEventListener("click", () => { st.promptIdx = null; st.content = ""; render(); });
+
+  const editor = document.getElementById("writeEditor");
+  const counter = document.getElementById("wordCounter");
+  if(editor && !locked){
+    editor.addEventListener("input", () => {
+      st.content = editor.innerHTML;
+      const n = countWords(st.content);
+      if(counter){
+        counter.textContent = n + " / " + t.wordTarget + " mots";
+        counter.classList.toggle("ok", n >= t.wordTarget);
+      }
+    });
+    const keepSelection = (e) => e.preventDefault();
+    const underlineBtn = document.getElementById("underlineBtn");
+    const circleBtn = document.getElementById("circleBtn");
+    const clearBtn = document.getElementById("clearMarkBtn");
+    if(underlineBtn){
+      underlineBtn.addEventListener("mousedown", keepSelection);
+      underlineBtn.addEventListener("click", () => {
+        editor.focus();
+        document.execCommand("underline");
+        st.content = editor.innerHTML;
+      });
+    }
+    if(circleBtn){
+      circleBtn.addEventListener("mousedown", keepSelection);
+      circleBtn.addEventListener("click", () => {
+        editor.focus();
+        const sel = window.getSelection();
+        if(sel && sel.rangeCount > 0 && !sel.isCollapsed){
+          const range = sel.getRangeAt(0);
+          try {
+            const span = document.createElement("span");
+            span.className = "circled";
+            range.surroundContents(span);
+            sel.removeAllRanges();
+          } catch(e) {
+            alert("Sélectionne un seul mot ou groupe de mots simple, sans chevaucher un autre marquage.");
+          }
+          st.content = editor.innerHTML;
+        }
+      });
+    }
+    if(clearBtn){
+      clearBtn.addEventListener("click", () => {
+        editor.innerHTML = editor.innerHTML
+          .replace(/<\/?u>/g, "")
+          .replace(/<span class="circled">/g, "")
+          .replace(/<\/span>/g, "");
+        st.content = editor.innerHTML;
+      });
+    }
+  }
+
+  const submitBtn = document.getElementById("submitBtn");
+  if(submitBtn) submitBtn.addEventListener("click", () => {
+    st.status = "soumis";
+    notifyParent();
+    render();
+  });
+  const editBtn = document.getElementById("editBtn");
+  if(editBtn) editBtn.addEventListener("click", () => {
+    st.status = "a-faire";
+    render();
+  });
+}
+
+/* ---------------- Panneau enseignant ---------------- */
+function renderTeacherList(){
+  const list = document.getElementById("teacherList");
+  let items = [];
+  DATA.forEach((chapter, ci) => {
+    if(chapter.placeholder || chapter.special || chapter.isInvocations) return;
+    chapter.texts.forEach((t, ti) => {
+      if(t.placeholder) return;
+      const st = ensureState(ci, ti);
+      if(st.status === "soumis") items.push({ci, ti, title: t.title});
+    });
+  });
+  if(items.length === 0){
+    list.innerHTML = `<p class="empty-note">Aucun texte en attente de correction.</p>`;
+    return;
+  }
+  list.innerHTML = items.map(it => `<div class="teacher-item">
+      <div class="ti-title">${it.title}</div>
+      <button class="approve" data-ci="${it.ci}" data-ti="${it.ti}" data-action="approve">Marquer réussi</button>
+      <button class="reject" data-ci="${it.ci}" data-ti="${it.ti}" data-action="reject">Renvoyer</button>
+    </div>`).join("");
+  list.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const ci = parseInt(btn.dataset.ci,10), ti = parseInt(btn.dataset.ti,10);
+      const st = ensureState(ci, ti);
+      st.status = (btn.dataset.action === "approve") ? "reussi" : "a-faire";
+      notifyParent();
+      render();
+    });
+  });
+}
+
+const teacherPanel = document.getElementById("teacherPanel");
+document.addEventListener("keydown", (e) => {
+  if(e.ctrlKey && e.shiftKey && (e.key === "M" || e.key === "m")) teacherPanel.classList.add("open");
+});
+document.getElementById("closeTeacher").addEventListener("click", () => teacherPanel.classList.remove("open"));
+document.getElementById("unlockAllBtn").addEventListener("click", () => {
+  DATA.forEach((chapter, ci) => {
+    if(chapter.placeholder || chapter.special || chapter.isInvocations) return;
+    chapter.texts.forEach((t, ti) => { if(!t.placeholder) ensureState(ci, ti).status = "reussi"; });
+  });
+  teacherPanel.classList.remove("open");
+  notifyParent();
+  render();
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  textState = {};
+  view = {mode:"toc"};
+  teacherPanel.classList.remove("open");
+  notifyParent();
+  render();
+});
+
+/* Auto-open a specific text when embedded with ?open=N (chapter 1 only, used by the global hub) */
+const openParam = new URLSearchParams(window.location.search).get("open");
+if(openParam !== null && !isNaN(parseInt(openParam, 10)) && DATA[0] && DATA[0].texts){
+  const idx = parseInt(openParam, 10);
+  if(idx >= 0 && idx < DATA[0].texts.length) view = {mode:"text", ch:0, text: idx};
+}
+
+render();
+</script>
+</body>
+</html>
