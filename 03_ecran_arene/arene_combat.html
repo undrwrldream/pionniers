@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Arène de Combat — Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --parchment:#F1E4C3; --gold:#D9A62E; --iron:#5B5750; --steel:#5C7A99;
+    --hp-red:#B23A3A; --hp-red-dark:#6E1F1F;
+  }
+  *{box-sizing:border-box;}
+  html, body{ height:100%; }
+  body{
+    margin:0; min-height:100vh; overflow-x:hidden;
+    background:radial-gradient(ellipse at 50% 15%, #2E2419, #17130D 75%);
+    color:var(--parchment); font-family:'Crimson Text', serif;
+    display:flex; flex-direction:column;
+  }
+  /* Écran pensé pour un projecteur/TV grand écran (16:9), contrairement à l'interface élève */
+  h1,h2,h3{ font-family:'Cinzel', serif; }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 20px; border-bottom:2px solid var(--gold);
+    background:rgba(0,0,0,0.35);
+  }
+  .topbar h1{ margin:0; font-size:20px; letter-spacing:1px; }
+  .round-badge{
+    font-family:'Cinzel', serif; font-size:15px; background:#2B2118;
+    border:1.5px solid var(--gold); border-radius:20px; padding:5px 16px;
+  }
+  .fullscreen-btn{
+    font-family:'Cinzel', serif; font-size:14px; background:#2B2118; color:var(--parchment);
+    border:1.5px solid var(--gold); border-radius:8px; padding:6px 14px; cursor:pointer;
+  }
+  .fullscreen-btn:hover{ background:#3a2f20; }
+
+  /* Boutons de début/déroulement de combat — en haut, juste sous le titre */
+  .controls-top{
+    display:flex; align-items:center; justify-content:center; gap:14px;
+    padding:10px 20px; border-bottom:1px solid #4a3d2c; background:rgba(0,0,0,0.22);
+  }
+
+  .action-btn{
+    font-family:'Cinzel', serif; background:linear-gradient(160deg,#7a5b1e,var(--gold));
+    color:#1c1608; border:none; border-radius:8px; padding:11px 30px; font-size:15px; cursor:pointer;
+    letter-spacing:.5px; box-shadow:0 3px 0 #6b4e14;
+  }
+  .action-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  /* ---------- Scène : monstre en haut, élèves en demi-cercle en dessous ---------- */
+  .stage-wrap{ flex:1 1 auto; display:flex; align-items:flex-start; justify-content:center; padding:1.4vh 1vw; overflow:auto; }
+  .stage{ position:relative; width:1220px; max-width:100%; }
+
+  .monster-block{ position:relative; text-align:center; }
+  .monster-name{ font-family:'Cinzel', serif; font-size:22px; color:var(--steel); margin-bottom:4px; }
+  .monster-img-wrap{ position:relative; display:inline-block; min-height:150px; }
+  .monster-img-wrap img{
+    width:min(48vw, 520px); height:min(48vw, 520px); object-fit:contain;
+    filter:drop-shadow(0 14px 20px #000);
+  }
+  .monster-img-wrap.hit{ animation:monsterShake .3s ease; }
+  @keyframes monsterShake{ 0%,100%{ transform:translateX(0);} 25%{ transform:translateX(-6px);} 75%{ transform:translateX(6px);} }
+  /* PV et dégâts affichés juste sous le monstre, mais en léger overlay sur
+     le bas de son image plutôt que dans leur propre bloc séparé. */
+  .monster-overlay-stats{
+    position:absolute; left:50%; bottom:2%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:6px; z-index:5;
+  }
+  .hp-bar-wrap{
+    width:300px; background:rgba(43,33,24,0.88); border:2px solid var(--gold);
+    border-radius:10px; padding:4px; position:relative; box-shadow:0 4px 10px rgba(0,0,0,.5);
+  }
+  .hp-bar-wrap .hp-label{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:12px; font-family:'Cinzel', serif; text-shadow:0 1px 2px #000;
+  }
+  .hp-bar-fill{ height:16px; border-radius:6px; background:linear-gradient(90deg,var(--hp-red-dark),var(--hp-red)); transition:width .5s ease; }
+  .monster-dmg-stat{
+    font-family:'Cinzel', serif; font-size:13px; color:#e6a3a3;
+    background:rgba(0,0,0,.55); border:1px solid #6b3a3a; border-radius:8px; padding:5px 12px; display:inline-block;
+  }
+
+  /* Zone du demi-cercle : le pivot (haut du monstre) est au centre-haut de cette zone —
+     remontée pour que le monstre agrandi occupe le centre du demi-cercle plutôt que
+     de flotter au-dessus, dans son propre espace vide. */
+  .arc-zone{ position:relative; width:100%; height:460px; margin-top:-70px; }
+  .student{
+    position:absolute; width:100px; margin-left:-50px; margin-top:-4px;
+    text-align:center; transition:filter .25s ease;
+  }
+  .student.petrified{ filter:grayscale(1) brightness(.55); }
+  .student.ko{ filter:grayscale(1) brightness(.32); }
+  .avatar-wrap{ position:relative; width:80px; height:100px; margin:0 auto; }
+  .avatar-wrap svg{ width:100%; height:100%; }
+  .weapon-badge{
+    position:absolute; bottom:6px; right:-10px; width:24px; height:36px;
+    border-radius:5px; overflow:hidden; background:#2B2118; border:2px solid #8C97A6;
+  }
+  .weapon-badge img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .shield-badge{
+    position:absolute; bottom:6px; left:-10px; width:26px; height:26px;
+    border-radius:50%; overflow:hidden; background:#2B2118; border:2px solid var(--gold);
+  }
+  .shield-badge img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .student-name{ font-size:13px; margin-top:2px; }
+  .student-substats{
+    display:flex; gap:6px; justify-content:center; margin-top:2px; font-size:11px;
+    font-family:'Cinzel', serif; white-space:nowrap;
+  }
+  .stat-hp{ color:#e88a8a; }
+  .stat-dmg{ color:#c9b98d; }
+
+  .dmg-pop{
+    position:absolute; top:-4px; left:50%; transform:translateX(-50%);
+    font-family:'Cinzel', serif; font-weight:700; font-size:20px; color:#ff2e2e;
+    text-shadow:0 0 6px #000, 0 0 2px #fff; pointer-events:none; z-index:20;
+    animation:floatUp .8s ease-out forwards;
+  }
+  .monster-dmg-pop{
+    position:absolute; top:15%; left:50%; transform:translateX(-50%);
+    font-family:'Cinzel', serif; font-weight:700; color:#ff2e2e; font-size:26px;
+    text-shadow:0 0 6px #000; pointer-events:none; z-index:20; animation:floatUp .9s ease-out forwards;
+  }
+  @keyframes floatUp{
+    0%{ opacity:1; transform:translate(-50%,0) scale(1); }
+    100%{ opacity:0; transform:translate(-50%,-30px) scale(1.15); }
+  }
+
+  /* Effet de slash style Zelda */
+  .slash-fx{ position:absolute; top:32%; left:100%; margin-left:-10px; width:90px; height:90px; opacity:0; pointer-events:none; z-index:15; }
+  .slash-fx.play{ animation:slashPlay .32s ease-out; }
+  @keyframes slashPlay{
+    0%{ opacity:0; transform:rotate(-25deg) scale(0.5); } 25%{ opacity:1; } 100%{ opacity:0; transform:rotate(15deg) scale(1.25); }
+  }
+
+  .bottom-bar{ padding:10px 20px 14px; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .log{ width:min(760px,92vw); max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.4); border:1px solid #6b5b3d; border-radius:8px; padding:8px 14px; font-size:13.5px; }
+  .log div{ margin:2px 0; color:#e6d8b8; } .log div.gold-line{ color:#ffd35c; } .log div.bad-line{ color:#a9c1d6; } .log div.hit-line{ color:#e6a3a3; }
+
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(10,8,5,0.88); align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .overlay.open{ display:flex; }
+  .event-card{ width:min(560px,94vw); background:#241C13; border:2px solid var(--gold); border-radius:14px; padding:26px 28px; text-align:center; }
+  .event-card h2{ margin:0 0 6px; font-size:19px; color:var(--gold); }
+  .event-card .event-flavor{ font-size:13.5px; color:#c9b98d; margin-bottom:16px; }
+  .event-card .event-question{ font-size:17px; margin-bottom:18px; }
+  .choice-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .choice-btn{ font-family:'Crimson Text', serif; font-size:15px; background:#3a2f22; color:var(--parchment); border:1.5px solid #6b5b3d; border-radius:8px; padding:12px; cursor:pointer; }
+  .choice-btn:hover{ border-color:var(--gold); } .choice-btn:disabled{ opacity:.5; }
+  .event-result{ margin-top:14px; font-size:14px; min-height:20px; }
+  .event-result.good{ color:#8fd08a; } .event-result.bad{ color:#e08a8a; }
+  .victory-card h2{ font-size:30px; color:var(--gold); margin-bottom:6px; }
+
+  .teacher-panel{ position:fixed; top:0; right:-360px; width:340px; height:100vh; background:#1c160f; border-left:2px solid var(--gold); padding:20px; transition:right .3s ease; z-index:80; overflow-y:auto; }
+  .teacher-panel.open{ right:0; }
+  .teacher-panel h3{ color:var(--gold); margin-top:0; font-size:16px; }
+  .teacher-panel label{ display:block; font-size:12.5px; color:#c9b98d; margin:12px 0 4px; }
+  .teacher-panel select{ width:100%; padding:6px; border-radius:6px; border:1px solid #6b5b3d; background:#2B2118; color:var(--parchment); }
+  .teacher-panel .tp-btn{ width:100%; margin-top:10px; padding:8px; border-radius:6px; border:none; background:var(--gold); color:#1c1608; font-family:'Cinzel', serif; cursor:pointer; }
+  .teacher-panel .tp-btn.warn{ background:#8a3a3a; color:#fff; }
+  .tp-note{ font-size:11px; color:#8a7c5e; margin-top:14px; line-height:1.5; }
+  .tp-close{ position:absolute; top:10px; right:12px; background:none; border:none; color:var(--parchment); font-size:18px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>⚔️ L'Arène — Combat du vendredi</h1>
+  <div style="display:flex; align-items:center; gap:12px;">
+    <button class="fullscreen-btn" id="fullscreenBtn" type="button" title="Occuper tout l'écran du projecteur">⛶ Plein écran</button>
+    <div class="round-badge" id="roundBadge">Round 0</div>
+  </div>
+</div>
+
+<div class="controls-top">
+  <button class="action-btn" id="startBtn">Commencer le combat</button>
+  <button class="action-btn" id="roundBtn" disabled>Lancer le round</button>
+</div>
+
+<div class="stage-wrap">
+  <div class="stage">
+    <div class="monster-block">
+      <div class="monster-name" id="monsterName">—</div>
+      <div class="monster-img-wrap" id="monsterImgWrap"></div>
+      <div class="monster-overlay-stats">
+        <div class="hp-bar-wrap">
+          <div class="hp-bar-fill" id="monsterHpFill" style="width:100%"></div>
+          <div class="hp-label" id="monsterHpLabel">PV 0/0</div>
+        </div>
+        <div class="monster-dmg-stat" id="monsterDmgStat">Dégâts : — / round</div>
+      </div>
+    </div>
+    <div class="arc-zone" id="arcZone"></div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div class="log" id="log"></div>
+</div>
+
+<div class="overlay" id="eventOverlay">
+  <div class="event-card">
+    <h2 id="eventTitle">Événement</h2>
+    <div class="event-flavor" id="eventFlavor"></div>
+    <div class="event-question" id="eventQuestion"></div>
+    <div class="choice-grid" id="eventChoices"></div>
+    <div class="event-result" id="eventResult"></div>
+    <button class="action-btn" id="eventContinueBtn" style="margin-top:16px; display:none;">Continuer</button>
+  </div>
+</div>
+
+<div class="overlay" id="victoryOverlay">
+  <div class="event-card victory-card">
+    <h2>🏆 Monstre vaincu !</h2>
+    <div class="event-flavor" id="victorySummary"></div>
+    <button class="action-btn" id="victoryCloseBtn" style="margin-top:10px;">Fermer</button>
+  </div>
+</div>
+
+<div class="overlay" id="defeatOverlay">
+  <div class="event-card victory-card">
+    <h2 style="color:#c76a6a;">💀 Le groupe est tombé...</h2>
+    <div class="event-flavor" id="defeatSummary"></div>
+    <button class="action-btn" id="defeatCloseBtn" style="margin-top:10px;">Fermer</button>
+  </div>
+</div>
+
+<div class="teacher-panel" id="teacherPanel">
+  <button class="tp-close" id="closeTeacher">✕</button>
+  <h3>Panneau enseignant</h3>
+
+  <label>Monstre du combat</label>
+  <select id="monsterSelect"></select>
+
+  <label>Bouclier d'absorption (assigné en début de combat, pour récompenser un comportement)</label>
+  <select id="shieldSelect">
+    <option value="0">Aucun bouclier</option>
+    <option value="5" selected>Comportement correct (+5 PV absorbés)</option>
+    <option value="10">Excellent comportement (+10 PV absorbés)</option>
+  </select>
+
+  <button class="tp-btn" id="forceEventBtn">Déclencher l'événement du monstre</button>
+  <button class="tp-btn warn" id="resetBtn">Réinitialiser le combat</button>
+
+  <div class="tp-note">
+    PROTOTYPE — le bouclier d'absorption ci-dessus est choisi par l'enseignant
+    UNE FOIS avant le combat, pour récompenser le comportement du groupe ; il
+    absorbe les prochains dégâts subis, PV pour PV, avant que les vraies PV
+    n'en prennent le coup. Le monstre attaque tout le groupe d'un coup, chaque
+    round. Tout est ajustable dans le bloc CONFIG du JS.
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CONFIG — valeurs de démonstration, à ajuster librement
+   ============================================================ */
+const RANKS = ["Apprenti","Novice","Invocateur","Magicien","Sorcier","Archimage"];
+const RANK_MULT = [1,2,4,8,12,20];   // niveau 1 à 6 : × sur l'attaque et les PV (Apprenti … Archimage)
+
+const WEAPON_ATK = {
+  "weapon1_dagger":4, "weapon2_longsword":6, "weapon3_shortsword":5,
+  "weapon4_axe":7, "weapon5_saber":6, "weapon6_lance":7, "weapon7_warhammer":8,
+  "weapon8_halberd":8, "weapon9_flail":6, "weapon10_2hsword":9,
+  "legend1_frostmourne":13, "legend2_dawn":13
+};
+const BASE_HP = 10;  // PV de départ, avant armure
+// PV de l'armure par pièce (casque/armure/gants/bottes/bouclier). Vide pour l'instant :
+// les élèves n'ont qu'une arme, donc 0 PV d'armure — il leur faudra vite s'équiper !
+const ARMOR_HP = {
+  "shield1_kite":6, "shield2_round":6, "shield3_heater":8, "shield4_dragon":10, "shield5_royal":12
+};
+
+const ATTACK_STAGGER_MS = 250; // délai entre chaque attaque d'élève
+
+const TUNIC_COLORS = ["#7B2D26","#3B5D42","#5C7A99","#B8860B","#5C4A8C","#2D6E6E","#B5502E","#6B7A2A","#4A5A6A","#8C2E4A","#3A4A8C","#A67C2E"];
+const SKIN_TONES = ["#E8C79E","#D9AE78","#C68E5C"];
+
+// Géométrie du demi-cercle — pivot au centre-haut de #arcZone (juste sous le monstre)
+const ARC_RADIUS = 410;
+
+// Élèves de démonstration : tous au niveau 1 (Apprenti) et sans équipement, comme un vrai élève qui débute.
+// (Sans arme, l'attaque de base est de 5 — voir initRoster ; sans bouclier, 0 PV d'armure.)
+const ROSTER = [
+  {name:"Alice", rankIndex:0}, {name:"Noah", rankIndex:0}, {name:"Léa",  rankIndex:0}, {name:"Zack", rankIndex:0},
+  {name:"Mia",   rankIndex:0}, {name:"Théo", rankIndex:0}, {name:"Sara", rankIndex:0}, {name:"Max",  rankIndex:0},
+  {name:"Nora",  rankIndex:0}, {name:"Eli",  rankIndex:0}, {name:"Juno", rankIndex:0}, {name:"Otto", rankIndex:0},
+];
+
+// Chaque monstre = image, PV, dégâts infligés à un élève au hasard chaque round, et événements spéciaux.
+const MONSTERS = {
+  gobelin:      { name:"I. Gobelin",        img:"monster_gobelin",        maxHp:150, dmgPerRound:15,
+    events:[ { trigger:"before_combat", type:"reward_quiz",
+      flavor:"Le Gobelin ricane et propose un marché avant le combat.",
+      question:"Combien font 7 × 8 ?", choices:["54","56","64","48"], correctIndex:1,
+      onSuccess:{ log:"Bonne réponse ! Le Gobelin, dépité, laisse tomber 5 pièces d'or.", gold:5 },
+      onFail:{ log:"Mauvaise réponse... le Gobelin garde son or et ricane." } } ] },
+  zombie:       { name:"II. Zombie",        img:"monster_zombie",         maxHp:90,  dmgPerRound:12,
+    events:[ { trigger:"round_start", type:"debuff_quiz", repeat:true,
+      flavor:"Le Zombie gémit une question avant que le round ne commence.",
+      question:"Quel est le pluriel de « cheval » ?", choices:["Chevals","Chevaux","Chevos","Chevales"], correctIndex:1,
+      onSuccess:{ log:"Bonne réponse ! Le groupe reste vif et alerte." },
+      onFail:{ log:"Mauvaise réponse... le Zombie pétrifie la moitié du groupe pour ce round !", effect:"petrify_half" } } ] },
+  chimere:      { name:"III. Chimère",      img:"monster_chimere",        maxHp:110, dmgPerRound:14, events:[] },
+  troll:        { name:"IV. Troll",         img:"monster_troll",          maxHp:130, dmgPerRound:16, events:[] },
+  cube:         { name:"V. Cube gélatineux",img:"monster_cube_gelatineux",maxHp:100, dmgPerRound:12, events:[] },
+  mimique:      { name:"VI. Mimique",       img:"monster_mimique",        maxHp:120, dmgPerRound:15, events:[] },
+  hobgobelin:   { name:"VII. Hobgobelin",   img:"monster_hobgobelin",     maxHp:140, dmgPerRound:18, events:[] },
+  basilic:      { name:"VIII. Basilic",     img:"monster_basilic",        maxHp:160, dmgPerRound:20, events:[] },
+  demon:        { name:"IX. Démon",         img:"monster_demon",          maxHp:180, dmgPerRound:22, events:[] },
+  manticore:    { name:"X. Manticore",      img:"monster_manticore",      maxHp:200, dmgPerRound:25, events:[] },
+  dragon_blanc: { name:"XI. Dragon blanc",  img:"monster_dragon_blanc",   maxHp:230, dmgPerRound:28, events:[] },
+};
+
+/* ============================================================
+   ÉTAT (en mémoire seulement — prototype)
+   ============================================================ */
+let state = { monsterId:null, monsterHp:0, monsterMaxHp:0, round:0, gold:0, students:[] };
+
+function buildAvatarSVG(tunicColor, skinColor){
+  return `<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+    <rect x="38" y="86" width="10" height="34" rx="3" fill="${skinColor}" stroke="#2B2118" stroke-width="1.5"/>
+    <rect x="52" y="86" width="10" height="34" rx="3" fill="${skinColor}" stroke="#2B2118" stroke-width="1.5"/>
+    <path d="M32 48 L68 48 L74 88 L26 88 Z" fill="${tunicColor}" stroke="#2B2118" stroke-width="1.8"/>
+    <rect x="18" y="50" width="12" height="34" rx="6" fill="${skinColor}" stroke="#2B2118" stroke-width="1.5"/>
+    <rect x="70" y="50" width="12" height="34" rx="6" fill="${skinColor}" stroke="#2B2118" stroke-width="1.5"/>
+    <circle cx="50" cy="26" r="20" fill="${skinColor}" stroke="#2B2118" stroke-width="1.8"/>
+    <circle cx="43" cy="24" r="2" fill="#2B2118"/><circle cx="57" cy="24" r="2" fill="#2B2118"/>
+    <path d="M42 33 Q50 38 58 33" fill="none" stroke="#2B2118" stroke-width="1.6" stroke-linecap="round"/>
+  </svg>`;
+}
+function slashSVG(){
+  return `<svg viewBox="0 0 100 100">
+    <defs><linearGradient id="sg" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="55%" stop-color="#fff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#cfe8ff" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="M15,85 A55,55 0 0,1 85,15" fill="none" stroke="url(#sg)" stroke-width="11" stroke-linecap="round"/>
+    <path d="M25,88 A45,45 0 0,1 88,25" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function initRoster(){
+  state.students = ROSTER.map((s,i)=>{
+    const atk = WEAPON_ATK[s.weapon] || 5;
+    // PV = (10 de base + PV du bouclier équipé) × multiplicateur de rang.
+    const armorHp = ARMOR_HP[s.shield] || 0;
+    const maxHp = Math.round((BASE_HP + armorHp) * RANK_MULT[s.rankIndex]);
+    return {...s, index:i, atk, armorHp, maxHp, hp:maxHp, petrified:false, ko:false};
+  });
+}
+
+function populateMonsterSelect(){
+  document.getElementById('monsterSelect').innerHTML =
+    Object.keys(MONSTERS).map(id=>`<option value="${id}">${MONSTERS[id].name}</option>`).join('');
+}
+
+/* ---------- Formation en demi-cercle : élèves à égale distance du monstre ---------- */
+function renderParties(){
+  const zone = document.getElementById('arcZone');
+  zone.innerHTML = '';
+  const cx = zone.clientWidth / 2 || 610;
+  const cy = 0; // le pivot est au tout haut de la zone, juste sous le bloc du monstre
+  const n = state.students.length;
+
+  state.students.forEach((s,i)=>{
+    // theta balaie 0° à 180° : chaque élève à égale distance du monstre
+    const theta = n > 1 ? (Math.PI * i) / (n - 1) : Math.PI/2;
+    const x = cx - ARC_RADIUS * Math.cos(theta);
+    const y = cy + ARC_RADIUS * Math.sin(theta);
+
+    const tunic = TUNIC_COLORS[s.index % TUNIC_COLORS.length];
+    const skin = SKIN_TONES[s.index % SKIN_TONES.length];
+    const div = document.createElement('div');
+    div.className = 'student';
+    div.id = 'student-'+s.index;
+    div.style.left = x + 'px';
+    div.style.top = y + 'px';
+    div.innerHTML = `
+      <div class="avatar-wrap">
+        ${buildAvatarSVG(tunic, skin)}
+        ${s.shield ? `<div class="shield-badge"><img src="arena_assets/${s.shield}.webp" alt=""></div>` : ''}
+        ${s.weapon ? `<div class="weapon-badge"><img src="arena_assets/${s.weapon}.webp" alt=""></div>` : ''}
+      </div>
+      <div class="slash-fx" id="slash-${s.index}">${slashSVG()}</div>
+      <div class="student-name">${s.name}</div>
+      <div class="student-substats">
+        <span class="stat-hp" id="stat-hp-${s.index}">PV ${s.hp}/${s.maxHp}</span>
+        <span class="stat-dmg" id="stat-dmg-${s.index}">DMG ${s.atk}</span>
+      </div>`;
+    zone.appendChild(div);
+  });
+}
+
+function log(msg, cls){
+  const l = document.getElementById('log');
+  const d = document.createElement('div'); if(cls) d.className = cls; d.textContent = msg;
+  l.appendChild(d); l.scrollTop = l.scrollHeight;
+}
+function updateMonsterHpUI(){
+  const pct = Math.max(0, (state.monsterHp/state.monsterMaxHp)*100);
+  document.getElementById('monsterHpFill').style.width = pct+'%';
+  document.getElementById('monsterHpLabel').textContent = `PV ${Math.max(0,state.monsterHp)}/${state.monsterMaxHp}`;
+}
+function updateStudentHpUI(s){
+  const el = document.getElementById('stat-hp-'+s.index);
+  if(el) el.textContent = `PV ${Math.max(0,s.hp)}/${s.maxHp}`;
+}
+function popBlocked(targetEl){
+  const d = document.createElement('div');
+  d.className = 'dmg-pop'; d.style.color = '#5fb8e8'; d.textContent = 'Bloqué !';
+  targetEl.appendChild(d);
+  setTimeout(()=>d.remove(), 900);
+}
+function popDamage(targetEl, amount, isMonster){
+  const d = document.createElement('div');
+  d.className = isMonster ? 'monster-dmg-pop' : 'dmg-pop';
+  d.textContent = '-'+amount;
+  targetEl.appendChild(d);
+  setTimeout(()=>d.remove(), 900);
+}
+function playSlash(studentIndex){
+  const el = document.getElementById('slash-'+studentIndex);
+  el.classList.remove('play'); void el.offsetWidth; el.classList.add('play');
+}
+function shakeMonster(){
+  const el = document.getElementById('monsterImgWrap');
+  el.classList.remove('hit'); void el.offsetWidth; el.classList.add('hit');
+}
+function setKO(s){
+  s.ko = true;
+  document.getElementById('student-'+s.index).classList.add('ko');
+}
+
+/* ---------- Démarrage du combat ---------- */
+document.getElementById('startBtn').addEventListener('click', startCombat);
+
+// Plein écran réel (Fullscreen API) — pensé pour l'écran projeté, pas pour
+// l'appareil de l'élève : occupe la totalité de l'écran du projecteur/TV,
+// sans aucune barre de navigateur.
+(function initPleinEcran(){
+  const btn = document.getElementById('fullscreenBtn');
+  if(!btn) return;
+  btn.addEventListener('click', () => {
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    btn.textContent = document.fullscreenElement ? '⛶ Quitter le plein écran' : '⛶ Plein écran';
+  });
+})();
+function startCombat(){
+  const monsterId = document.getElementById('monsterSelect').value;
+  const monster = MONSTERS[monsterId];
+  state.monsterId = monsterId; state.monsterMaxHp = monster.maxHp; state.monsterHp = monster.maxHp;
+  state.round = 0; state.gold = 0;
+  initRoster();
+  const shieldValue = parseInt(document.getElementById('shieldSelect').value) || 0;
+  state.students.forEach(s=>{ s.absorbMax = shieldValue; s.absorb = shieldValue; });
+  renderParties();
+  document.getElementById('monsterName').textContent = monster.name;
+  document.getElementById('monsterImgWrap').innerHTML = `<img src="arena_assets/monsters/${monster.img}.webp" alt="${monster.name}">`;
+  document.getElementById('monsterDmgStat').textContent = `Dégâts : ${monster.dmgPerRound} / round`;
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('roundBadge').textContent = 'Round 0';
+  updateMonsterHpUI();
+  log(`Le combat contre ${monster.name} commence !`);
+  document.getElementById('startBtn').disabled = true;
+
+  const beforeEvent = monster.events.find(e=>e.trigger==='before_combat');
+  if(beforeEvent){ showEvent(beforeEvent, ()=>{ document.getElementById('roundBtn').disabled = false; }); }
+  else { document.getElementById('roundBtn').disabled = false; }
+}
+
+/* ---------- Overlay d'événement ---------- */
+function showEvent(event, onDone){
+  const overlay = document.getElementById('eventOverlay');
+  const titles = { reward_quiz:"Événement — Récompense", debuff_quiz:"Événement — Épreuve" };
+  document.getElementById('eventTitle').textContent = titles[event.type] || "Événement";
+  document.getElementById('eventFlavor').textContent = event.flavor || '';
+  document.getElementById('eventQuestion').textContent = event.question;
+  const result = document.getElementById('eventResult'); result.textContent=''; result.className='event-result';
+  const contBtn = document.getElementById('eventContinueBtn'); contBtn.style.display='none';
+  const grid = document.getElementById('eventChoices'); grid.innerHTML = '';
+  event.choices.forEach((c,i)=>{
+    const b = document.createElement('button'); b.className='choice-btn'; b.textContent=c;
+    b.addEventListener('click', ()=>resolveEvent(event, i===event.correctIndex));
+    grid.appendChild(b);
+  });
+  overlay.classList.add('open');
+  contBtn.onclick = ()=>{ overlay.classList.remove('open'); onDone(); };
+}
+function resolveEvent(event, success){
+  const result = document.getElementById('eventResult');
+  Array.from(document.getElementById('eventChoices').children).forEach(b=>b.disabled=true);
+  if(success){
+    result.className='event-result good'; result.textContent=event.onSuccess.log;
+    if(event.onSuccess.gold){ state.gold += event.onSuccess.gold; log(`+${event.onSuccess.gold} or (récompense d'événement).`,'gold-line'); }
+  } else {
+    result.className='event-result bad'; result.textContent=event.onFail.log;
+    if(event.onFail.effect==='petrify_half') applyPetrifyHalf();
+    log(event.onFail.log, 'bad-line');
+  }
+  document.getElementById('eventContinueBtn').style.display='inline-block';
+}
+function applyPetrifyHalf(){
+  const active = state.students.filter(s=>!s.petrified && !s.ko);
+  const shuffled = [...active].sort(()=>Math.random()-0.5);
+  const half = Math.ceil(shuffled.length/2);
+  shuffled.slice(0, half).forEach(s=>{
+    s.petrified = true;
+    document.getElementById('student-'+s.index).classList.add('petrified');
+  });
+}
+function clearPetrify(){
+  state.students.forEach(s=>{
+    if(s.petrified){
+      s.petrified = false;
+      document.getElementById('student-'+s.index).classList.remove('petrified');
+    }
+  });
+}
+
+/* ---------- Boucle de round : attaques séquentielles à 250 ms d'intervalle ---------- */
+document.getElementById('roundBtn').addEventListener('click', ()=>{
+  const monster = MONSTERS[state.monsterId];
+  const roundEvent = monster.events.find(e=>e.trigger==='round_start');
+  document.getElementById('roundBtn').disabled = true;
+  if(roundEvent){ showEvent(roundEvent, runRound); }
+  else { runRound(); }
+});
+
+function runRound(){
+  state.round++;
+  document.getElementById('roundBadge').textContent = 'Round '+state.round;
+  const attackers = state.students.filter(s=>!s.petrified && !s.ko);
+  let totalDmg = 0, i = 0;
+
+  function attackNext(){
+    if(i >= attackers.length){
+      log(`Round ${state.round} : le groupe inflige ${totalDmg} dégâts au total.`);
+      clearPetrify();
+      if(state.monsterHp <= 0){
+        document.getElementById('victorySummary').textContent =
+          `Vaincu en ${state.round} round(s). Or amassé pendant le combat : ${state.gold}.`;
+        document.getElementById('victoryOverlay').classList.add('open');
+        log(`${MONSTERS[state.monsterId].name} est vaincu !`, 'gold-line');
+      } else {
+        monsterRetaliate();
+        document.getElementById('roundBtn').disabled = false;
+      }
+      return;
+    }
+    const s = attackers[i];
+    const finalDmg = Math.round(s.atk * RANK_MULT[s.rankIndex]);
+    totalDmg += finalDmg;
+
+    playSlash(s.index);
+    popDamage(document.getElementById('student-'+s.index), finalDmg, false);
+    state.monsterHp = Math.max(0, state.monsterHp - finalDmg);
+    updateMonsterHpUI();
+    shakeMonster();
+    popDamage(document.getElementById('monsterImgWrap'), finalDmg, true);
+
+    i++;
+    setTimeout(attackNext, ATTACK_STAGGER_MS);
+  }
+  attackNext();
+}
+
+function monsterRetaliate(){
+  const monster = MONSTERS[state.monsterId];
+  const alive = state.students.filter(s=>!s.ko);
+  if(alive.length === 0) return;
+  let newlyKO = [];
+  alive.forEach(target=>{
+    let dmg = monster.dmgPerRound;
+    if(target.absorb > 0){
+      const absorbed = Math.min(target.absorb, dmg);
+      target.absorb -= absorbed;
+      dmg -= absorbed;
+    }
+    if(dmg > 0){
+      target.hp = Math.max(0, target.hp - dmg);
+      updateStudentHpUI(target);
+      popDamage(document.getElementById('student-'+target.index), dmg, false);
+      if(target.hp <= 0){ setKO(target); newlyKO.push(target.name); }
+    } else {
+      popBlocked(document.getElementById('student-'+target.index));
+    }
+  });
+  log(`${monster.name} attaque tout le groupe pour ${monster.dmgPerRound} dégâts chacun (avant absorption).`, 'hit-line');
+  if(newlyKO.length) log(`K.O. : ${newlyKO.join(', ')}.`, 'hit-line');
+
+  const stillStanding = state.students.filter(s=>!s.ko);
+  if(stillStanding.length === 0){
+    document.getElementById('roundBtn').disabled = true;
+    document.getElementById('defeatSummary').textContent =
+      `Le groupe est tombé au round ${state.round} face à ${monster.name}. Il faudra mieux calculer les dégâts et s'équiper avant le prochain combat.`;
+    document.getElementById('defeatOverlay').classList.add('open');
+    log(`Le groupe entier est K.O. — défaite face à ${monster.name}.`, 'bad-line');
+  }
+}
+
+document.getElementById('victoryCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('victoryOverlay').classList.remove('open');
+  document.getElementById('startBtn').disabled = false;
+});
+document.getElementById('defeatCloseBtn').addEventListener('click', ()=>{
+  document.getElementById('defeatOverlay').classList.remove('open');
+  document.getElementById('startBtn').disabled = false;
+});
+
+/* ---------- Panneau enseignant ---------- */
+const teacherPanel = document.getElementById('teacherPanel');
+document.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.shiftKey && (e.key==='M'||e.key==='m')) teacherPanel.classList.add('open'); });
+document.getElementById('closeTeacher').addEventListener('click', ()=>teacherPanel.classList.remove('open'));
+document.getElementById('forceEventBtn').addEventListener('click', ()=>{
+  const monster = MONSTERS[state.monsterId]; if(!monster) return;
+  const ev = monster.events[0]; if(ev) showEvent(ev, ()=>{});
+});
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  document.getElementById('victoryOverlay').classList.remove('open');
+  document.getElementById('defeatOverlay').classList.remove('open');
+  document.getElementById('eventOverlay').classList.remove('open');
+  document.getElementById('roundBtn').disabled = true;
+  document.getElementById('startBtn').disabled = false;
+  log("Combat réinitialisé par l'enseignant.");
+});
+
+/* ---------- Initialisation ---------- */
+populateMonsterSelect();
+initRoster();
+renderParties();
+</script>
+</body>
+</html>
