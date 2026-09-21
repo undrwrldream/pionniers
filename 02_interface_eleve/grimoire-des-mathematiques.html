@@ -2666,6 +2666,7 @@
   const PUNCH_MODES = ['add', 'sub', 'mul', 'div'];
   const PUNCH_SCORE_MAX = 1500;            // plafond de vraisemblance (le meilleur combat possible vaut 1 450)
   let punchCache = null;                   // { t, entrees } — le tableau est relu au plus toutes les 15 s
+  let punchFiche = null;                   // fiche de l'élève lue à l'ouverture (évite de la relire à chaque victoire)
   const punchCle = slug => PUNCH_PREFIXE + slug;
   function progPunch(p){
     const o = { add:0, sub:0, mul:0, div:0 };
@@ -2721,13 +2722,17 @@
         if(!currentSlug) return repondrePunch(e, d, { ok: true, slug: null });
         const r = await lireFichePunch(currentSlug, currentStudentName);
         if(r.erreur) return repondrePunch(e, d, { ok: false });
+        punchFiche = r.fiche;
         repondrePunch(e, d, { ok: true, slug: currentSlug, nom: currentStudentName, prog: r.fiche.prog });
       } else if(d.type === 'victoire'){
         const m = d.mode;
         if(!currentSlug || PUNCH_MODES.indexOf(m) === -1) return repondrePunch(e, d, { ok: false });
-        const r = await lireFichePunch(currentSlug, currentStudentName);
-        if(r.erreur) return repondrePunch(e, d, { ok: false });
-        const f = r.fiche;
+        let f = (punchFiche && punchFiche.slug === currentSlug) ? punchFiche : null;
+        if(!f){
+          const r = await lireFichePunch(currentSlug, currentStudentName);
+          if(r.erreur) return repondrePunch(e, d, { ok: false });
+          f = r.fiche;
+        }
         const k = Math.max(0, Math.min(11, d.k | 0));
         const score = Math.max(0, Math.min(PUNCH_SCORE_MAX, Math.round(+d.score) || 0));
         f.nom = currentStudentName;
@@ -2736,14 +2741,16 @@
         let record = false;
         if(!f.best || score > f.best.score){ f.best = { score, mode: m, k, date: Date.now(), coeurs: d.coeurs | 0 }; record = true; }
         await ecrireFichePunch(f);
+        punchFiche = f;
         punchCache = null;
+        repondrePunch(e, d, { ok: true, record, meilleur: f.best.score, rang: null, total: null, prog: f.prog });   // score enregistré : on le dit tout de suite
         let rang = null, total = null;
         try{
           const entrees = await entreesPunch(true);
           const i = entrees.findIndex(x => x.slug === currentSlug);
           rang = i >= 0 ? i + 1 : null; total = entrees.length;
         }catch(err){ /* le rang est facultatif : le score, lui, est bien enregistré */ }
-        repondrePunch(e, d, { ok: true, record, meilleur: f.best.score, rang, total, prog: f.prog });
+        try{ e.source.postMessage({ source: 'grimoire-punch', event: 'rang', rang, total }, '*'); }catch(_){ }
       } else if(d.type === 'classement'){
         const entrees = await entreesPunch(false);
         const propre = x => ({ nom: x.nom, score: x.score, mode: x.mode, k: x.k });
@@ -2757,6 +2764,7 @@
   });
   function ouvrirPunchMath(){
     punchCache = null;
+    punchFiche = null;
     $('punchFrame').src = 'punch-math.html';
     $('punchOverlay').classList.add('open');
   }

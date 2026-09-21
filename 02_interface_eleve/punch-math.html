@@ -418,6 +418,7 @@ const PONT = (function(){
   }
   window.addEventListener('message', e=>{
     const d = e.data;
+    if(d && d.source==='grimoire-punch' && d.event==='rang'){ if(window.__surRang) window.__surRang(d); return; }
     if(!d || d.source!=='grimoire-punch' || !attentes[d.id]) return;
     const f = attentes[d.id]; delete attentes[d.id]; f(d);
   });
@@ -635,7 +636,7 @@ async function fin(victoire){
       const bonusBoss = PTS.boss*(k+1), bonusCoeurs = PTS.coeur*S.hearts;
       bilan = { pts:S.pts, bonusBoss, bonusCoeurs, total:S.pts+bonusBoss+bonusCoeurs };
       // Le score part vers le Grimoire tout de suite ; la réponse (rang) est affichée quand elle arrive.
-      if(ID.enLigne) envoi = PONT.demander('victoire', { mode:m, k, score:bilan.total, coeurs:S.hearts, bon:S.stats.bon, mauvais:S.stats.mauvais }, 15000);
+      if(ID.enLigne) envoi = PONT.demander('victoire', { mode:m, k, score:bilan.total, coeurs:S.hearts, bon:S.stats.bon, mauvais:S.stats.mauvais }, 60000);
       sfx.ko(); flottant('K.O. !', 50, 30, '#ffd86a');
       monstre.classList.add('ko');
       await sleep(1500);
@@ -671,10 +672,13 @@ function afficherMenu(){
   carte.innerHTML = '<h1>Punch-math!</h1>'+
     '<p>Un boss lève son poing : réponds <b>juste</b> et <b>avant la fin du temps</b> pour le frapper. Sinon, c\'est lui qui te frappe !</p>'+
     '<div class="modes">'+cartes+'</div>'+
-    '<div class="pied"><button class="gros" id="btnClass" type="button">🏆 Les 10 meilleurs</button><span class="ident">'+ligneIdentite()+'</span></div>';
+    '<div class="pied"><button class="gros" id="btnClass" type="button">🏆 Les 10 meilleurs</button>'+
+      (!ID.enLigne && PONT.enfant ? '<button class="gros sec" id="btnRetry" type="button">Réessayer la connexion</button>' : '')+
+      '<span class="ident">'+ligneIdentite()+'</span></div>';
   ecran.classList.remove('cache');
   carte.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{ if(b.getAttribute('aria-disabled')!=='true') afficherCarte(b.dataset.m); });
   $('btnClass').onclick = ()=> afficherClassement(afficherMenu);
+  if($('btnRetry')) $('btnRetry').onclick = connecter;
   const premier = carte.querySelector('.mode:not([aria-disabled="true"])'); if(premier) premier.focus();
 }
 
@@ -703,6 +707,11 @@ function afficherCarte(m){
   const s = carte.querySelector('.boss.suivant') || carte.querySelector('.boss.fait'); if(s) s.focus();
 }
 
+window.__surRang = function(d){
+  const el = document.getElementById('rangAttente');
+  if(el && d.rang) el.innerHTML = 'Tu es <b>n° '+d.rang+'</b> sur '+d.total+' au tableau de la classe.';
+  else if(el) el.textContent = '';
+};
 function afficherFin(v, debloque, bilan, envoi){
   const m=S.mode, k=S.k, s=S.stats;
   let html = '<h1>'+(v?'Victoire !':'Défaite')+'</h1>';
@@ -734,7 +743,7 @@ function afficherFin(v, debloque, bilan, envoi){
       const el = $('ligneRang'); if(!el || S.phase!=='fin') return;
       if(!r || !r.ok){ el.textContent = 'Ton score n\'a pas pu être enregistré (connexion). Réessaie un combat plus tard.'; return; }
       el.innerHTML = (r.record ? '<b>Nouveau record personnel !</b> ' : 'Ton record reste de <b>'+fmt(r.meilleur)+' pts</b>. ')+
-                     (r.rang ? 'Tu es <b>n° '+r.rang+'</b> sur '+r.total+' au tableau de la classe.' : '');
+                     (r.rang ? 'Tu es <b>n° '+r.rang+'</b> sur '+r.total+' au tableau de la classe.' : '<span id="rangAttente">Calcul de ton rang…</span>');
     });
   }
 }
@@ -754,7 +763,7 @@ async function afficherClassement(retour){
   carte.innerHTML = entete + '<p>Chargement du tableau de la classe…</p>' + boutons;
   ecran.classList.remove('cache');
   $('btnRetour').onclick = retour || afficherMenu;
-  const r = ID.enLigne ? await PONT.demander('classement', null, 25000) : null;
+  const r = ID.enLigne ? await PONT.demander('classement', null, 60000) : null;
   if(S.phase!=='classement' || S.classementId!==moiId) return;
   let corps;
   if(!ID.enLigne){
@@ -809,18 +818,21 @@ $('muet').addEventListener('click', e=>{
   e.currentTarget.blur();
 });
 
-(async function demarrer(){
+async function connecter(){
   dessinerHUD();
-  carte.className='carte'; carte.innerHTML='<h1>Punch-math!</h1><p>Chargement…</p>'; ecran.classList.remove('cache');
-  const r = await PONT.demander('init', null, 7000);
+  carte.className='carte';
+  carte.innerHTML='<h1>Punch-math!</h1><p>Connexion au tableau de la classe…<br><small>La première fois, ça peut prendre quelques secondes.</small></p>';
+  ecran.classList.remove('cache');
+  const r = await PONT.demander('init', null, 45000);
   if(r && r.ok && r.slug){
-    ID.slug = r.slug; ID.nom = r.nom || ''; ID.enLigne = true; P = normaliserProg(r.prog);
+    ID.slug = r.slug; ID.nom = r.nom || ''; ID.enLigne = true; ID.note = ''; P = normaliserProg(r.prog);
   }else{
     chargerEssai();
-    if(r && r.ok===false) ID.note = 'Le Grimoire n\'a pas pu lire ta progression (connexion).';
+    ID.note = (PONT.enfant && (!r || r.ok===false)) ? 'La connexion au tableau n\'a pas fonctionné.' : '';
   }
   afficherMenu();
-})();
+}
+connecter();
 
 window.__duel = { S, P: ()=>P, ID, genQ, tempsBoss };
 })();
