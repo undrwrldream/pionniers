@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr-CA">
+<head>
+<meta charset="utf-8">
+<title>Les homophones — exercices</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Crimson+Text:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --parchemin:#F1E4C3; --parchemin-fonce:#E3D3A6; --encre:#2B2118; --bordeaux:#7B2D26; --bordeaux-fonce:#5C201B;
+         --or:#B8860B; --or-clair:#D9A62E; --vert:#2F6B3A; --rouge:#B3261E; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  body{ min-height:100vh; padding:18px 12px 40px; color:var(--encre); font-family:'Crimson Text', Georgia, 'Times New Roman', serif; font-size:19px;
+        background: radial-gradient(ellipse at 50% 0%, #f8eed4, var(--parchemin) 55%, var(--parchemin-fonce)); }
+  .page{ max-width:820px; margin:0 auto; }
+  h1{ margin:6px 0 4px; text-align:center; font-family:'Cinzel', Georgia, serif; font-size:clamp(26px,5vw,38px); color:var(--bordeaux-fonce); letter-spacing:.02em; }
+  h2{ margin:0 0 10px; text-align:center; font-family:'Cinzel', Georgia, serif; font-size:clamp(22px,4.2vw,30px); color:var(--bordeaux-fonce); }
+  .sous-titre{ text-align:center; margin:0 0 20px; color:#5a4630; }
+  .grille{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+  @media (min-width:640px){ .grille{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  .sujet{ font:inherit; cursor:pointer; padding:16px 12px; border:2px solid var(--or); border-radius:10px; background:#fbf5e4; color:var(--encre);
+          font-family:'Cinzel', Georgia, serif; font-size:clamp(18px,3.4vw,24px); font-weight:700; box-shadow:0 2px 0 rgba(0,0,0,.15); }
+  .sujet:hover{ background:#fff8e6; }
+  .sujet small{ display:block; margin-top:4px; font-family:'Crimson Text', Georgia, serif; font-size:15px; font-weight:400; color:#6a563d; }
+  button:focus-visible{ outline:3px solid var(--bordeaux); outline-offset:2px; }
+  .retour{ font:inherit; font-size:17px; cursor:pointer; margin:0 0 10px; padding:6px 12px; border:1px solid var(--or); border-radius:8px; background:transparent; color:var(--bordeaux-fonce); }
+  .regle{ margin:0 0 16px; padding:12px 14px; border-left:5px solid var(--or); border-radius:6px; background:rgba(255,255,255,.55); font-size:18px; line-height:1.4; }
+  ol.phrases{ list-style:none; margin:0; padding:0; counter-reset:q; }
+  ol.phrases > li{ counter-increment:q; display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:10px; padding:10px 12px 10px 46px; position:relative;
+                   border:1px solid rgba(90,60,20,.35); border-radius:10px; background:rgba(255,255,255,.6); }
+  ol.phrases > li::before{ content:counter(q); position:absolute; left:10px; top:50%; transform:translateY(-50%); width:28px; height:28px; border-radius:50%;
+                   background:var(--bordeaux); color:#fff; font-family:'Cinzel', serif; font-size:14px; display:flex; align-items:center; justify-content:center; }
+  .phrase{ flex:1 1 320px; line-height:1.5; }
+  .trou{ display:inline-block; min-width:70px; padding:0 8px; text-align:center; border-bottom:3px solid var(--or); font-weight:700; color:var(--bordeaux-fonce); }
+  .choix{ display:flex; gap:8px; flex:0 0 auto; }
+  .choix button{ font:inherit; font-size:19px; font-weight:700; min-width:76px; min-height:44px; padding:6px 14px; cursor:pointer; border:2px solid var(--or); border-radius:8px; background:#fbf5e4; color:var(--encre); }
+  .choix button:hover{ background:#fff8e6; }
+  .choix button.choisi{ background:var(--bordeaux); border-color:var(--bordeaux-fonce); color:#fff; }
+  .choix button:disabled{ cursor:default; opacity:.85; }
+  li.juste{ border-color:var(--vert); background:rgba(47,107,58,.14); }
+  li.faux{ border-color:var(--rouge); background:rgba(179,38,30,.10); }
+  .verdict{ flex:1 1 100%; font-size:17px; font-weight:700; }
+  li.juste .verdict{ color:var(--vert); }
+  li.faux .verdict{ color:var(--rouge); }
+  .actions{ display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:16px 0 8px; }
+  .gros{ font-family:'Cinzel', Georgia, serif; font-size:18px; font-weight:700; cursor:pointer; padding:12px 22px; border:2px solid var(--or-clair); border-radius:8px; color:#fff;
+         background:linear-gradient(#8a2f27, #5C201B); }
+  .gros.sec{ background:linear-gradient(#6b573b, #453724); }
+  .etat{ font-size:17px; color:#5a4630; }
+  .resultat{ margin-top:14px; padding:16px; text-align:center; border:3px solid var(--or); border-radius:12px; background:rgba(255,255,255,.7); }
+  .resultat .note{ font-family:'Cinzel', Georgia, serif; font-size:clamp(30px,7vw,46px); font-weight:700; color:var(--bordeaux-fonce); }
+  .pied{ margin-top:26px; text-align:center; font-size:15px; color:#6a563d; }
+  .cache{ display:none !important; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div id="menu">
+    <h1>Les homophones</h1>
+    <p class="sous-titre">Choisis un exercice. Dans chaque phrase, clique sur le bon mot, puis clique sur « Corriger ».</p>
+    <div class="grille" id="grille"></div>
+    <p class="pied">Ces exercices ne gardent pas les résultats.</p>
+  </div>
+  <div id="exercice" class="cache"></div>
+</div>
+
+<script>
+const TOPICS = [{"title":"son / sont","rule":"« son » est un déterminant possessif placé devant un nom (on peut dire « son » = « le sien »). « sont » est le verbe être conjugué (on peut le remplacer par « étaient »).","options":["son","sont"],"sentences":[["Marie a perdu ___ chapeau au parc.","son"],["Les enfants ___ arrivés en retard ce matin.","sont"],["Il range ___ vélo dans le garage.","son"],["Où ___ tes parents en ce moment ?","sont"],["Elle a oublié ___ sac à l'école.","son"],["Mes amis ___ très contents du spectacle.","sont"],["Le chien a mangé ___ repas rapidement.","son"],["Les fleurs ___ magnifiques ce printemps.","sont"],["Julien cherche ___ ballon dans la cour.","son"],["Les élèves ___ prêts pour l'examen.","sont"],["Le chat dort sur ___ coussin préféré.","son"],["Les livres ___ rangés sur l'étagère.","sont"],["Elle a rangé ___ cahier dans son sac.","son"],["Ils ___ partis tôt ce matin.","sont"],["Le pêcheur remonte ___ filet plein de poissons.","son"]]},{"title":"on / ont","rule":"« on » est un pronom sujet (on peut le remplacer par « il »). « ont » est le verbe avoir conjugué (on peut le remplacer par « avaient »).","options":["on","ont"],"sentences":[["___ va au cinéma ce soir ?","On"],["Les voisins ___ acheté une nouvelle voiture.","ont"],["___ ne sait jamais ce qui va arriver.","On"],["Mes cousins ___ déjà mangé.","ont"],["Est-ce qu'___ peut sortir jouer dehors ?","on"],["Les joueurs ___ gagné le match.","ont"],["Quand ___ travaille fort, on réussit.","on"],["Ils ___ oublié leurs devoirs à la maison.","ont"],["___ devrait partir avant qu'il pleuve.","On"],["Les élèves ___ terminé leur projet.","ont"],["Dans cette classe, ___ respecte tout le monde.","on"],["Mes parents ___ organisé une fête surprise.","ont"],["Si ___ arrive en avance, on aura les meilleures places.","on"],["Les chevaux ___ couru toute la journée.","ont"],["___ raconte que ce château est hanté.","On"]]},{"title":"a / à","rule":"« a » est le verbe avoir conjugué (on peut le remplacer par « avait »). « à » est une préposition qui ne se remplace pas.","options":["a","à"],"sentences":[["Elle ___ terminé son repas.","a"],["Nous allons ___ la bibliothèque.","à"],["Il n'y ___ personne dans la salle.","a"],["Le trésor est caché ___ l'intérieur de la grotte.","à"],["Ma sœur ___ un nouveau vélo.","a"],["Ils partent ___ six heures.","à"],["Ce chevalier ___ une armure brillante.","a"],["Le magicien parle ___ voix basse.","à"],["L'équipe ___ remporté la victoire.","a"],["Nous jouons ___ des jeux vidéo.","à"],["Elle ___ peur des araignées.","a"],["Le dragon habite ___ côté de la montagne.","à"],["Mon frère ___ oublié son cahier.","a"],["On donne les pièces d'or ___ celui qui gagne.","à"],["Cette histoire ___ un dénouement surprenant.","a"]]},{"title":"et / est","rule":"« et » est une conjonction (on peut la remplacer par « et puis »). « est » est le verbe être conjugué (on peut le remplacer par « était »).","options":["et","est"],"sentences":[["Le loup ___ méchant dans cette histoire.","est"],["Marie ___ Julien jouent ensemble.","et"],["Ce livre ___ passionnant du début à la fin.","est"],["J'aime les pommes ___ les poires.","et"],["Le trésor ___ enfoui sous le vieux chêne.","est"],["Elle mange une pomme ___ boit du jus.","et"],["Le château ___ entouré de douves.","est"],["Nous avons pris nos crayons ___ nos cahiers.","et"],["Ce chevalier ___ très courageux.","est"],["Léo ___ Sofia partent en voyage.","et"],["Le repas ___ prêt à être servi.","est"],["Le soleil brille ___ le ciel est bleu.","et"],["Cette potion ___ magique.","est"],["Il faut du courage ___ de la sagesse.","et"],["Ce sort ___ interdit dans le royaume.","est"]]},{"title":"ou / où","rule":"« ou » est une conjonction (on peut la remplacer par « ou bien »). « où » indique un lieu ou un moment et ne se remplace pas de la même façon.","options":["ou","où"],"sentences":[["Veux-tu du jus ___ de l'eau ?","ou"],["___ as-tu rangé ton livre ?","Où"],["Choisis un chapeau rouge ___ bleu.","ou"],["Je ne sais pas ___ se trouve la clé.","où"],["On peut lire ___ dessiner cet après-midi.","ou"],["Voici le village ___ vit le sorcier.","où"],["Préfères-tu le chocolat ___ la vanille ?","ou"],["Dis-moi ___ tu vas après l'école.","où"],["Il faut choisir entre courir ___ marcher.","ou"],["C'est l'endroit ___ le dragon dort.","où"],["Veux-tu venir avec moi ___ rester ici ?","ou"],["La forêt ___ nous marchons est immense.","où"],["On peut prendre le bus ___ le train.","ou"],["Je me souviens du jour ___ j'ai appris à nager.","où"],["Tu peux écrire au crayon ___ au stylo.","ou"]]},{"title":"ces / ses","rule":"« ces » est un déterminant démonstratif pluriel (on peut le remplacer par « ceux-là »). « ses » est un déterminant possessif pluriel (on peut le remplacer par « les siens »).","options":["ces","ses"],"sentences":[["Regarde ___ magnifiques étoiles dans le ciel !","ces"],["Le roi a réuni ___ chevaliers autour de la table.","ses"],["___ exercices sont vraiment difficiles.","Ces"],["Elle a rangé ___ crayons dans sa trousse.","ses"],["___ élèves travaillent très fort.","Ces"],["Le dragon garde ___ trésors jalousement.","ses"],["As-tu vu ___ nuages étranges ?","ces"],["Il a perdu ___ clés encore une fois.","ses"],["___ montagnes sont couvertes de neige.","Ces"],["La sorcière prépare ___ potions dans son chaudron.","ses"],["Je n'oublierai jamais ___ vacances.","ces"],["Le magicien range ___ livres de sorts.","ses"],["___ animaux vivent dans la forêt enchantée.","Ces"],["Elle a invité ___ amies à la fête.","ses"],["___ questions me semblent justes.","Ces"]]},{"title":"ce / se","rule":"« ce » est un déterminant ou pronom démonstratif (souvent devant un nom : « ce chevalier »). « se » précède un verbe pronominal (on peut le remplacer par « lui-même »).","options":["ce","se"],"sentences":[["___ chevalier porte une armure dorée.","Ce"],["Le dragon ___ cache dans sa caverne.","se"],["___ livre appartient à la bibliothèque.","Ce"],["Les élèves ___ préparent pour l'examen.","se"],["___ matin, il fait très froid.","Ce"],["Elle ___ lave les mains avant de manger.","se"],["___ jeu est vraiment amusant.","Ce"],["Les chevaliers ___ battent en duel.","se"],["___ trésor est caché depuis des siècles.","Ce"],["Il ___ demande pourquoi le ciel est bleu.","se"],["___ sorcier connaît des sorts puissants.","Ce"],["Les enfants ___ amusent dans la cour.","se"],["___ château est très ancien.","Ce"],["Le dragon ___ réveille au lever du soleil.","se"],["___ problème est facile à résoudre.","Ce"]]},{"title":"la / là","rule":"« la » est un article ou un pronom (on peut le remplacer par « une » ou « celle-ci »). « là » indique un lieu et prend toujours un accent grave.","options":["la","là"],"sentences":[["Pose ___ boîte sur la table.","la"],["Le trésor est caché ___-bas, derrière la colline.","là"],["Je vois ___ tour du château.","la"],["Viens ___, j'ai besoin de ton aide.","là"],["Elle regarde ___ carte avant de partir.","la"],["Ton livre est ___, sur l'étagère.","là"],["___ princesse habite dans ce château.","La"],["Reste ___ pendant que je vérifie.","là"],["On aperçoit ___ forêt au loin.","la"],["C'est ___ que le dragon dort.","là"],["Il a fermé ___ porte doucement.","la"],["Va ___-bas chercher de l'eau.","là"],["___ potion est prête à être bue.","La"],["Assieds-toi ___, près du feu.","là"],["Elle range ___ vaisselle après le repas.","la"]]},{"title":"leur / leurs","rule":"« leur », invariable, devant un verbe (on peut le remplacer par « lui »). « leur/leurs » devant un nom s'accorde selon qu'un ou plusieurs objets sont possédés.","options":["leur","leurs"],"sentences":[["Les élèves rangent ___ cahiers.","leurs"],["Je vais ___ expliquer la règle du jeu.","leur"],["Les chevaliers montent sur ___ chevaux.","leurs"],["Le professeur ___ donne un exercice.","leur"],["Les enfants adorent ___ nouveau jeu.","leur"],["Les dragons protègent ___ trésors.","leurs"],["Nous allons ___ rendre visite demain.","leur"],["Les sorciers rangent ___ baguettes magiques.","leurs"],["Les élèves montrent ___ dessins à la classe.","leurs"],["Le roi ___ a offert des cadeaux.","leur"],["Les enfants attachent ___ chaussures.","leurs"],["Je ___ ai raconté une histoire.","leur"],["Les chevaliers nettoient ___ armures.","leurs"],["On doit ___ dire la vérité.","leur"],["Les oiseaux construisent ___ nids.","leurs"]]},{"title":"mes / mais","rule":"« mes » est un déterminant possessif pluriel (on peut le remplacer par « mon » ou « ma » au singulier). « mais » est une conjonction qui marque une opposition.","options":["mes","mais"],"sentences":[["J'ai rangé ___ livres dans mon sac.","mes"],["Je voulais venir, ___ j'étais malade.","mais"],["___ amis viennent à ma fête.","Mes"],["Il est fort, ___ il manque de patience.","mais"],["J'ai oublié ___ crayons à la maison.","mes"],["Le trésor est proche, ___ il est bien gardé.","mais"],["___ parents m'accompagnent à l'école.","Mes"],["Je veux gagner, ___ je dois m'entraîner.","mais"],["___ chaussures sont neuves.","Mes"],["Elle est petite, ___ très courageuse.","mais"],["___ devoirs sont terminés.","Mes"],["Il pleut, ___ nous sortons quand même.","mais"],["___ cousins habitent loin d'ici.","Mes"],["Le dragon est grand, ___ il est gentil.","mais"],["___ jouets sont rangés dans le coffre.","Mes"]]}];
+const $ = id => document.getElementById(id);
+const NB = TOPICS[0].sentences.length;
+let courant = null, ordre = [], choix = {}, corrige = false;
+
+function melanger(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function maj(t){ return t.charAt(0).toUpperCase() + t.slice(1); }
+
+function afficherMenu(){
+  courant = null;
+  $('exercice').classList.add('cache'); $('menu').classList.remove('cache');
+  $('grille').innerHTML = TOPICS.map((t,i)=>'<button type="button" class="sujet" data-i="'+i+'">'+esc(t.title)+'<small>'+t.sentences.length+' phrases</small></button>').join('');
+  $('grille').querySelectorAll('.sujet').forEach(b => b.onclick = () => commencer(+b.dataset.i));
+  window.scrollTo(0,0);
+}
+
+function commencer(i){
+  courant = i; corrige = false; choix = {};
+  ordre = melanger(TOPICS[i].sentences.map((_,k)=>k));
+  const t = TOPICS[i];
+  const lignes = ordre.map(k => {
+    const [phrase] = t.sentences[k];
+    const [avant, apres] = phrase.split('___');
+    return '<li data-q="'+k+'"><span class="phrase">'+esc(avant)+'<span class="trou" data-trou="'+k+'">&nbsp;</span>'+esc(apres)+'</span>'+
+           '<span class="choix">'+t.options.map(o=>'<button type="button" data-q="'+k+'" data-o="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</span></li>';
+  }).join('');
+  $('exercice').innerHTML =
+    '<button type="button" class="retour" id="retour">← Tous les exercices</button>'+
+    '<h2>'+esc(t.title)+'</h2>'+
+    '<div class="regle">'+esc(t.rule)+'</div>'+
+    '<ol class="phrases" id="phrases">'+lignes+'</ol>'+
+    '<div class="actions"><button type="button" class="gros" id="btnCorriger">Corriger</button><span class="etat" id="etat"></span></div>'+
+    '<div id="resultat"></div>';
+  $('menu').classList.add('cache'); $('exercice').classList.remove('cache');
+  $('retour').onclick = afficherMenu;
+  $('btnCorriger').onclick = corriger;
+  $('phrases').addEventListener('click', e => {
+    const b = e.target.closest('button[data-o]'); if(!b || corrige) return;
+    choisir(+b.dataset.q, b.dataset.o);
+  });
+  majEtat(); window.scrollTo(0,0);
+}
+
+function choisir(k, option){
+  choix[k] = option;
+  const [phrase] = TOPICS[courant].sentences[k];
+  const debut = phrase.split('___')[0].trim() === '';
+  const trou = document.querySelector('[data-trou="'+k+'"]');
+  trou.textContent = debut ? maj(option) : option;
+  document.querySelectorAll('button[data-q="'+k+'"]').forEach(x => x.classList.toggle('choisi', x.dataset.o === option));
+  majEtat();
+}
+function majEtat(){ $('etat').textContent = Object.keys(choix).length + ' / ' + NB + ' phrases répondues'; }
+
+function corriger(){
+  if(corrige) return;
+  corrige = true;
+  const t = TOPICS[courant]; let bons = 0;
+  t.sentences.forEach(([phrase, rep], k) => {
+    const attendu = rep.toLowerCase(), li = document.querySelector('li[data-q="'+k+'"]');
+    const ok = choix[k] === attendu;
+    if(ok) bons++;
+    li.classList.add(ok ? 'juste' : 'faux');
+    li.querySelectorAll('button').forEach(b => b.disabled = true);
+    const debut = phrase.split('___')[0].trim() === '';
+    const v = document.createElement('div'); v.className = 'verdict';
+    v.textContent = ok ? '✔ Bravo !' : '✘ La bonne réponse : ' + (debut ? maj(attendu) : attendu);
+    li.appendChild(v);
+  });
+  const mots = bons === NB ? 'Parfait !' : bons >= NB*0.8 ? 'Très bien !' : bons >= NB*0.6 ? 'Bon travail, continue !' : 'Relis la règle et réessaie.';
+  $('btnCorriger').classList.add('cache'); $('etat').textContent = '';
+  $('resultat').innerHTML = '<div class="resultat"><div class="note">'+bons+' / '+NB+'</div><p>'+mots+'</p>'+
+    '<div class="actions" style="justify-content:center"><button type="button" class="gros" id="btnRefaire">Recommencer</button>'+
+    '<button type="button" class="gros sec" id="btnAutre">Autre exercice</button></div></div>';
+  $('btnRefaire').onclick = () => commencer(courant);
+  $('btnAutre').onclick = afficherMenu;
+  $('resultat').scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+afficherMenu();
+</script>
+</body>
+</html>
