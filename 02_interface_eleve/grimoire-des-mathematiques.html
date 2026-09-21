@@ -293,8 +293,23 @@
     --quest-blue-bright: #2547ac;
     --quest-blue-light: #dbeafe;
   }
+  /* Punch-math! : bouton jaune tout en haut à droite de l'astrolabe ; le bouton bleu des quêtes passe juste en dessous. */
+  #punchBtn{
+    position:absolute; top:14px; right:14px; z-index:20; border:none; cursor:pointer;
+    background: linear-gradient(180deg, #ffe066, #f2b705);
+    color:#3a2500; font-family:'IM Fell English SC', serif; font-size:0.95rem; font-weight:700; letter-spacing:0.02em;
+    padding: 9px 16px; border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.5);
+  }
+  #punchBtn:hover{ background: linear-gradient(180deg, #ffec8a, #ffc61a); }
+  #punchBtn:focus-visible{ outline:3px solid #fff; outline-offset:2px; }
+  .punch-overlay{ position:fixed; inset:0; z-index:125; display:none; flex-direction:column; background:#0b0705; }
+  .punch-overlay.open{ display:flex; }
+  #punchFrame{ flex:1; min-height:0; width:100%; border:none; background:#0b0705; }
+  #punchCloseBtn{ background: var(--gold); border:none; border-radius:6px; padding:7px 14px; cursor:pointer; font-family:'IM Fell English SC', serif; font-size:0.95rem; white-space:nowrap; }
+  #punchCloseBtn:hover{ background: var(--gold-bright); }
   #questTabBtn{
-    display:none; position:absolute; top:14px; right:14px; z-index:20; border:none; cursor:pointer;
+    display:none; position:absolute; top:58px; right:14px; z-index:20; border:none; cursor:pointer;
     background: linear-gradient(180deg, var(--quest-blue-bright), var(--quest-blue));
     color:#EAF1FF; font-family:'IM Fell English SC', serif; font-size:0.85rem; letter-spacing:0.02em;
     padding: 9px 14px; border-radius: 8px;
@@ -302,7 +317,8 @@
   }
   #questTabBtn:hover{ background: linear-gradient(180deg, #3358c9, var(--quest-blue-bright)); }
   @media (max-width: 640px){
-    #questTabBtn{ font-size:0.75rem; padding:7px 10px; top:10px; right:10px; }
+    #punchBtn{ font-size:0.8rem; padding:7px 11px; top:10px; right:10px; }
+    #questTabBtn{ font-size:0.75rem; padding:7px 10px; top:46px; right:10px; }
   }
 
   .quest-overlay{ position: fixed; inset:0; background: rgba(6,10,8,0.86); z-index: 110; display:none; justify-content:center; align-items:flex-start; padding: 26px 12px; overflow-y:auto; }
@@ -521,12 +537,25 @@
   }
   .doc-row:hover{ border-color: var(--wax); background: rgba(255,255,255,0.65); }
   .doc-row .doc-icone{ font-size:1.3rem; flex:0 0 auto; }
+  .doc-row .doc-mini{ width:46px; height:46px; object-fit:contain; flex:0 0 auto; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
+  .doc-row.doc-verrouille .doc-mini{ filter:grayscale(1) opacity(0.5); }
   .doc-row .doc-txt{ display:flex; flex-direction:column; gap:1px; min-width:0; }
   .doc-row .doc-titre{ font-family:'IM Fell English SC', serif; font-size:0.98rem; color: var(--ink); line-height:1.2; }
   .doc-row .doc-sub{ font-size:0.78rem; color: var(--ink-soft); line-height:1.25; }
   .doc-row .doc-etat{ margin-left:auto; flex:0 0 auto; }
   .doc-row.doc-fait{ background: rgba(47,93,58,0.12); border-color: var(--ok); }
   .doc-row.doc-fait .doc-titre{ color: var(--ok); }
+  /* document verrouillé : on ne l'ouvre qu'après avoir terminé le précédent (sceau de verrouillage) */
+  .doc-row{ position:relative; }
+  .doc-row.doc-verrouille{ cursor:default; background: rgba(0,0,0,0.05); border-color: var(--parchment-shadow); padding-right:64px; }
+  .doc-row.doc-verrouille:hover{ background: rgba(0,0,0,0.05); border-color: var(--parchment-shadow); }
+  .doc-row.doc-verrouille .doc-icone, .doc-row.doc-verrouille .doc-titre, .doc-row.doc-verrouille .doc-sub{ color:#8a7c60; opacity:0.75; }
+  .doc-row.doc-verrouille::after{
+    content:""; position:absolute; top:50%; right:8px; transform:translateY(-50%);
+    width:46px; height:46px; z-index:2; pointer-events:none;
+    background:url('livre_assets/sceau_verrouillage.png') center / contain no-repeat;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.45));
+  }
   .doc-encours{ color:#8a6a10; font-weight:normal; }
   .doc-ok{ font-family:'Caveat', cursive; font-size:1.1rem; color: var(--ok); white-space:nowrap; }
   .section-card.locked .doc-row{ cursor:default; opacity:0.6; }
@@ -569,6 +598,7 @@
 
   /* le livre ne sert qu'à CHOISIR : sections à gauche, sous-sections (documents) à droite */
   .section-card.choisie{ border-color: var(--wax); box-shadow: 0 0 0 1px var(--wax); background: rgba(255,255,255,0.55); }
+  .sous-sections{ padding-top:44px; }   /* laisse la place aux boutons Punch-math! et Quêtes secondaires, en haut à droite */
   .sous-sections h3{ font-size:1.05rem; margin-bottom:4px; }
   .sous-sections > p{ margin:0 0 4px; font-size:0.9rem; }
 
@@ -604,7 +634,7 @@
       <div id="bookBandeau"></div>
       <div id="bookPages">
         <div class="page page-left"><div class="page-inner" id="pageLeft"></div></div>
-        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button></div>
+        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="punchBtn" type="button">🥊 Punch-math!</button><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button></div>
       </div>
       <div class="astro-couche" aria-hidden="true">
         <img class="astro-fond" src="livre_assets/astrolabe.jpg" alt="">
@@ -672,6 +702,15 @@
         <div class="doc-toast" id="docToast"></div>
       </div>
     </div>
+  </div>
+
+  <div id="punchOverlay" class="punch-overlay">
+    <div class="doc-bar">
+      <span class="doc-bar-titre">🥊 Punch-math!</span>
+      <span class="doc-bar-etat">Bats les boss et grimpe au tableau de la classe</span>
+      <button id="punchCloseBtn" type="button">✕ Fermer</button>
+    </div>
+    <iframe id="punchFrame" title="Punch-math!"></iframe>
   </div>
 
   <div id="dialogueOverlay" class="dialogue-overlay" role="dialog" aria-modal="true" aria-labelledby="dialogueMessage">
@@ -959,26 +998,86 @@
      postMessage : { source:'grimoire-doc', type:'progress' | 'termine' }.
      =================================================================== */
   const DOCS_CHAPITRES = {
+    // ----- Chapitre VIII : « Les Bases » et « Consolidation » sont faites de documents (dossier chapitre8_aire/).
+    //       L'Évaluation reste une série de questions.
+    mesure1: {
+      0: { docs: [
+        { id:'royaume-aire', titre:"Le royaume de l'Aire", icone:'👑', mode:'lecture', total:1, recompense:10,
+          mini:'chapitre8_aire/Mini/royaume-aire.webp',
+          fichier:'chapitre8_aire/01-le-royaume-de-l-aire.html',
+          desc:"Lis le document du début à la fin.",
+          consigne:"Fais défiler le document jusqu'au bout pour gagner 10 🪙",
+          libelleProgres:(v, t) => 'Lecture : ' + v + ' / ' + t + ' parties vues', libelleFait:'✓ Lu' },
+        { id:'exercices-aire-1', titre:"Exercices du royaume de l'Aire 1", icone:'✏️', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre8_aire/Mini/royaume-aire.webp',
+          fichier:'chapitre8_aire/02-exercices-aire-1.html',
+          desc:"Réussis les 10 défis en entier.",
+          consigne:"Réussis les 10 défis pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
+        { id:'exercices-aire-2', titre:"Exercices du royaume de l'Aire 2", icone:'✏️', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre8_aire/Mini/royaume-aire.webp',
+          fichier:'chapitre8_aire/03-exercices-aire-2.html',
+          desc:"Réussis les 10 défis en entier. Débloque la Consolidation.",
+          consigne:"Réussis les 10 défis pour gagner 20 🪙 et débloquer la Consolidation",
+          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
+        { id:'tetris-labo', titre:"Tétris des triangles : le laboratoire", icone:'🔺', mode:'exercices', total:3, recompense:10,
+          mini:'chapitre8_aire/Mini/tetris.webp',
+          fichier:'chapitre8_aire/04-tetris-triangles-labo.html',
+          desc:"Réussis les 3 exercices, puis invente ta propre pièce.",
+          consigne:"Réussis les 3 exercices pour gagner 10 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
+        { id:'tetris-defi', titre:"Tétris des triangles : le défi des pièces", icone:'🔺', mode:'exercices', total:5, recompense:10,
+          mini:'chapitre8_aire/Mini/tetris.webp',
+          fichier:'chapitre8_aire/05-tetris-triangles-defi-pieces.html',
+          desc:"Construis les 5 pièces en suivant le modèle.",
+          consigne:"Construis les 5 pièces pour gagner 10 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' pièces construites', libelleFait:'✓ Réussi' }
+      ]},
+      1: { exige:'exercices-aire-2', docs: [
+        { id:'tetris-reglettes', titre:"Tétris des réglettes", icone:'🧱', mode:'exercices', total:8, recompense:10,
+          mini:'chapitre8_aire/Mini/tetris.webp',
+          fichier:'chapitre8_aire/06-tetris-reglettes-cuisenaire.html',
+          desc:"Fais tomber les réglettes et remplis 8 lignes de 10 cm.",
+          consigne:"Remplis 8 lignes de 10 cm pour gagner 10 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' lignes remplies', libelleFait:'✓ Réussi' }
+      ]}
+    },
     mesure2: {
       0: { docs: [
         { id:'heure-tarte', titre:"Notions : l'heure en pointe de tarte (1re partie)", icone:'📖', mode:'lecture', total:1, recompense:10,
+          mini:'chapitre9_heure/Mini/tarte.webp',
           fichier:'chapitre9_heure/01-heure-en-pointe-de-tarte.html',
           desc:"Lis le document du début à la fin.",
           consigne:"Fais défiler le document jusqu'au bout pour gagner 10 🪙",
           libelleProgres:(v, t) => 'Lecture : ' + v + ' / ' + t + ' parties vues', libelleFait:'✓ Lu' },
         { id:'exercices-fondamentaux', titre:"Exercices : l'heure en pointe de tarte (1re partie)", icone:'✏️', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/Mini/tarte.webp',
           fichier:'chapitre9_heure/02-exercices-fondamentaux.html',
           desc:"Réussis les 10 exercices en entier. Débloque la Consolidation.",
           consigne:"Réussis les 10 exercices pour gagner 20 🪙 et débloquer la Consolidation",
           libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
         { id:'heure-tarte-2', titre:"Notions : l'heure en pointe de tarte (2e partie)", icone:'📖', mode:'lecture', total:1, recompense:10,
+          mini:'chapitre9_heure/Mini/tarte.webp',
           fichier:'chapitre9_heure/04-heure-en-pointe-de-tarte-2e-partie.html',
           desc:"Lis la suite du document du début à la fin.",
           consigne:"Fais défiler le document jusqu'au bout pour gagner 10 🪙",
-          libelleProgres:(v, t) => 'Lecture : ' + v + ' / ' + t + ' parties vues', libelleFait:'✓ Lu' }
+          libelleProgres:(v, t) => 'Lecture : ' + v + ' / ' + t + ' parties vues', libelleFait:'✓ Lu' },
+        { id:'heure-bmx-1', titre:"Exercices : l'heure en saut de BMX 1", icone:'🚲', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/Mini/bmx.webp',
+          fichier:'chapitre9_heure/05-heure-en-saut-de-bmx-1.html',
+          desc:"Réussis les 10 défis en entier.",
+          consigne:"Réussis les 10 défis pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-bmx-2', titre:"Exercices : l'heure en saut de BMX 2", icone:'🚲', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/Mini/bmx.webp',
+          fichier:'chapitre9_heure/06-heure-en-saut-de-bmx-2.html',
+          desc:"Réussis les 10 défis en entier.",
+          consigne:"Réussis les 10 défis pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' }
       ]},
       1: { exige:'exercices-fondamentaux', docs: [
         { id:'horloge', titre:'Exercices', icone:'🕒', mode:'exercices', total:6, recompense:10,
+          mini:'chapitre9_heure/Mini/tarte.webp',
           fichier:'chapitre9_heure/03-horloge-heures-et-quarts.html',
           desc:"Réussis les 6 exercices en entier.",
           consigne:"Réussis les 6 exercices pour gagner 10 🪙",
@@ -988,9 +1087,13 @@
   };
 
   // id du document à terminer pour débloquer une section (ou null)
+  // Sections qui restent des séries de questions mais dont l'accès dépend d'un document terminé
+  // (aucune pour l'instant : la Consolidation du chapitre VIII est faite de documents et porte son propre « exige »).
+  const EXIGENCES_SECTIONS = {};
   function docExigePourSection(chapterId, sectionIdx){
     const cfg = DOCS_CHAPITRES[chapterId];
-    return (cfg && cfg[sectionIdx] && cfg[sectionIdx].exige) || null;
+    const exigence = EXIGENCES_SECTIONS[chapterId];
+    return (cfg && cfg[sectionIdx] && cfg[sectionIdx].exige) || (exigence && exigence[sectionIdx]) || null;
   }
 
   // ---------- state ----------
@@ -2264,6 +2367,16 @@
     }
   }
   function docFait(docId){ const p = docProgressCache[docId]; return !!(p && p.done); }
+  // Un document est verrouillé tant que le précédent, dans la même section, n'est pas terminé
+  // (le premier de chaque section est toujours ouvert; la section elle-même a sa propre règle).
+  function docPrecedentRequis(chapterId, sectionIdx, docId){
+    const cfg = DOCS_CHAPITRES[chapterId] && DOCS_CHAPITRES[chapterId][sectionIdx];
+    if(!cfg) return null;
+    const i = cfg.docs.findIndex(d => d.id === docId);
+    if(i <= 0) return null;
+    const prec = cfg.docs[i - 1];
+    return docFait(prec.id) ? null : prec;
+  }
   function trouverDoc(chapterId, docId){
     const cfg = DOCS_CHAPITRES[chapterId];
     for(const idx of Object.keys(cfg)){
@@ -2365,6 +2478,12 @@
     });
   }
 
+  // Vignette du document (dossier Mini/ à côté du document) ; sans vignette, l'icône emoji du document.
+  function iconeDoc(doc){
+    return doc.mini
+      ? '<img class="doc-mini" src="' + escapeHtml(doc.mini) + '" alt="" draggable="false">'
+      : '<span class="doc-icone">' + doc.icone + '</span>';
+  }
   function renderDroiteChapitre(){
     const cfgDocs = DOCS_CHAPITRES[currentChapter.id] || null;
     const cfg = (cfgDocs && sectionChoisie !== null) ? cfgDocs[sectionChoisie] : null;
@@ -2373,9 +2492,18 @@
     let rows = '';
     cfg.docs.forEach(doc => {
       const fait = docFait(doc.id);
-      const enCours = !fait && !!(docProgressCache[doc.id] && docProgressCache[doc.id].etat);
+      const requis = fait ? null : docPrecedentRequis(currentChapter.id, idx, doc.id);
+      const enCours = !fait && !requis && !!(docProgressCache[doc.id] && docProgressCache[doc.id].etat);
+      if(requis){
+        rows += '<li class="doc-row doc-verrouille" data-doc="' + doc.id + '" aria-disabled="true">' +
+          iconeDoc(doc) +
+          '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(doc.titre) + '</span>' +
+          '<span class="doc-sub">' + escapeHtml('Termine « ' + requis.titre + ' » pour ouvrir celui-ci.') + '</span></span>' +
+        '</li>';
+        return;
+      }
       rows += '<li class="doc-row' + (fait ? ' doc-fait' : '') + '" data-doc="' + doc.id + '">' +
-        '<span class="doc-icone">' + doc.icone + '</span>' +
+        iconeDoc(doc) +
         '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(doc.titre) + '</span>' +
         '<span class="doc-sub">' + escapeHtml(doc.desc) + (enCours ? ' <b class="doc-encours">· En cours — tu reprends où tu étais.</b>' : '') + '</span></span>' +
         '<span class="doc-etat">' + (fait ? '<span class="doc-ok">' + doc.libelleFait + '</span>' : '<span class="card-reward">🪙 ' + doc.recompense + '</span>') + '</span>' +
@@ -2399,6 +2527,11 @@
     const cfg = DOCS_CHAPITRES[currentChapter.id][sectionIdx];
     const doc = cfg.docs.find(d => d.id === docId);
     if(!doc) return;
+    const requis = docFait(doc.id) ? null : docPrecedentRequis(currentChapter.id, sectionIdx, doc.id);
+    if(requis){
+      alerteGrimoire("Ce document est verrouillé. Termine d'abord « " + requis.titre + " ».");
+      return;
+    }
     docActif = { chapterId: currentChapter.id, sectionIdx, doc, termineTraite: false };
     const fait = docFait(doc.id);
     $('docBarTitre').textContent = doc.titre;
@@ -2522,6 +2655,119 @@
     }
   });
 
+
+  // ---------- Punch-math! : jeu de combat (punch-math.html) et tableau commun des meilleurs ----------
+  // Comme les documents des chapitres, le jeu ne touche jamais au stockage : il parle au Grimoire par postMessage
+  //   { source:'punch-math', type:'init' | 'victoire' | 'classement', id }   →   réponse { source:'grimoire-punch', id, ... }
+  // Chaque élève a UNE fiche partagée « punch_<identifiant> » : sa progression (boss vaincus par mode) et son meilleur combat.
+  // Le tableau lit toutes les fiches « punch_… » et garde les 10 meilleurs scores (un seul score par élève : son meilleur).
+  // Aucun or n'est versé par ce jeu.
+  const PUNCH_PREFIXE = 'punch_';
+  const PUNCH_MODES = ['add', 'sub', 'mul', 'div'];
+  const PUNCH_SCORE_MAX = 1500;            // plafond de vraisemblance (le meilleur combat possible vaut 1 450)
+  let punchCache = null;                   // { t, entrees } — le tableau est relu au plus toutes les 15 s
+  const punchCle = slug => PUNCH_PREFIXE + slug;
+  function progPunch(p){
+    const o = { add:0, sub:0, mul:0, div:0 };
+    if(p && typeof p === 'object') PUNCH_MODES.forEach(m => { o[m] = Math.max(0, Math.min(12, +p[m] || 0)); });
+    return o;
+  }
+  function ficheValidePunch(env){
+    if(!env || !env.donnees) return null;
+    if(window.PasserelleCore && window.PasserelleCore.calculerSceau(env.donnees) !== env.seal) return null;
+    return env.donnees;
+  }
+  // Retourne { fiche } ou { erreur:true } si le réseau a échoué (on n'écrase alors JAMAIS une vraie fiche par une fiche vide).
+  async function lireFichePunch(slug, nom){
+    try{
+      const res = await window.storage.get(punchCle(slug), true);
+      if(res && res.value){
+        const f = ficheValidePunch(JSON.parse(res.value));
+        if(f){ f.slug = slug; f.prog = progPunch(f.prog); f.parMode = f.parMode || {}; if(nom) f.nom = nom; return { fiche: f }; }
+      }
+    }catch(e){
+      if(e && e.code && e.code !== 'ABSENTE') return { erreur: true };
+    }
+    return { fiche: { slug, nom: nom || slug, prog: progPunch(), best: null, parMode: {} } };
+  }
+  async function ecrireFichePunch(f){
+    const seal = window.PasserelleCore ? window.PasserelleCore.calculerSceau(f) : '';
+    await window.storage.set(punchCle(f.slug), JSON.stringify({ donnees: f, seal }), true);
+  }
+  async function entreesPunch(forcer){
+    if(!forcer && punchCache && Date.now() - punchCache.t < 15000) return punchCache.entrees;
+    const lst = await window.storage.list(PUNCH_PREFIXE, true);
+    const cles = (lst && lst.keys) || [];
+    const fiches = await Promise.all(cles.map(async cle => {
+      try{ const r = await window.storage.get(cle, true); return ficheValidePunch(JSON.parse(r.value)); }catch(e){ return null; }
+    }));
+    const entrees = fiches
+      .filter(f => f && f.slug && f.best && typeof f.best.score === 'number')
+      .map(f => ({ slug: f.slug, nom: f.nom || f.slug, score: f.best.score, mode: f.best.mode, k: f.best.k, date: f.best.date || 0 }));
+    entrees.sort((a, b) => (b.score - a.score) || (a.date - b.date));   // à égalité : le plus ancien passe devant
+    punchCache = { t: Date.now(), entrees };
+    return entrees;
+  }
+  function repondrePunch(e, d, contenu){
+    try{ e.source.postMessage(Object.assign({ source: 'grimoire-punch', id: d.id }, contenu), '*'); }catch(_){ /* la fenêtre s'est fermée */ }
+  }
+  window.addEventListener('message', async (e) => {
+    const d = e.data;
+    if(!d || d.source !== 'punch-math') return;
+    const cadre = $('punchFrame');
+    if(!cadre || e.source !== cadre.contentWindow) return;   // seulement le jeu ouvert
+    try{
+      if(d.type === 'init'){
+        if(!currentSlug) return repondrePunch(e, d, { ok: true, slug: null });
+        const r = await lireFichePunch(currentSlug, currentStudentName);
+        if(r.erreur) return repondrePunch(e, d, { ok: false });
+        repondrePunch(e, d, { ok: true, slug: currentSlug, nom: currentStudentName, prog: r.fiche.prog });
+      } else if(d.type === 'victoire'){
+        const m = d.mode;
+        if(!currentSlug || PUNCH_MODES.indexOf(m) === -1) return repondrePunch(e, d, { ok: false });
+        const r = await lireFichePunch(currentSlug, currentStudentName);
+        if(r.erreur) return repondrePunch(e, d, { ok: false });
+        const f = r.fiche;
+        const k = Math.max(0, Math.min(11, d.k | 0));
+        const score = Math.max(0, Math.min(PUNCH_SCORE_MAX, Math.round(+d.score) || 0));
+        f.nom = currentStudentName;
+        f.prog[m] = Math.max(f.prog[m], k + 1);
+        f.parMode[m] = Math.max(f.parMode[m] || 0, score);
+        let record = false;
+        if(!f.best || score > f.best.score){ f.best = { score, mode: m, k, date: Date.now(), coeurs: d.coeurs | 0 }; record = true; }
+        await ecrireFichePunch(f);
+        punchCache = null;
+        let rang = null, total = null;
+        try{
+          const entrees = await entreesPunch(true);
+          const i = entrees.findIndex(x => x.slug === currentSlug);
+          rang = i >= 0 ? i + 1 : null; total = entrees.length;
+        }catch(err){ /* le rang est facultatif : le score, lui, est bien enregistré */ }
+        repondrePunch(e, d, { ok: true, record, meilleur: f.best.score, rang, total, prog: f.prog });
+      } else if(d.type === 'classement'){
+        const entrees = await entreesPunch(false);
+        const propre = x => ({ nom: x.nom, score: x.score, mode: x.mode, k: x.k });
+        const top = entrees.slice(0, 10).map(x => Object.assign(propre(x), { moi: x.slug === currentSlug }));
+        const i = entrees.findIndex(x => x.slug === currentSlug);
+        repondrePunch(e, d, { ok: true, top, total: entrees.length, moi: i >= 0 ? Object.assign(propre(entrees[i]), { rang: i + 1 }) : null });
+      }
+    }catch(err){
+      repondrePunch(e, d, { ok: false });
+    }
+  });
+  function ouvrirPunchMath(){
+    punchCache = null;
+    $('punchFrame').src = 'punch-math.html';
+    $('punchOverlay').classList.add('open');
+  }
+  function fermerPunchMath(){
+    $('punchOverlay').classList.remove('open');
+    $('punchFrame').src = 'about:blank';
+  }
+  $('punchBtn').addEventListener('click', ouvrirPunchMath);
+  $('punchCloseBtn').addEventListener('click', fermerPunchMath);
+  $('punchFrame').addEventListener('load', () => { try{ $('punchFrame').contentWindow.focus(); }catch(e){} });
+
   // ---------- quiz spreads ----------
   function startSection(sectionIdx){
     sectionChoisie = null;
@@ -2571,7 +2817,7 @@
       '<div id="chapterHeadMini"><span class="medallion" style="width:38px;height:38px;font-size:0.85rem;">' + currentChapter.numeral + '</span> ' +
       '<strong style="font-family:\'IM Fell English SC\', serif;">' + escapeHtml(SECTION_META[currentSectionIdx].name) + '</strong></div>' +
       '<div style="margin-top:14px; flex:1; display:flex; flex-direction:column;">' + questionPageHtml(li, 'L') + '</div>';
-    swapRight('<div style="flex:1; display:flex; flex-direction:column;">' + questionPageHtml(ri, 'R') + '</div>');
+    swapRight('<div style="flex:1; display:flex; flex-direction:column; padding-top:44px;">' + questionPageHtml(ri, 'R') + '</div>');   // padding-top : laisse la place aux boutons en haut à droite
 
     setupCanvas('cv_L');
     if($('cv_R')) setupCanvas('cv_R');
@@ -2791,7 +3037,7 @@
       '<div id="chapterHeadMini"><span class="medallion" style="width:38px;height:38px;font-size:0.85rem;">✦</span> ' +
       '<strong style="font-family:\'IM Fell English SC\', serif;">' + escapeHtml(feuilleActive.titre) + '</strong></div>' +
       '<div style="margin-top:14px; flex:1; display:flex; flex-direction:column;">' + questionPageHtmlSupp(li, 'L') + '</div>';
-    swapRight('<div style="flex:1; display:flex; flex-direction:column;">' + questionPageHtmlSupp(ri, 'R') + '</div>');
+    swapRight('<div style="flex:1; display:flex; flex-direction:column; padding-top:44px;">' + questionPageHtmlSupp(ri, 'R') + '</div>');
 
     setupCanvas('cv_L');
     if($('cv_R')) setupCanvas('cv_R');

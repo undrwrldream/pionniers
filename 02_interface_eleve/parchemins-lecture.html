@@ -11,6 +11,7 @@
 <script src="passerelle-core.js"></script>
 <script src="types-de-reponse.js"></script>
 <script src="evocations-data.js"></script>
+<script src="conjugaison-data.js"></script>
 <style>
   :root{
     --parchment:#EFE3C4;
@@ -558,7 +559,7 @@
    ou retourne à la liste des sections (jamais de bouton fermer). */
 .vocab-panel{
   display:none; position:fixed; z-index:250; flex-direction:column;
-  width:min(92vw, 560px); height:min(82vh, 700px);
+  width:min(94vw, 560px); height:min(88vh, 600px);
   border-radius:10px; overflow:hidden;
   box-shadow:0 14px 34px rgba(0,0,0,0.5), 0 0 0 1px rgba(122,88,42,0.4);
 }
@@ -581,14 +582,91 @@
   margin:0 0 10px; font-style:italic;
 }
 .vocab-popup-grid{
-  display:grid; grid-template-columns:1fr 1fr; gap:8px 30px; font-size:0.92rem;
-  text-align:center; width:100%; max-width:340px;
+  display:grid; grid-auto-flow:column; column-gap:14px; row-gap:0; font-size:0.92rem;
+  text-align:center; width:100%; flex:1 1 auto; align-content:start;
 }
-.vocab-popup-grid div{ padding:2px 0; border-bottom:1px dotted rgba(0,0,0,0.15); overflow-wrap:break-word; }
+.vocab-popup-grid div{ padding:0 2px; border-bottom:1px dotted rgba(0,0,0,0.15); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 @media (max-width:480px){
-  .vocab-panel{ width:92vw; height:44vh; }
+  .vocab-panel{ width:94vw; height:70vh; }
 }
+/* liste ouverte : le parchemin se range à gauche et la liste occupe la place à droite, côte à côte (écrans assez larges) */
+@media (min-width:1200px){
+  body.vocab-ouvert .wrap{ max-width:none; width:100%; margin:0; }
+  body.vocab-ouvert .evoc-conteneur{ width:min(calc(100vw - 620px), calc(84vh * 1.5), 1920px); margin-left:20px; margin-right:auto; }
+}
+/* bouton pour masquer la liste (elle ne cache plus jamais la page) et bouton pour la rouvrir */
+.vocab-panel-header{ position:relative; }
+.vocab-panel-close{
+  position:absolute; top:8px; right:8px; z-index:2; cursor:pointer;
+  font-family:'EB Garamond', serif; font-size:13px; font-weight:600; color:#F6E7C4;
+  background:rgba(30,10,8,0.72); border:1px solid rgba(227,178,60,0.7); border-radius:5px; padding:3px 9px;
+}
+.vocab-panel-close:hover{ background:rgba(90,30,20,0.9); }
+.vocab-toggle{
+  display:none; position:fixed; top:10px; right:12px; z-index:240; cursor:pointer;
+  font-family:'Cinzel Decorative', serif; font-size:13px; color:#2b1c08;
+  background:var(--gold-bright); border:1.5px solid var(--gold-dark); border-radius:6px; padding:8px 12px;
+  box-shadow:0 4px 12px rgba(0,0,0,0.3);
+}
+.vocab-toggle.visible{ display:block; }
+
+/* expérience (XP) */
+.xp-bandeau{ margin:0 0 12px; padding:8px 12px 10px; border:1px solid var(--gold-dark); border-radius:8px; background:rgba(255,248,225,0.55); }
+.xp-ligne{ display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-size:0.9rem; color:var(--ink); }
+.xp-barre{ height:9px; margin-top:6px; border-radius:99px; background:rgba(90,60,20,0.18); overflow:hidden; }
+.xp-barre i{ display:block; height:100%; background:linear-gradient(90deg,var(--gold-dark),var(--gold-bright)); border-radius:99px; }
+.xp-gain{ margin:10px auto 0; text-align:center; font-family:'Cinzel Decorative', serif; font-size:0.95rem; color:var(--gold-dark); font-weight:700; }
+
+/* pages de section : la sortie reste toujours visible (barre collée en haut) et répétée en bas */
+.evoc-barre, .conj-barre{
+  position:sticky; top:0; z-index:5; padding:3px 0 6px; margin:0 0 6px;
+  background:linear-gradient(180deg, rgba(232,216,178,0.97) 80%, rgba(232,216,178,0));
+}
+.evoc-barre .back-link, .conj-barre .back-link{ margin-bottom:0; display:inline-block; }
+.retour-bas{
+  display:block; margin:16px auto 4px; cursor:pointer;
+  font-family:'Cinzel Decorative', serif; font-size:13px; color:var(--gold-dark);
+  background:var(--parchment); border:1.5px solid var(--gold-dark); border-radius:6px; padding:9px 16px;
+}
+.retour-bas:hover{ background:var(--gold-bright); color:#2b1c08; }
+
+/* Chapitre 2 — Conjurations (même présentation que les Invocations) */
+.conj-titre-liste{ font-family:'Cinzel Decorative', serif; font-size:1.15rem; text-align:center; margin:2px 0 6px; }
+.conj-intro{ text-align:center; color:var(--ink-soft); font-size:0.85rem; margin:0 0 14px; }
+.conj-sous{ display:block; font-weight:400; font-size:0.78rem; color:var(--ink-soft); }
+.evoc-liste-num:has(> img.conj-mini){ width:54px; }
+.evoc-liste-num img.conj-mini{ width:50px; height:50px; object-fit:contain; margin:-8px 0; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
+.conj-entete{ text-align:center; font-family:'Cinzel Decorative', serif; font-size:1.05rem; margin:4px 0 2px; }
+.conj-sous-titre{ text-align:center; color:var(--ink-soft); font-size:0.85rem; margin-bottom:8px; }
+.conj-series{ display:flex; gap:8px; justify-content:center; margin:6px 0 12px; flex-wrap:wrap; }
+.conj-serie-btn{
+  font-family:'Cinzel Decorative', serif; font-size:0.78rem; padding:7px 14px; cursor:pointer;
+  border:1.5px solid var(--gold-dark); border-radius:6px; background:var(--parchment); color:var(--gold-dark);
+}
+.conj-serie-btn.actif{ background:var(--gold); color:#2b1c08; }
+.conj-temps h3{
+  font-family:'Cinzel Decorative', serif; font-size:0.95rem; color:var(--ink);
+  border-bottom:2px solid var(--gold); padding-bottom:3px; margin:16px 0 8px;
+}
+.conj-refs{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.conj-ref{
+  background:rgba(255,255,255,0.35); border:1px dashed var(--border); border-radius:6px;
+  padding:6px 10px; font-size:0.85rem; line-height:1.4;
+}
+.conj-ref-titre{ font-weight:700; color:var(--gold-dark); font-size:0.8rem; margin-bottom:2px; }
+.conj-groupes{ display:grid; grid-template-columns:1fr 1fr; gap:4px 26px; }
+.conj-groupe-titre{ font-weight:700; font-size:0.85rem; margin:4px 0 7px; }
+.conj-q{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px; font-size:0.92rem; }
+.conj-q b.elide{ margin-right:-4px; }
+.conj-q .reponse-mot{
+  width:118px; font-family:'EB Garamond', serif; font-size:0.95rem; padding:4px 7px;
+  border:1px solid var(--border); border-radius:5px; background:#fff;
+}
+.conj-q.correcte .reponse-mot{ border-color:var(--green); background:var(--green-bg); }
+.conj-q.incorrecte .reponse-mot{ border-color:#a33; background:#fbe6e6; }
+.conj-fin{ text-align:center; margin-top:12px; color:var(--green); font-weight:600; }
+@media (max-width:720px){ .conj-refs, .conj-groupes{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -616,12 +694,14 @@
 </div>
 
 <div class="vocab-panel" id="vocabPanel">
-  <div class="vocab-panel-header" id="vocabPanelHeader"></div>
+  <div class="vocab-panel-header" id="vocabPanelHeader"><button class="vocab-panel-close" id="vocabPanelClose" type="button" aria-label="Masquer la liste de vocabulaire">✕ Masquer</button></div>
   <div class="vocab-panel-body">
     <p class="vocab-panel-hint">↕ Déplaçable — glisse la bannière</p>
     <div class="vocab-popup-grid" id="vocabPopupGrid"></div>
   </div>
 </div>
+
+<button class="vocab-toggle" id="vocabToggle" type="button">📖 Vocabulaire</button>
 
 <div class="levelup-overlay" id="levelupOverlay">
   <div class="levelup-card">
@@ -639,24 +719,24 @@
 const DATA = [
   { title: "Chapitre 1: Invocations", isInvocations: true,
     texts: [ { kind: "promotion", title: "Épreuve de promotion", paireIndex: 0 } ] },
-  { title:"Chapitre 2: Conjurations",
+  { title:"Chapitre 2: Conjurations", isConjurations: true,
     texts: [
-      { kind:"conjugaison", title:"Conjure Chrono-Bot !", emoji:"🤖", sousTitre:"ÊTRE & AVOIR — présent, imparfait, futur",
+      { kind:"conjugaison", themeId:1, slug:"chrono-bot", title:"Conjure Chrono-Bot !", emoji:"🤖", sousTitre:"ÊTRE & AVOIR — présent, imparfait, futur",
         serie1:"chapitre2_conjugaison/chapitre2-theme1-chrono-bot-serie1.html",
         serie2:"chapitre2_conjugaison/chapitre2-theme1-chrono-bot-serie2.html" },
-      { kind:"conjugaison", title:"Conjure M. Pizza !", emoji:"🍕", sousTitre:"AIMER & MANGER — présent, imparfait, futur",
+      { kind:"conjugaison", themeId:2, slug:"m-pizza", title:"Conjure M. Pizza !", emoji:"🍕", sousTitre:"AIMER & MANGER — présent, imparfait, futur",
         serie1:"chapitre2_conjugaison/chapitre2-theme2-m-pizza-serie1.html",
         serie2:"chapitre2_conjugaison/chapitre2-theme2-m-pizza-serie2.html" },
-      { kind:"conjugaison", title:"Conjure Le Tyran !", emoji:"👑", sousTitre:"POUVOIR & VOULOIR — présent, imparfait, futur",
+      { kind:"conjugaison", themeId:3, slug:"tyran", title:"Conjure Le Tyran !", emoji:"👑", sousTitre:"POUVOIR & VOULOIR — présent, imparfait, futur",
         serie1:"chapitre2_conjugaison/chapitre2-theme3-tyran-serie1.html",
         serie2:"chapitre2_conjugaison/chapitre2-theme3-tyran-serie2.html" },
-      { kind:"conjugaison", title:"Conjure Albert Einstein !", emoji:"🧪", sousTitre:"APPRENDRE & COMPRENDRE — présent, imparfait, futur",
+      { kind:"conjugaison", themeId:4, slug:"einstein", title:"Conjure Albert Einstein !", emoji:"🧪", sousTitre:"APPRENDRE & COMPRENDRE — présent, imparfait, futur",
         serie1:"chapitre2_conjugaison/chapitre2-theme4-einstein-serie1.html",
         serie2:"chapitre2_conjugaison/chapitre2-theme4-einstein-serie2.html" },
-      { kind:"conjugaison", title:"Conjure La Faucheuse !", emoji:"💀", sousTitre:"FINIR & MOURIR — présent, imparfait, futur",
+      { kind:"conjugaison", themeId:5, slug:"faucheuse", title:"Conjure La Faucheuse !", emoji:"💀", sousTitre:"FINIR & MOURIR — présent, imparfait, futur",
         serie1:"chapitre2_conjugaison/chapitre2-theme5-faucheuse-serie1.html",
         serie2:"chapitre2_conjugaison/chapitre2-theme5-faucheuse-serie2.html" },
-      { kind:"conjugaison", title:"Conjure le Petit Castor !", placeholder:true, emoji:"🦫", sousTitre:"DÉFAIRE & REFAIRE — présent, imparfait, futur" },
+      { kind:"conjugaison", themeId:6, slug:"petit-castor", title:"Conjure le Petit Castor !", placeholder:true, emoji:"🦫", sousTitre:"DÉFAIRE & REFAIRE — présent, imparfait, futur" },
       { kind: "promotion", title: "Épreuve de promotion", paireIndex: 1 }
     ] },
   {
@@ -1375,6 +1455,69 @@ function souligneMots(texte, mots){
 }
 
 
+/* ---------------- Conjurations (chapitre 2) : progression enregistrée, comme les Invocations ----------------
+   Une clé par thème et par série : conj_<élève>_<thème>_s<série> = { meilleurScore, derniereTentative }.
+   Un thème est « terminé » dès que CONJ_SERIES_REQUISES série(s) ont été corrigées au moins une fois
+   (peu importe le score, comme pour les sections d'Invocations) ; c'est l'épreuve de promotion qui vérifie la maîtrise. */
+const CONJ_SERIES_REQUISES = 1;
+const CONJ_TOTAL_PAR_SERIE = 36;
+let conjProgression = {};   // { [themeId]: { 1:{meilleurScore, derniereTentative}, 2:{...} } }
+
+function cleConj(themeId, serie){ return "conj_" + identiteEleve.slug + "_" + themeId + "_s" + serie; }
+async function chargerProgressionConj(themeId, serie){
+  if(!identiteEleve) return { meilleurScore:null, derniereTentative:null };
+  try{
+    const res = await window.storage.get(cleConj(themeId, serie), true);
+    return (res && res.value) ? JSON.parse(res.value) : { meilleurScore:null, derniereTentative:null };
+  }catch(e){ return { meilleurScore:null, derniereTentative:null }; }
+}
+async function sauvegarderProgressionConj(themeId, serie, donnees){
+  if(!identiteEleve) return;
+  try{ await window.storage.set(cleConj(themeId, serie), JSON.stringify(donnees), true); }
+  catch(e){ /* pas grave : l'élève voit son score pour cette session */ }
+}
+function themesConjugaison(){ return DATA[1].texts.filter(t => t.kind === "conjugaison" && !t.placeholder); }
+async function chargerToutesConj(){
+  await Promise.all(themesConjugaison().flatMap(t => [1, 2].map(async serie => {
+    const prog = await chargerProgressionConj(t.themeId, serie);
+    conjProgression[t.themeId] = conjProgression[t.themeId] || {};
+    conjProgression[t.themeId][serie] = prog;
+  })));
+}
+function conjThemeDone(themeId){
+  const p = conjProgression[themeId] || {};
+  return [1, 2].filter(s => p[s] && p[s].meilleurScore != null).length >= CONJ_SERIES_REQUISES;
+}
+
+/* Épreuves de promotion : leur état (2 exercices réussis ou non) est maintenant enregistré, sinon il se perdait à la fermeture. */
+function clePromo(ci, ti){ return "promo_" + identiteEleve.slug + "_" + ci + "_" + ti; }
+async function chargerPromotions(){
+  if(!identiteEleve) return;
+  const taches = [];
+  DATA.forEach((ch, ci) => {
+    if(!ch.texts) return;
+    ch.texts.forEach((t, ti) => {
+      if(t.kind !== "promotion") return;
+      taches.push((async () => {
+        try{
+          const res = await window.storage.get(clePromo(ci, ti), true);
+          if(!res || !res.value) return;
+          const d = JSON.parse(res.value);
+          const st = ensurePromotionState(ci, ti);
+          [0, 1].forEach(k => { if(d.sousExercices && d.sousExercices[k] && d.sousExercices[k].statut === "reussi") st.sousExercices[k].statut = "reussi"; });
+        }catch(e){ /* rien d'enregistré encore */ }
+      })());
+    });
+  });
+  await Promise.all(taches);
+}
+async function sauvegarderPromotion(ci, ti){
+  if(!identiteEleve) return;
+  const st = ensurePromotionState(ci, ti);
+  try{ await window.storage.set(clePromo(ci, ti), JSON.stringify({ sousExercices: st.sousExercices }), true); }
+  catch(e){ /* l'état reste en mémoire pour cette session */ }
+}
+
 function ensureState(ci, ti){
   textState[ci] = textState[ci] || {};
   textState[ci][ti] = textState[ci][ti] || {status:"a-faire", answers:{}, matching:{}, promptIdx:null, content:""};
@@ -1541,6 +1684,7 @@ function ensurePromotionState(ci, ti){
 
 function itemDone(ci, ti, t){
   if(t.placeholder) return true;
+  if(t.kind === "conjugaison") return conjThemeDone(t.themeId);
   if(t.kind === "promotion"){
     const st = textState[ci] && textState[ci][ti];
     return !!(st && st.sousExercices && st.sousExercices[0].statut === "reussi" && st.sousExercices[1].statut === "reussi");
@@ -1549,12 +1693,62 @@ function itemDone(ci, ti, t){
 }
 
 function chapterUnlocked(ci){
-  if(ci === 0) return true;
+  if(window.__toutDebarre) return true;    // panneau enseignant : « Débarrer tous les chapitres »
+  if(ci === 0 || ci === 1) return true;    // le chapitre 2 (Conjurations) est ouvert d'emblée
   const prev = DATA[ci - 1];
   if(!prev) return false;
   if(prev.isInvocations) return invocationsToutesTerminees && prev.texts.every((t, ti) => itemDone(ci-1, ti, t));
   if(prev.placeholder) return false;
   return prev.texts.every((t, ti) => itemDone(ci-1, ti, t));
+}
+
+// Un chapitre est terminé quand toutes ses sections ET son épreuve de promotion sont réussies.
+function chapitreTermine(ci){
+  const ch = DATA[ci];
+  if(!ch || ch.special || ch.placeholder || !ch.texts) return false;
+  if(ch.isInvocations && !invocationsToutesTerminees) return false;
+  return ch.texts.every((t, ti) => itemDone(ci, ti, t));
+}
+// Le rang de mage = nombre de chapitres terminés d'affilée depuis le chapitre 1
+// (le chapitre 2 est ouvert d'emblée : le rang n'avance qu'une fois les chapitres précédents terminés).
+function nbChapitresTermines(){ let n = 0; while(chapitreTermine(n)) n++; return n; }
+
+/* ---------------- Expérience (XP) — chapitres 1 et 2 ----------------
+   • 100 XP par section terminée (une seule fois : corrigée au moins une fois, peu importe le score) ;
+   • 200 XP par exercice de l'épreuve de promotion réussi (10/15 ou plus ; 2 exercices par chapitre) ;
+   • les XP des deux chapitres s'additionnent : tous les 1000 XP, un rang de mage de plus.
+   Rien n'est stocké à part : les XP se calculent à partir des progressions déjà enregistrées (sections, thèmes, promotions).
+   Les chapitres suivants (3 et +) gardent leur règle d'avant : un rang de plus par chapitre terminé. */
+const XP_PAR_SECTION = 100, XP_PAR_EXERCICE_BOSS = 200, XP_PAR_RANG = 1000;
+let evocNbTerminees = 0;   // nombre de sections d'Invocations terminées (mis à jour par calculerInvocationsTerminees)
+
+function xpBossChapitre(ci){
+  const ch = DATA[ci], ti = ch ? ch.texts.findIndex(t => t.kind === "promotion") : -1;
+  const st = ti >= 0 && textState[ci] && textState[ci][ti];
+  if(!st || !st.sousExercices) return 0;
+  return [0, 1].filter(k => st.sousExercices[k] && st.sousExercices[k].statut === "reussi").length * XP_PAR_EXERCICE_BOSS;
+}
+function nbSectionsChapitre(ci){ return ci === 0 ? EVOCATIONS_DATA.length : themesConjugaison().length; }
+function xpChapitre(ci){
+  if(ci !== 0 && ci !== 1) return 0;
+  const sections = ci === 0 ? evocNbTerminees : themesConjugaison().filter(t => conjThemeDone(t.themeId)).length;
+  return sections * XP_PAR_SECTION + xpBossChapitre(ci);
+}
+function xpMaxChapitre(ci){ return nbSectionsChapitre(ci) * XP_PAR_SECTION + 2 * XP_PAR_EXERCICE_BOSS; }
+function xpTotal(){ return xpChapitre(0) + xpChapitre(1); }
+function xpTotalMax(){ return xpMaxChapitre(0) + xpMaxChapitre(1); }
+function niveauEleve(){
+  let n = Math.floor(xpTotal() / XP_PAR_RANG);
+  if(chapitreTermine(0) && chapitreTermine(1)){ let ci = 2; while(chapitreTermine(ci)){ n++; ci++; } }
+  return Math.min(n, LEVELS.length - 1);
+}
+function afficherGainXP(zoneId, gain){
+  const zone = document.getElementById(zoneId);
+  if(!zone) return;
+  const div = document.createElement("div");
+  div.className = "xp-gain";
+  div.textContent = "✨ +" + gain + " XP  ·  " + xpTotal() + " XP au total";
+  zone.appendChild(div);
 }
 
 function openSpecialChapter(ci){
@@ -1579,14 +1773,22 @@ function render(){
   else if(view.mode === "promotion-hub") renderPromotionHub();
   else if(view.mode === "promotion-exercise") renderPromotionExercise();
   else if(view.mode === "promotion-results") renderPromotionResults();
-  else if(view.mode === "conjugaison-hub") renderConjugaisonHub();
+  else if(view.mode === "conj-liste") renderConjurationsListe();
+  else if(view.mode === "conj-section") renderConjSection();
   renderTeacherList();
 }
 
 /* ---------------- Table of contents ---------------- */
 async function renderTOC(){
   const invocationsFaites = await calculerInvocationsTerminees();
-  let html = `<p style="text-align:center;color:var(--ink-soft);margin-bottom:20px;">Clique sur un chapitre pour voir ses textes. Termine-le pour gravir un rang de mage.</p>`;
+  const xp = xpTotal(), xpMax = xpTotalMax(), niveau = niveauEleve();
+  const reste = XP_PAR_RANG - (xp % XP_PAR_RANG);
+  const texteSuivant = xp >= xpMax ? "Tous les XP des chapitres 1 et 2 sont gagnés !" : `Prochain rang dans <b>${reste} XP</b>`;
+  let html = `<div class="xp-bandeau">
+      <div class="xp-ligne"><span>✨ <b>${xp} XP</b></span><span>Rang : <b>${LEVELS[niveau]}</b></span><span>${texteSuivant}</span></div>
+      <div class="xp-barre"><i style="width:${xp >= xpMax ? 100 : (xp % XP_PAR_RANG) / XP_PAR_RANG * 100}%"></i></div>
+    </div>
+    <p style="text-align:center;color:var(--ink-soft);margin-bottom:16px;">Chaque section terminée rapporte de l'expérience (XP) : 1000 XP = un rang de mage de plus.</p>`;
   DATA.forEach((ch, ci) => {
     const level = LEVELS[ci] || "?";
     if(ch.isInvocations){
@@ -1596,7 +1798,20 @@ async function renderTOC(){
           <div class="chapter-name">${ch.title}</div>
           <div class="chapter-sub">${invocationsFaites}/${EVOCATIONS_DATA.length} terminé(s)</div>
         </div>
-        <div class="rank-badge">${level}</div>
+        <div class="rank-badge">${xpChapitre(0)} / ${xpMaxChapitre(0)} XP</div>
+      </div>`;
+      return;
+    }
+    if(ch.isConjurations){
+      const themes = themesConjugaison();
+      const faits = themes.filter(t => conjThemeDone(t.themeId)).length;
+      html += `<div class="chapter-row" data-conjurations="1">
+        <div class="chapter-num">${ci+1}</div>
+        <div class="chapter-info">
+          <div class="chapter-name">${ch.title}</div>
+          <div class="chapter-sub">${faits}/${themes.length} terminé(s)</div>
+        </div>
+        <div class="rank-badge">${xpChapitre(1)} / ${xpMaxChapitre(1)} XP</div>
       </div>`;
       return;
     }
@@ -1637,6 +1852,9 @@ async function renderTOC(){
   app.querySelectorAll(".chapter-row[data-invocations]").forEach(row => {
     row.addEventListener("click", () => { view = {mode:"evoc-liste"}; render(); });
   });
+  app.querySelectorAll(".chapter-row[data-conjurations]").forEach(row => {
+    row.addEventListener("click", () => { view = {mode:"conj-liste"}; render(); });
+  });
   app.querySelectorAll(".chapter-row[data-special]").forEach(row => {
     row.addEventListener("click", () => {
       const ci = parseInt(row.dataset.special,10);
@@ -1659,7 +1877,7 @@ async function renderEvocationsListe(){
   app.innerHTML = `<div class="evoc-conteneur"><div class="evoc-contenu">
     <div class="back-link" id="backToTocFromEvoc">← Retour à la table des matières</div>
     <h2>🔷 Invocations</h2>
-    <p style="text-align:center;color:var(--ink-soft);font-size:0.85rem;margin-bottom:16px;">Vocabulaire par thème — complète les 10 sections pour gravir ton premier rang de mage.</p>
+    <p style="text-align:center;color:var(--ink-soft);font-size:0.85rem;margin-bottom:16px;">Vocabulaire par thème — chaque section terminée rapporte ${XP_PAR_SECTION} XP, et chaque exercice de l'épreuve de promotion ${XP_PAR_EXERCICE_BOSS} XP.</p>
     <div id="evocListeItems">Chargement...</div>
   </div></div>`;
   document.getElementById("backToTocFromEvoc").addEventListener("click", () => { view = {mode:"toc"}; render(); });
@@ -1728,18 +1946,18 @@ async function renderEvocationsSection(){
   });
 
   app.innerHTML = `<div class="evoc-conteneur"><div class="evoc-contenu">
-    <div class="back-link" id="backToEvocListe">← Retour aux Invocations</div>
+    <div class="evoc-barre"><span class="back-link" id="backToEvocListe">← Retour aux Invocations</span></div>
     <h2>${section.titre}</h2>
     <div class="evoc-texte">${texteSouligne}</div>
     <div id="evocExosWrap">${exercicesHtml}</div>
     <button class="evoc-submit-btn" id="evocSubmitBtn">Corriger mes réponses</button>
     <div id="evocScoreZone"></div>
+    <button class="retour-bas" id="evocRetourBas" type="button">← Retour aux Invocations</button>
   </div></div>`;
 
-  document.getElementById("backToEvocListe").addEventListener("click", () => {
-    fermerVocabPanel();
-    view = {mode:"evoc-liste"}; render();
-  });
+  const quitterSection = () => { fermerVocabPanel(); view = {mode:"evoc-liste"}; render(); };
+  document.getElementById("backToEvocListe").addEventListener("click", quitterSection);
+  document.getElementById("evocRetourBas").addEventListener("click", quitterSection);
   afficherVocabPanel(section);
   document.getElementById("evocSubmitBtn").addEventListener("click", () => corrigerEvocations(section));
 }
@@ -1763,8 +1981,11 @@ function corrigerEvocations(section){
 
   (async () => {
     const prog = await chargerProgressionEvoc(section.id);
+    const premiere = prog.meilleurScore == null;
     const meilleurScore = (prog.meilleurScore == null || score > prog.meilleurScore) ? score : prog.meilleurScore;
     await sauvegarderProgressionEvoc(section.id, { meilleurScore, derniereTentative: score });
+    await calculerInvocationsTerminees();
+    if(premiere) afficherGainXP("evocScoreZone", XP_PAR_SECTION);
     await verifierPromotionRangInvocations();
   })();
 }
@@ -1779,6 +2000,7 @@ async function calculerInvocationsTerminees(){
     if(prog.meilleurScore != null) n++;
   }
   invocationsToutesTerminees = n >= EVOCATIONS_DATA.length;
+  evocNbTerminees = n;
   return n;
 }
 
@@ -1788,6 +2010,7 @@ async function calculerInvocationsTerminees(){
 // comme pour tous les autres chapitres — voir promouvoirRang().
 async function verifierPromotionRangInvocations(){
   await calculerInvocationsTerminees();
+  await promouvoirRang();
 }
 
 /* ---------------- Panneau flottant de la liste de vocabulaire ----------------
@@ -1798,30 +2021,84 @@ let vocabPanelPos = null; // { left, top } en px, mémorisé tant que la page re
 
 function afficherVocabPanel(section){
   const grid = document.getElementById("vocabPopupGrid");
-  const mots = [...section.vocabulaire];
-  const parDeux = Math.ceil(mots.length / 2);
-  const colonnes = [mots.slice(0, parDeux), mots.slice(parDeux)];
-  grid.innerHTML = colonnes.map(col => "<div>" + col.map(m => `<div>${m}</div>`).join("") + "</div>").join("");
+  grid.innerHTML = [...section.vocabulaire].map(m => `<div>${m}</div>`).join("");
+  document.getElementById("vocabToggle").classList.add("visible");
+  // Sur un petit écran, la liste ne s'ouvre pas d'elle-même (elle cacherait la page) : le bouton « Vocabulaire » l'ouvre.
+  if(window.innerWidth >= 1200) ouvrirVocabPanel(); else masquerVocabPanel();
+}
 
+function ouvrirVocabPanel(){
   const panel = document.getElementById("vocabPanel");
   panel.classList.add("open");
-
+  document.body.classList.add("vocab-ouvert");
+  document.getElementById("vocabToggle").classList.remove("visible");
   if(vocabPanelPos){
     panel.style.left = vocabPanelPos.left + "px";
     panel.style.top = vocabPanelPos.top + "px";
     panel.style.right = "auto";
   } else if(!panel.style.left){
-    // Position par défaut : coin supérieur droit, sous la barre du navigateur.
+    // Position par défaut : coin supérieur droit.
     const marge = 18;
     panel.style.top = marge + "px";
     panel.style.left = (window.innerWidth - panel.offsetWidth - marge) + "px";
   }
   clampVocabPanelPosition();
+  ajusterListeVocab();
 }
 
+// Cache la liste mais garde le bouton pour la rouvrir (utile sur petit écran ou pour voir le texte en entier).
+function masquerVocabPanel(){
+  document.getElementById("vocabPanel").classList.remove("open");
+  document.body.classList.remove("vocab-ouvert");
+  document.getElementById("vocabToggle").classList.add("visible");
+}
+
+// Quitte la section : la liste et son bouton disparaissent.
 function fermerVocabPanel(){
   document.getElementById("vocabPanel").classList.remove("open");
+  document.body.classList.remove("vocab-ouvert");
+  document.getElementById("vocabToggle").classList.remove("visible");
 }
+
+// Fait entrer TOUS les mots dans le panneau, sans défilement : on cherche la plus grande taille de police
+// pour laquelle le nombre de colonnes nécessaires tient dans la largeur disponible.
+function ajusterListeVocab(){
+  const panel = document.getElementById("vocabPanel");
+  if(!panel.classList.contains("open")) return;
+  const grid = document.getElementById("vocabPopupGrid");
+  const corps = panel.querySelector(".vocab-panel-body");
+  const hint = corps.querySelector(".vocab-panel-hint");
+  const mots = grid.children, n = mots.length;
+  if(!n) return;
+  const cs = getComputedStyle(corps);
+  const largeur = corps.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const hauteur = corps.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)
+                  - hint.offsetHeight - parseFloat(getComputedStyle(hint).marginBottom || 0);
+  let plusLong = 0;
+  for(const m of mots) plusLong = Math.max(plusLong, m.textContent.length);
+  let choix = null;
+  for(let px = 16; px >= 9; px -= 0.5){
+    const ligne = Math.ceil(px * 1.4);
+    const lignes = Math.max(1, Math.floor(hauteur / ligne));
+    const colonnes = Math.ceil(n / lignes);
+    const largeurCol = plusLong * px * 0.5 + 12;
+    if(colonnes * largeurCol + (colonnes - 1) * 14 <= largeur){ choix = { px, ligne, lignes, colonnes }; break; }
+  }
+  if(!choix){   // écran minuscule : plus petit possible, avec défilement en dernier recours
+    const px = 9, ligne = 13, lignes = Math.max(1, Math.floor(hauteur / ligne));
+    choix = { px, ligne, lignes, colonnes: Math.ceil(n / lignes) };
+  }
+  grid.style.fontSize = choix.px + "px";
+  grid.style.gridTemplateRows = `repeat(${choix.lignes}, ${choix.ligne}px)`;
+  grid.style.gridTemplateColumns = `repeat(${choix.colonnes}, minmax(0, 1fr))`;
+  grid.style.lineHeight = choix.ligne + "px";
+}
+
+document.getElementById("vocabPanelClose").addEventListener("click", masquerVocabPanel);
+document.getElementById("vocabToggle").addEventListener("click", ouvrirVocabPanel);
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape" && document.getElementById("vocabPanel").classList.contains("open")) masquerVocabPanel();
+});
 
 function clampVocabPanelPosition(){
   const panel = document.getElementById("vocabPanel");
@@ -1844,6 +2121,7 @@ function clampVocabPanelPosition(){
   let entrain = false, decalX = 0, decalY = 0;
 
   poignee.addEventListener("pointerdown", (e) => {
+    if(e.target.closest && e.target.closest(".vocab-panel-close")) return;   // le bouton « Masquer » ne déplace pas le panneau
     entrain = true;
     poignee.setPointerCapture(e.pointerId);
     const rect = panel.getBoundingClientRect();
@@ -1859,11 +2137,12 @@ function clampVocabPanelPosition(){
   function relacher(){ if(entrain){ entrain = false; clampVocabPanelPosition(); } }
   poignee.addEventListener("pointerup", relacher);
   poignee.addEventListener("pointercancel", relacher);
-  window.addEventListener("resize", () => { if(document.getElementById("vocabPanel").classList.contains("open")) clampVocabPanelPosition(); });
+  window.addEventListener("resize", () => { if(document.getElementById("vocabPanel").classList.contains("open")){ clampVocabPanelPosition(); ajusterListeVocab(); } });
 })();
 
 /* ---------------- Chapter view (list of texts) ---------------- */
 function renderChapterView(){
+  if(DATA[view.ch] && DATA[view.ch].isConjurations){ view = {mode:"conj-liste"}; render(); return; }
   const ci = view.ch;
   const chapter = DATA[ci];
   const level = LEVELS[ci] || "?";
@@ -1937,7 +2216,7 @@ function renderPromotionHub(){
   const st = ensurePromotionState(ci, ti);
   let html = `<div class="back-link" id="backToChapter">← Retour au chapitre</div><div class="card">
     <div style="font-family:'Cinzel Decorative', serif;font-size:20px;text-align:center;margin-bottom:6px;">🏅 Épreuve de promotion</div>
-    <p style="text-align:center;color:var(--ink-soft);margin-bottom:18px;">Réussis les 2 exercices (10/15 chacun) pour gravir un échelon.</p>`;
+    <p style="text-align:center;color:var(--ink-soft);margin-bottom:18px;">${(ci === 0 || ci === 1) ? `Réussis les 2 exercices (10/15 chacun) : ${XP_PAR_EXERCICE_BOSS} XP par exercice réussi.` : `Réussis les 2 exercices (10/15 chacun) pour gravir un échelon.`}</p>`;
   paire.forEach((topicIdx, subIdx) => {
     const topic = HOMOPHONES_TOPICS[topicIdx];
     const sousSt = st.sousExercices[subIdx];
@@ -1953,7 +2232,7 @@ function renderPromotionHub(){
   html += `</div>`;
   app.innerHTML = html;
   document.getElementById("backToChapter").addEventListener("click", () => {
-    view = DATA[ci].isInvocations ? {mode:"evoc-liste"} : {mode:"chapter", ch:ci};
+    view = DATA[ci].isInvocations ? {mode:"evoc-liste"} : DATA[ci].isConjurations ? {mode:"conj-liste"} : {mode:"chapter", ch:ci};
     render();
   });
   app.querySelectorAll(".text-row[data-sub]").forEach(row => {
@@ -2013,15 +2292,14 @@ function finishPromotionExercise(){
   });
   const passed = score >= 10;
   const st = ensurePromotionState(ci, ti);
-  if(passed) st.sousExercices[sub].statut = "reussi";
+  const premiereReussite = passed && st.sousExercices[sub].statut !== "reussi";
+  if(passed){ st.sousExercices[sub].statut = "reussi"; sauvegarderPromotion(ci, ti); }
 
-  view = {mode:"promotion-results", ch:ci, text:ti, sub, topicIdx, answers, score, passed};
+  const xp = (premiereReussite && (ci === 0 || ci === 1)) ? XP_PAR_EXERCICE_BOSS : 0;
+  view = {mode:"promotion-results", ch:ci, text:ti, sub, topicIdx, answers, score, passed, xp};
   render();
 
-  if(passed && st.sousExercices[0].statut === "reussi" && st.sousExercices[1].statut === "reussi"){
-    const chapter = DATA[ci];
-    if(chapter.texts.every((t2, tii) => itemDone(ci, tii, t2))) promouvoirRang(ci);
-  }
+  if(passed) promouvoirRang(ci);
 }
 
 function renderPromotionResults(){
@@ -2042,7 +2320,7 @@ function renderPromotionResults(){
   });
 
   const bannerExtra = passed
-    ? `<div class="pass-msg">Bravo, 10/15 ou plus !</div>`
+    ? `<div class="pass-msg">Bravo, 10/15 ou plus !</div>${view.xp ? `<div class="xp-gain">✨ +${view.xp} XP  ·  ${xpTotal()} XP au total</div>` : ""}`
     : `<div class="retry-msg">Il te faut au moins 10/15. Tu dois recommencer cet exercice depuis le début.</div>`;
 
   app.innerHTML = `<div class="card">
@@ -2063,22 +2341,30 @@ function renderPromotionResults(){
   });
 }
 
-/* Accorde le rang suivant (une seule fois) et affiche la célébration plein écran. */
+/* Accorde le rang suivant (une seule fois) et affiche la célébration plein écran.
+   Le rang = nombre de chapitres terminés d'affilée depuis le chapitre 1. */
 async function promouvoirRang(ci){
-  const nextLevel = LEVELS[ci + 1];
-  if(!nextLevel || !identiteEleve || !window.PasserelleCore) return;
-  let genre = null;
+  if(!identiteEleve || !window.PasserelleCore) return;
+  await calculerInvocationsTerminees();
+  await chargerToutesConj();
+  const nouveau = niveauEleve();
+  const nextLevel = LEVELS[nouveau];
+  const xp = xpTotal();
+  let genre = null, monte = false;
   try{
     const resultat = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
     const coffre = resultat.donnees;
     genre = coffre.genre;
-    if((coffre.niveauLecture || 0) < (ci + 1)){
-      coffre.niveauLecture = ci + 1;
+    let change = false;
+    // Les XP et le rang sont écrits dans le coffre : c'est de là que la fiche de personnage les lit.
+    if((coffre.xp || 0) !== xp){ coffre.xp = xp; change = true; }
+    if(nextLevel && nouveau > (coffre.niveauLecture || 0)){ coffre.niveauLecture = nouveau; monte = true; change = true; }
+    if(change){
       coffre.nom = identiteEleve.nom;
       await window.PasserelleCore.sauvegarderCoffre(identiteEleve.slug, coffre);
     }
-  }catch(e){ /* la promotion sera revérifiée à la prochaine visite du menu */ }
-  afficherLevelUp(genre, nextLevel);
+  }catch(e){ monte = false; /* la promotion sera revérifiée à la prochaine visite du menu */ }
+  if(monte) afficherLevelUp(genre, nextLevel);
 }
 
 function afficherLevelUp(genre, nextLevel){
@@ -2092,47 +2378,151 @@ document.getElementById("levelupConfirmBtn").addEventListener("click", () => {
   window.location.href = "interface_eleve.html?eleve=" + encodeURIComponent(identiteEleve.slug) + "&nom=" + encodeURIComponent(identiteEleve.nom);
 });
 
-/* ---------------- Conjugaison (feuilles imprimables externes, 2 séries) ----------------
-   Chaque thème ouvre ses deux séries dans la même fenêtre-iframe que le
-   Chapitre Interdit. Comme pour les textes/rédactions, la remise à
-   l'enseignant est manuelle (pas de correction automatique). */
-function renderConjugaisonHub(){
-  const ci = view.ch, ti = view.text;
-  const t = DATA[ci].texts[ti];
-  const st = ensureState(ci, ti);
-  const locked = st.status !== "a-faire";
-  let banner = "";
-  if(st.status === "soumis") banner = `<div class="status-banner soumis">⏳ Remis — en attente de correction par l'enseignant.</div>`;
-  if(st.status === "reussi") banner = `<div class="status-banner reussi">✅ Réussi !</div>`;
+/* ---------------- Conjurations : liste des thèmes + section corrigée automatiquement ----------------
+   Même logique que les Invocations (chapitre 1) : les thèmes se débarrent l'un après l'autre, chaque section se corrige
+   avec « Corriger mes réponses » (score enregistré), et l'épreuve de promotion — les homophones — est le boss du chapitre.
+   Les feuilles imprimables d'origine restent dans chapitre2_conjugaison/ ; leur contenu est dans conjugaison-data.js. */
+const SCEAU_HTML = '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">';
 
-  app.innerHTML = `<div class="back-link" id="backToChapter">← Retour au chapitre</div><div class="card">
-    <div style="text-align:center;font-size:38px;margin-bottom:4px;">${t.emoji || "📘"}</div>
-    <div style="font-family:'Cinzel Decorative', serif;font-size:19px;text-align:center;margin-bottom:4px;">${t.title}</div>
-    <p style="text-align:center;color:var(--ink-soft);font-size:13px;margin-bottom:18px;">${t.sousTitre || ""}</p>
-    ${banner}
-    <div class="btn-row" style="margin-bottom:14px;">
-      <button class="next-btn" id="ouvrirSerie1">Ouvrir la Série 1</button>
-      <button class="next-btn secondary" id="ouvrirSerie2">Ouvrir la Série 2</button>
-    </div>
-    <div class="btn-row">
-      ${locked ? "" : `<button class="next-btn" id="submitBtn">Remettre à l'enseignant</button>`}
-      ${st.status === "soumis" ? `<button class="next-btn secondary" id="editBtn">Rouvrir cette section</button>` : ""}
-    </div>
-  </div>`;
-
-  document.getElementById("backToChapter").addEventListener("click", () => { view = {mode:"chapter", ch:ci}; render(); });
-  document.getElementById("ouvrirSerie1").addEventListener("click", () => ouvrirFeuilleConjugaison(t.title + " — Série 1", t.serie1));
-  document.getElementById("ouvrirSerie2").addEventListener("click", () => ouvrirFeuilleConjugaison(t.title + " — Série 2", t.serie2));
-  const submitBtn = document.getElementById("submitBtn");
-  if(submitBtn) submitBtn.addEventListener("click", () => { st.status = "soumis"; notifyParent(); render(); });
-  const editBtn = document.getElementById("editBtn");
-  if(editBtn) editBtn.addEventListener("click", () => { st.status = "a-faire"; render(); });
+// Vignette du thème : chapitre2_conjugaison/Mini/<slug>.webp (ex. chrono-bot.webp) ; sans image, l'emoji du thème reste.
+function miniOuEmoji(t){
+  return `<img class="conj-mini" src="chapitre2_conjugaison/Mini/${t.slug}.webp" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('${t.emoji}'))">`;
 }
 
-function ouvrirFeuilleConjugaison(titre, url){
-  document.getElementById("specialOverlayTitle").textContent = titre;
-  document.getElementById("specialOverlayFrame").src = url;
-  document.getElementById("specialOverlay").classList.add("open");
+function renderConjurationsListe(){
+  const ci = 1, ch = DATA[ci];
+  let html = `<div class="back-link" id="backToTocFromConj">← Retour à la table des matières</div>
+    <h2 class="conj-titre-liste">🔮 Conjurations</h2>
+    <p class="conj-intro">Conjugaison par thème — chaque section corrigée rapporte ${XP_PAR_SECTION} XP, puis affronte l'épreuve de promotion (${XP_PAR_EXERCICE_BOSS} XP par exercice réussi).</p>
+    <div id="conjListeItems">`;
+  let precedenteTerminee = true;
+  ch.texts.forEach(t => {
+    if(t.kind !== "conjugaison") return;
+    if(t.placeholder){
+      html += `<div class="evoc-liste-item locked">
+        <span class="evoc-liste-num">${SCEAU_HTML}</span>
+        <span class="evoc-liste-titre">${t.title}<small class="conj-sous">${t.sousTitre}</small></span>
+        <span class="evoc-liste-score">À venir</span>
+      </div>`;
+      return;
+    }
+    const debloquee = precedenteTerminee;
+    const terminee = conjThemeDone(t.themeId);
+    const p = conjProgression[t.themeId] || {};
+    const scores = [1, 2].map(s => p[s] && p[s].meilleurScore).filter(x => x != null);
+    const scoreTxt = scores.length ? `Meilleur score : ${Math.max(...scores)}/${CONJ_TOTAL_PAR_SERIE}` : (debloquee ? "Pas encore fait" : "Termine la section précédente");
+    html += `<div class="evoc-liste-item${debloquee ? "" : " locked"}" ${debloquee ? `data-theme="${t.themeId}"` : ""}>
+      <span class="evoc-liste-num">${debloquee ? miniOuEmoji(t) : SCEAU_HTML}</span>
+      <span class="evoc-liste-titre">${t.title}<small class="conj-sous">${t.sousTitre}</small></span>
+      <span class="evoc-liste-score">${scoreTxt}</span>
+    </div>`;
+    precedenteTerminee = terminee;
+  });
+  // Épreuve de promotion : le boss du chapitre, débarré une fois tous les thèmes terminés.
+  const iBoss = ch.texts.findIndex(t => t.kind === "promotion");
+  if(iBoss >= 0){
+    const bossDebloque = precedenteTerminee;
+    const bossFait = bossDebloque && itemDone(ci, iBoss, ch.texts[iBoss]);
+    let bossNb = 0;
+    if(bossDebloque){
+      const st = ensurePromotionState(ci, iBoss);
+      bossNb = (st.sousExercices[0].statut === "reussi" ? 1 : 0) + (st.sousExercices[1].statut === "reussi" ? 1 : 0);
+    }
+    const bossStatus = !bossDebloque ? "Termine les 5 sections" : bossFait ? "Réussi ✓" : `${bossNb}/2 réussi(s)`;
+    html += `<div class="evoc-liste-item ${!bossDebloque ? "locked" : bossFait ? "promo-done" : "promotion-ready"}" ${bossDebloque ? `data-boss="${iBoss}"` : ""}>
+      <span class="evoc-liste-num">${bossDebloque ? "🏅" : SCEAU_HTML}</span>
+      <span class="evoc-liste-titre">Épreuve de promotion</span>
+      <span class="evoc-liste-score">${bossStatus}</span>
+    </div>`;
+  }
+  html += `</div>`;
+  app.innerHTML = html;
+  document.getElementById("backToTocFromConj").addEventListener("click", () => { view = {mode:"toc"}; render(); });
+  app.querySelectorAll(".evoc-liste-item[data-theme]").forEach(item => {
+    item.addEventListener("click", () => { view = {mode:"conj-section", themeId: parseInt(item.dataset.theme, 10), serie: 1}; render(); });
+  });
+  const bossRow = app.querySelector(".evoc-liste-item[data-boss]");
+  if(bossRow) bossRow.addEventListener("click", () => { view = {mode:"promotion-hub", ch:ci, text: parseInt(bossRow.dataset.boss, 10)}; render(); });
+}
+
+function renderConjSection(){
+  const themeId = view.themeId, serie = view.serie || 1;
+  const t = DATA[1].texts.find(x => x.themeId === themeId);
+  const contenu = window.CONJUGAISON_DATA && window.CONJUGAISON_DATA[themeId];
+  if(!t || !contenu){ view = {mode:"conj-liste"}; render(); return; }
+  const sections = contenu.series[serie - 1];
+  const typeMot = window.TypesDeReponse.obtenir("mot");
+  const prog = conjProgression[themeId] || {};
+  const badge = s => (prog[s] && prog[s].meilleurScore != null) ? ` · ${prog[s].meilleurScore}/${CONJ_TOTAL_PAR_SERIE}` : "";
+
+  const attendues = [];
+  let corps = "";
+  sections.forEach(sec => {
+    corps += `<div class="conj-temps"><h3>${sec.titre}</h3><div class="conj-refs">` +
+      sec.refs.map(ref => `<div class="conj-ref"><div class="conj-ref-titre">${ref.verbe} — ${ref.temps.toLowerCase()}</div>` +
+        ref.lignes.map(([pron, forme]) => `<div>${pron} <b>${forme}</b></div>`).join("") + `</div>`).join("") +
+      `</div><div class="conj-groupes">`;
+    sec.groupes.forEach(g => {
+      corps += `<div class="conj-groupe"><div class="conj-groupe-titre">${g.titre}</div>`;
+      g.items.forEach(([pron, rep, suite]) => {
+        const i = attendues.length;
+        attendues.push(rep);
+        corps += `<div class="conj-q" id="conjQ-${i}"><b${/['’]$/.test(pron) ? ' class="elide"' : ""}>${pron}</b>${typeMot.rendreChamps({}, i)}<span>${suite}</span></div>`;
+      });
+      corps += `</div>`;
+    });
+    corps += `</div></div>`;
+  });
+  view.attendues = attendues;
+
+  app.innerHTML = `<div class="conj-barre"><span class="back-link" id="backToConjListe">← Retour aux Conjurations</span></div>
+    <div class="conj-entete">${t.emoji} ${t.title}</div>
+    <div class="conj-sous-titre">${t.sousTitre}</div>
+    <div class="conj-series">
+      <button class="conj-serie-btn ${serie === 1 ? "actif" : ""}" data-serie="1" type="button">Série 1${badge(1)}</button>
+      <button class="conj-serie-btn ${serie === 2 ? "actif" : ""}" data-serie="2" type="button">Série 2${badge(2)}</button>
+    </div>
+    ${corps}
+    <button class="evoc-submit-btn" id="conjSubmitBtn" type="button">Corriger mes réponses</button>
+    <div id="conjScoreZone"></div>
+    <button class="retour-bas" id="conjRetourBas" type="button">← Retour aux Conjurations</button>`;
+
+  const retour = () => { view = {mode:"conj-liste"}; render(); };
+  document.getElementById("backToConjListe").addEventListener("click", retour);
+  document.getElementById("conjRetourBas").addEventListener("click", retour);
+  app.querySelectorAll(".conj-serie-btn").forEach(b => b.addEventListener("click", () => {
+    view = {mode:"conj-section", themeId, serie: parseInt(b.dataset.serie, 10)}; render();
+  }));
+  document.getElementById("conjSubmitBtn").addEventListener("click", corrigerConj);
+}
+
+function corrigerConj(){
+  const { themeId, serie, attendues } = view;
+  const typeMot = window.TypesDeReponse.obtenir("mot");
+  let score = 0;
+  attendues.forEach((rep, i) => {
+    const correcte = typeMot.estCorrecte({ reponse:{ val: rep } }, typeMot.lireValeurs(i));
+    if(correcte) score++;
+    const row = document.getElementById("conjQ-" + i);
+    row.classList.remove("correcte", "incorrecte");
+    row.classList.add(correcte ? "correcte" : "incorrecte");
+  });
+  const total = attendues.length;
+  document.getElementById("conjScoreZone").innerHTML = `<div class="evoc-score">Score : ${score} / ${total}</div><div id="conjMessage"></div>`;
+  (async () => {
+    const prog = await chargerProgressionConj(themeId, serie);
+    const meilleurScore = (prog.meilleurScore == null || score > prog.meilleurScore) ? score : prog.meilleurScore;
+    const avant = conjThemeDone(themeId);
+    await sauvegarderProgressionConj(themeId, serie, { meilleurScore, derniereTentative: score });
+    conjProgression[themeId] = conjProgression[themeId] || {};
+    conjProgression[themeId][serie] = { meilleurScore, derniereTentative: score };
+    const zone = document.getElementById("conjMessage");
+    if(zone && !avant && conjThemeDone(themeId)){
+      zone.innerHTML = `<p class="conj-fin">✅ Section terminée ! Tu peux passer à la suivante.</p>`;
+      afficherGainXP("conjMessage", XP_PAR_SECTION);
+    }
+    await promouvoirRang();
+  })();
 }
 
 function renderTextView(){
@@ -2340,7 +2730,7 @@ function renderTeacherList(){
   const list = document.getElementById("teacherList");
   let items = [];
   DATA.forEach((chapter, ci) => {
-    if(chapter.placeholder || chapter.special || chapter.isInvocations) return;
+    if(chapter.placeholder || chapter.special || chapter.isInvocations || chapter.isConjurations) return;
     chapter.texts.forEach((t, ti) => {
       if(t.placeholder) return;
       const st = ensureState(ci, ti);
@@ -2373,8 +2763,9 @@ document.addEventListener("keydown", (e) => {
 });
 document.getElementById("closeTeacher").addEventListener("click", () => teacherPanel.classList.remove("open"));
 document.getElementById("unlockAllBtn").addEventListener("click", () => {
+  window.__toutDebarre = true;   // ouvre aussi les chapitres dont le précédent n'est pas terminé (Invocations et Conjurations sont enregistrées : rien à marquer)
   DATA.forEach((chapter, ci) => {
-    if(chapter.placeholder || chapter.special || chapter.isInvocations) return;
+    if(chapter.placeholder || chapter.special || chapter.isInvocations || chapter.isConjurations) return;
     chapter.texts.forEach((t, ti) => { if(!t.placeholder) ensureState(ci, ti).status = "reussi"; });
   });
   teacherPanel.classList.remove("open");
@@ -2396,7 +2787,13 @@ if(openParam !== null && !isNaN(parseInt(openParam, 10)) && DATA[0] && DATA[0].t
   if(idx >= 0 && idx < DATA[0].texts.length) view = {mode:"text", ch:0, text: idx};
 }
 
-render();
+app.innerHTML = '<p style="text-align:center;color:var(--ink-soft);">Chargement…</p>';
+(async () => {
+  try{ await Promise.all([chargerPromotions(), chargerToutesConj(), calculerInvocationsTerminees()]); }
+  catch(e){ /* on affiche quand même la table des matières */ }
+  render();
+  promouvoirRang();   // met à jour les XP (et le rang) du coffre d'après les progressions déjà enregistrées
+})();
 </script>
 </body>
 </html>

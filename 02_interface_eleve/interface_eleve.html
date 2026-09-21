@@ -242,6 +242,7 @@
     background:linear-gradient(180deg, #2A2118, #1B150F); box-shadow:none;
   }
   .grimoire-icon{ font-size:26px; flex:0 0 auto; }
+  .grimoire-icon .grimoire-mini{ width:38px; height:38px; object-fit:contain; display:block; }   /* vignette (dossier Mini/) à la place de l'emoji */
   .grimoire-toggle-text{ flex:1; display:flex; flex-direction:column; gap:2px; }
   .grimoire-title{ font-family:'Cinzel', serif; font-size:14px; color:var(--gold-light); letter-spacing:0.3px; }
   .grimoire-subtitle{ font-family:'Crimson Text', serif; font-style:italic; font-size:12px; color:#C9BB98; }
@@ -273,6 +274,32 @@
   }
   .grimoire-modal-close:hover{ background:rgba(217,166,46,0.15); }
   .grimoire-modal-frame{ flex:1; width:100%; border:none; display:block; }
+
+  /* ligne d'expérience (XP) sous les points de vie et l'attaque — un clic ouvre le détail des niveaux */
+  .xp-row{
+    display:block; width:100%; max-width:236px; margin:7px auto 0; padding:4px 10px 6px;
+    background:var(--cellbg); border:2px solid var(--gold); cursor:pointer; text-align:center;
+    font-family:'Cinzel', serif; font-size:12px; font-weight:700; color:var(--ink);
+  }
+  .xp-row:hover{ filter:brightness(1.07); }
+  .xp-row:focus-visible{ outline:2px solid var(--burgundy); outline-offset:2px; }
+  .xp-track{ display:block; height:6px; margin-top:4px; background:rgba(0,0,0,0.16); border-radius:99px; overflow:hidden; }
+  .xp-track i{ display:block; height:100%; width:0; background:linear-gradient(90deg,var(--gold),var(--gold-light)); border-radius:99px; transition:width 0.4s ease; }
+  .xp-modal{ position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(14,11,7,0.72); }
+  .xp-modal.open{ display:flex; }
+  .xp-carte{
+    width:min(94vw, 460px); max-height:92vh; overflow-y:auto; padding:18px 20px 16px;
+    background:var(--parchment); border:3px solid var(--gold); border-radius:8px; box-shadow:0 12px 40px rgba(0,0,0,0.6);
+    font-family:'Crimson Text', serif; color:var(--ink);
+  }
+  .xp-carte h2{ margin:0 0 10px; font-family:'Cinzel', serif; font-size:18px; text-align:center; color:var(--burgundy-dark); }
+  .xp-niveaux{ list-style:none; margin:0 0 12px; padding:0; }
+  .xp-niveaux li{ display:flex; justify-content:space-between; gap:10px; padding:6px 10px; margin-bottom:5px; border:1px solid rgba(90,60,20,0.35); border-radius:5px; background:rgba(255,255,255,0.35); font-size:15px; }
+  .xp-niveaux li b{ font-family:'Cinzel', serif; font-size:13px; }
+  .xp-niveaux li.actuel{ background:rgba(212,160,23,0.28); border-color:var(--gold); }
+  .xp-niveaux li.actuel::after{ content:"◀ toi"; font-size:12px; color:var(--burgundy); align-self:center; }
+  .xp-comment{ font-size:14px; line-height:1.4; margin:0 0 12px; color:var(--ink-soft, var(--ink)); }
+  .xp-fermer{ display:block; margin:0 auto; font-family:'Cinzel', serif; font-size:13px; color:var(--parchment); background:var(--burgundy); border:none; border-radius:6px; padding:8px 18px; cursor:pointer; }
 </style>
 </head>
 <body>
@@ -354,7 +381,7 @@
             <span class="grimoire-chevron">›</span>
           </button>
           <button class="grimoire-toggle grimoire-toggle-bonus" id="cassiopeeToggle" style="margin-top:8px;">
-            <span class="grimoire-icon">🌀</span>
+            <span class="grimoire-icon"><img class="grimoire-mini" src="Mini/cassiopee.webp" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('🌀'))"></span>
             <span class="grimoire-toggle-text">
               <span class="grimoire-title">Cassiopée</span>
               <span class="grimoire-subtitle">Chapitre bonus — un portail t'attend</span>
@@ -383,9 +410,13 @@
               <div class="portrait-placeholder" id="portraitPlaceholder">Touchez pour ajouter votre portrait</div>
             </div>
             <div class="stats-row">
-              <div class="hp-badge" id="hpBadge">40/40</div>
+              <div class="hp-badge" id="hpBadge">10/10</div>
               <div class="dmg-badge" id="dmgBadge">DMG: 0</div>
             </div>
+            <button class="xp-row" id="xpRow" type="button" aria-label="Voir ce que rapporte chaque niveau">
+              <span id="xpTexte">XP : 0 / 1000</span>
+              <span class="xp-track"><i id="xpRemplissage"></i></span>
+            </button>
             <button class="portrait-edit" id="portraitEditBtn">Changer l'image</button>
             <input type="file" id="fileInput" accept="image/*">
           </div>
@@ -405,6 +436,15 @@
 
     </div>
     <div class="livre-bandeau-bas"></div>
+  </div>
+</div>
+
+<div class="xp-modal" id="xpModal" role="dialog" aria-modal="true" aria-labelledby="xpTitre">
+  <div class="xp-carte">
+    <h2 id="xpTitre">Ce que rapporte chaque niveau</h2>
+    <ul class="xp-niveaux" id="xpNiveaux"></ul>
+    <p class="xp-comment">Gagne de l'expérience (XP) dans les Parchemins de lecture : <b>100 XP</b> par section terminée et <b>200 XP</b> par exercice de l'épreuve de promotion réussi. Tous les <b>1000 XP</b>, tu montes d'un niveau.</p>
+    <button class="xp-fermer" id="xpFermer" type="button">Fermer</button>
   </div>
 </div>
 
@@ -684,7 +724,8 @@ const CATALOG = {
   },
 };
 const SLOTS = ["helmet","armor","gloves","boots","weapon","shield"];
-const BASE_HP = 40;
+const BASE_HP = 10;   // PV de départ, avant équipement (comme dans l'arène)
+const RANK_MULT = [1, 2, 4, 8, 12, 20];   // niveau 1 à 6 : × sur l'attaque et les PV
 function computeStats(){
   let hp = BASE_HP, dmg = 0;
   SLOTS.forEach(slot=>{
@@ -697,7 +738,9 @@ function computeStats(){
     if(typeof it.dmgBonus === 'number') dmg += it.dmgBonus;
     if(typeof it.dmg === 'number') dmg += it.dmg;
   });
-  return {hp, dmg};
+  // le niveau (rang de mage) multiplie les PV et l'attaque
+  const mult = RANK_MULT[Math.min((state && state.niveau) || 0, RANK_MULT.length - 1)];
+  return {hp: Math.round(hp * mult), dmg: Math.round(dmg * mult)};
 }
 
 /* ---------- État ---------- */
@@ -738,6 +781,8 @@ async function resynchroniserApresModule(){
   state.inventory = resultat.donnees.equipement.inventory;
   state.equipped = resultat.donnees.equipement.equipped;
   state.portraitImage = resultat.donnees.equipement.portraitImage;
+  state.niveau = resultat.donnees.niveauLecture || 0;
+  state.xp = resultat.donnees.xp || 0;
   const rangTitreEl = document.getElementById('rangTitre');
   if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[resultat.donnees.niveauLecture || 0] || NIVEAUX_LECTURE[0];
   render();
@@ -753,7 +798,9 @@ window.onPasserelleReady = function(identite, coffre){
     gold: coffre.or, // 0 pour un nouvel élève — tout l'or se gagne, aucun cadeau de départ
     inventory: coffre.equipement.inventory,
     equipped: coffre.equipement.equipped,
-    portraitImage: coffre.equipement.portraitImage
+    portraitImage: coffre.equipement.portraitImage,
+    niveau: coffre.niveauLecture || 0,   // rang de mage (0 = Apprenti … 5 = Archimage)
+    xp: coffre.xp || 0                   // expérience, écrite par les Parchemins de lecture
   };
   const rangTitreEl = document.getElementById('rangTitre');
   if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[coffre.niveauLecture || 0] || NIVEAUX_LECTURE[0];
@@ -891,7 +938,30 @@ function renderDoll(){
     [hpBadge, dmgBadge].forEach(b=>{ b.classList.remove('reveal'); void b.offsetWidth; b.classList.add('reveal'); });
   }
   wasBusy = busy;
+  renderXp();
 }
+
+/* ---------- Expérience (XP) : ligne sous les PV / DMG, et fenêtre du détail des niveaux ---------- */
+function renderXp(){
+  if(!state) return;
+  const xp = state.xp || 0, niveau = state.niveau || 0, dernier = niveau >= RANK_MULT.length - 1;
+  const palier = (Math.floor(xp / 1000) + 1) * 1000;
+  document.getElementById('xpTexte').textContent = dernier ? ('XP : ' + xp + ' · niveau max') : ('XP : ' + xp + ' / ' + palier);
+  document.getElementById('xpRemplissage').style.width = (dernier ? 100 : (xp % 1000) / 10) + '%';
+}
+function ouvrirXpModal(){
+  const niveau = (state && state.niveau) || 0;
+  document.getElementById('xpNiveaux').innerHTML = NIVEAUX_LECTURE.map((nom, i) =>
+    '<li class="' + (i === niveau ? 'actuel' : '') + '"><span><b>Niveau ' + (i + 1) + '</b> — ' + nom + '</span><span>' +
+    (i === 0 ? 'point de départ' : 'attaque et PV × ' + RANK_MULT[i]) + '</span></li>').join('');
+  document.getElementById('xpModal').classList.add('open');
+}
+function fermerXpModal(){ document.getElementById('xpModal').classList.remove('open'); }
+document.getElementById('xpRow').addEventListener('click', ouvrirXpModal);
+document.getElementById('xpFermer').addEventListener('click', fermerXpModal);
+document.getElementById('xpModal').addEventListener('click', (e) => { if(e.target.id === 'xpModal') fermerXpModal(); });
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape') fermerXpModal(); });
+
 function render(){ renderDoll(); renderTabs(); renderStoreList(); }
 
 document.querySelectorAll('.slot').forEach(slotEl=>{
