@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <script src="02_interface_eleve/config-classe.js"></script>
+<script src="02_interface_eleve/economie.js"></script>
 <style>
   :root{
     --parchment:#F1E4C3; --ink:#2B2118; --burgundy:#7B2D26; --burgundy-dark:#5C201B;
@@ -16,12 +17,14 @@
   *{ box-sizing:border-box; }
   [hidden]{ display:none !important; }
   html,body{ margin:0; min-height:100%; }
+  html{ background:#0d0704; }
   body{
     font-family:'Crimson Text', serif; font-size:18px; color:var(--parchment);
     background:radial-gradient(ellipse at center, #241109 0%, #0d0704 80%) fixed;
     min-height:100vh; padding:22px 16px; display:flex; justify-content:center;
   }
   main{ width:100%; max-width:560px; display:flex; flex-direction:column; gap:18px; }
+  body.large main{ max-width:1180px; }
   h1{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:24px; margin:0; }
   h2{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:16px; margin:0 0 8px; }
   p{ margin:0; line-height:1.45; }
@@ -70,37 +73,141 @@
   .petit:hover{ background:rgba(241,228,195,.1); }
   a{ color:var(--gold-light); }
   .aide{ font-size:16px; opacity:.8; }
+
+  /* ---------- Onglets ---------- */
+  .onglets{ display:flex; gap:6px; flex-wrap:wrap; border-bottom:1px solid rgba(217,166,46,.4); }
+  .onglet{ font-family:'Cinzel', serif; font-size:15px; font-weight:700; color:var(--parchment); background:transparent;
+    border:1px solid transparent; border-bottom:none; border-radius:8px 8px 0 0; padding:10px 16px; cursor:pointer; opacity:.7; }
+  .onglet:hover{ opacity:1; }
+  .onglet[aria-selected="true"]{ opacity:1; background:var(--panel); border-color:rgba(217,166,46,.4); color:var(--gold-light); margin-bottom:-1px; }
+  .vue{ display:flex; flex-direction:column; gap:18px; }
+  .vue[hidden]{ display:none !important; }
+
+  /* ---------- Chiffres clés ---------- */
+  .cles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px; }
+  .cle{ background:var(--panel); border:1px solid rgba(217,166,46,.4); border-radius:8px; padding:14px 16px; }
+  .cle b{ display:block; font-family:'Cinzel', serif; font-size:30px; color:var(--gold-light); line-height:1.1; }
+  .cle span{ opacity:.8; font-size:16px; }
+  .cle.majeure{ border-color:var(--gold-light); }
+  .cle.majeure b{ font-size:40px; }
+
+  /* ---------- Tableaux ---------- */
+  .defile{ overflow-x:auto; border:1px solid rgba(217,166,46,.3); border-radius:8px; }
+  table{ width:100%; border-collapse:collapse; font-size:16px; }
+  th{ text-align:left; font-family:'Cinzel', serif; font-size:13px; color:var(--gold-light); background:#1b100a;
+    padding:9px 10px; border-bottom:1px solid rgba(217,166,46,.45); white-space:nowrap; position:sticky; top:0; }
+  th.tri{ cursor:pointer; user-select:none; }
+  th.tri:hover{ color:var(--parchment); }
+  td{ padding:7px 10px; border-bottom:1px solid rgba(241,228,195,.1); white-space:nowrap; }
+  td.n, th.n{ text-align:right; font-variant-numeric:tabular-nums; }
+  tr.absent td{ opacity:.5; }
+  tr:hover td{ background:rgba(241,228,195,.04); }
+  .barre{ display:inline-block; width:70px; height:7px; border-radius:99px; background:rgba(241,228,195,.15); vertical-align:middle; margin-right:8px; overflow:hidden; }
+  .barre i{ display:block; height:100%; background:var(--gold-light); }
+  .fait{ color:var(--ok); }
+  .entete-vue{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .entete-vue p{ opacity:.8; }
+  h3{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:15px; margin:0 0 8px; }
+  .grille-2{ display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:18px; align-items:start; }
+  .reglages{ display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end; }
+  .reglages label{ display:flex; flex-direction:column; gap:4px; font-size:15px; opacity:.9; }
+  .reglages input, .reglages select{ font-family:'Crimson Text', serif; font-size:17px; padding:7px 9px; border-radius:6px;
+    background:#0f0b06; color:var(--gold-light); border:1px solid rgba(241,228,195,.35); min-width:110px; }
+  .gagne{ color:var(--ok); } .perdu{ color:var(--alerte); }
+  .note{ font-size:15px; opacity:.75; line-height:1.45; }
 </style>
 </head>
 <body>
 <main>
   <header>
     <h1>Console enseignant</h1>
-    <p class="sous-titre">Commande l'arène affichée sur le tableau.</p>
   </header>
 
-  <section class="panneau etat" aria-live="polite">
-    <div class="ligne-etat"><span class="point" id="pointTbi"></span><span id="texteTbi">Vérification du tableau…</span></div>
-    <div class="ligne-etat"><span class="point" id="pointArene"></span><span id="texteArene">Vérification de l'arène…</span></div>
-  </section>
+  <nav class="onglets" role="tablist">
+    <button class="onglet" role="tab" data-vue="arene" aria-selected="true">Arène</button>
+    <button class="onglet" role="tab" data-vue="classe" aria-selected="false">Tableau de classe</button>
+    <button class="onglet" role="tab" data-vue="classements" aria-selected="false">Classements</button>
+    <button class="onglet" role="tab" data-vue="economie" aria-selected="false">Économie</button>
+  </nav>
 
-  <section class="commandes">
-    <button class="cmd" id="btnOuvrir" type="button" disabled>⚔️ Lancer l'arène</button>
-    <button class="cmd fermer" id="btnFermer" type="button" disabled>Fermer l'arène</button>
-  </section>
-  <div id="retour" role="status"></div>
+  <!-- ===================== ARÈNE (télécommande, inchangée) ===================== -->
+  <div class="vue" id="vue-arene">
+    <p class="sous-titre">Commande l'arène affichée sur le tableau.</p>
+    <section class="panneau etat" aria-live="polite">
+      <div class="ligne-etat"><span class="point" id="pointTbi"></span><span id="texteTbi">Vérification du tableau…</span></div>
+      <div class="ligne-etat"><span class="point" id="pointArene"></span><span id="texteArene">Vérification de l'arène…</span></div>
+    </section>
 
-  <section class="panneau" id="panneauCode">
-    <h2>Code enseignant</h2>
-    <p class="aide" id="aideCode">Tape ton code une seule fois : il reste sur cet appareil.</p>
-    <div class="rangee" style="margin-top:10px;">
-      <input type="password" id="champCode" autocomplete="off" aria-label="Code enseignant">
-      <button class="petit" id="btnCode" type="button">Enregistrer</button>
-      <button class="petit" id="btnOublier" type="button" hidden>Oublier ce code</button>
+    <section class="commandes">
+      <button class="cmd" id="btnOuvrir" type="button" disabled>⚔️ Lancer l'arène</button>
+      <button class="cmd fermer" id="btnFermer" type="button" disabled>Fermer l'arène</button>
+    </section>
+    <div id="retour" role="status"></div>
+
+    <section class="panneau" id="panneauCode">
+      <h2>Code enseignant</h2>
+      <p class="aide" id="aideCode">Tape ton code une seule fois : il reste sur cet appareil.</p>
+      <div class="rangee" style="margin-top:10px;">
+        <input type="password" id="champCode" autocomplete="off" aria-label="Code enseignant">
+        <button class="petit" id="btnCode" type="button">Enregistrer</button>
+        <button class="petit" id="btnOublier" type="button" hidden>Oublier ce code</button>
+      </div>
+    </section>
+
+    <p class="aide">Sur le tableau, ouvre <a href="tbi.html" target="_blank" rel="noopener">tbi.html</a> dans le navigateur et laisse cette page ouverte : c'est elle qui affiche l'arène.</p>
+  </div>
+
+  <!-- ===================== TABLEAU DE CLASSE ===================== -->
+  <div class="vue" id="vue-classe" hidden>
+    <div class="entete-vue">
+      <p id="majClasse">Chargement de la feuille Google…</p>
+      <button class="petit" type="button" data-actualiser>Actualiser</button>
     </div>
-  </section>
+    <div class="cles" id="clesClasse"></div>
+    <div class="defile"><table id="tableClasse"></table></div>
+    <p class="note">« Or gagné » : tout l'or gagné depuis le début, dépensé ou pas. C'est la force du groupe dans l'arène.
+      La progression compte les documents réussis dans les chapitres ouverts du Grimoire. Clique sur un titre de colonne pour trier.</p>
+  </div>
 
-  <p class="aide">Sur le tableau, ouvre <a href="tbi.html" target="_blank" rel="noopener">tbi.html</a> dans le navigateur et laisse cette page ouverte : c'est elle qui affiche l'arène.</p>
+  <!-- ===================== CLASSEMENTS ===================== -->
+  <div class="vue" id="vue-classements" hidden>
+    <div class="entete-vue">
+      <p>Les mêmes classements que ceux des élèves, pour toute la classe.</p>
+      <button class="petit" type="button" data-actualiser>Actualiser</button>
+    </div>
+    <div class="grille-2">
+      <section><h3>Punch-math!</h3><div class="defile"><table id="tablePunch"></table></div></section>
+      <section><h3>Échecs contre l'IA</h3><div class="defile"><table id="tableEchecsIA"></table></div></section>
+      <section><h3>Échecs un contre un</h3><div class="defile"><table id="tableEchecsDuel"></table></div>
+        <p class="note" style="margin-top:8px">Cote : tout le monde commence à 1000. Battre un joueur mieux classé rapporte plus. Les parties de moins de deux coups ne comptent pas.</p></section>
+    </div>
+  </div>
+
+  <!-- ===================== ÉCONOMIE ===================== -->
+  <div class="vue" id="vue-economie" hidden>
+    <p class="note">Les prix et les statistiques viennent de la boutique de la fiche de personnage. « Documents » : nombre moyen de documents du Grimoire à réussir pour payer, selon les récompenses actuelles.</p>
+    <div class="cles" id="clesEconomie"></div>
+
+    <section><h3>Équipement complet, selon le palier et le rang de mage</h3>
+      <div class="defile"><table id="tableKits"></table></div></section>
+
+    <section><h3>Simulateur de combat</h3>
+      <div class="reglages">
+        <label>Élèves au combat <input type="number" id="simN" min="1" max="40" value="25"></label>
+        <label>Or gagné par élève <input type="number" id="simOr" min="0" max="5000" step="10" value="150"></label>
+        <label>Équipement porté <select id="simKit"></select></label>
+        <label>Rang de mage <select id="simRang"></select></label>
+        <button class="petit" type="button" id="simClasse">Prendre la classe actuelle</button>
+      </div>
+      <p class="note" style="margin-top:8px" id="simResume"></p>
+      <div class="defile" style="margin-top:10px"><table id="tableMonstres"></table></div>
+      <p class="note" style="margin-top:8px">Tous les élèves sont supposés porter le même équipement. Le bouclier d'absorption de l'arène (récompense de comportement) n'est pas compté.
+        Formule : PV du monstre = PV de base + facteur × 0,28 × or du groupe ; dégâts = facteur × (3 + 0,08 × or par élève). Réglages dans economie.js.</p>
+    </section>
+
+    <section><h3>Catalogue de la boutique</h3>
+      <div class="defile"><table id="tableCatalogue"></table></div></section>
+  </div>
 </main>
 
 <script>
@@ -266,6 +373,321 @@ function reinitialiserFermer(){
 }
 
 appliquerCode(lireCodeSauvegarde());
+
+</script>
+
+<script>
+/* =====================================================================
+   TABLEAU DE CLASSE, CLASSEMENTS ET ÉCONOMIE
+   Tout est lu en une fois dans la feuille Google (?lot=…), puis calculé ici.
+   Rien n'est écrit : ces onglets ne modifient aucune donnée d'élève.
+   ===================================================================== */
+const E = window.Economie;
+const esc = t => String(t == null ? '' : t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const nf = n => Number(n || 0).toLocaleString('fr-CA');
+
+/* ---------- Onglets ---------- */
+document.querySelectorAll('.onglet').forEach(b => b.addEventListener('click', () => ouvrirVue(b.dataset.vue)));
+function ouvrirVue(vue){
+  document.querySelectorAll('.onglet').forEach(b => b.setAttribute('aria-selected', String(b.dataset.vue === vue)));
+  document.querySelectorAll('.vue').forEach(v => { v.hidden = v.id !== 'vue-' + vue; });
+  document.body.classList.toggle('large', vue !== 'arene');
+  if(vue !== 'arene' && !D.charge && !D.enCours) chargerTout();
+  if(vue === 'economie') afficherEconomie();
+}
+document.querySelectorAll('[data-actualiser]').forEach(b => b.addEventListener('click', () => chargerTout()));
+
+/* ---------- Identifiants : même algorithme que l'écran d'accueil ---------- */
+function slugify(str){
+  const base = str.toString().replace(/œ/gi, 'oe').replace(/æ/gi, 'ae')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  return base || 'eleve';
+}
+function preparerEleves(brut){
+  const liste = brut.map(e => ({ nom: e.nom, slugBase: slugify(e.identifiant || e.nom), explicite: !!e.identifiant }));
+  const compte = {}, numero = {};
+  liste.forEach(l => { compte[l.slugBase] = (compte[l.slugBase] || 0) + 1; });
+  liste.forEach(l => {
+    l.slug = l.slugBase;
+    if(compte[l.slugBase] > 1 && !l.explicite){ numero[l.slugBase] = (numero[l.slugBase] || 0) + 1; l.slug = l.slugBase + '_' + numero[l.slugBase]; }
+  });
+  return liste.map(l => ({ nom: l.nom, slug: l.slug }));
+}
+
+/* ---------- Ce que contient le Grimoire (chapitres ouverts, documents, récompenses) ---------- */
+function lireManifesteGrimoire(t){
+  const chapitres = {};
+  const reCh = /\{ id:'(\w+)', numeral:'([IVX]+)', title:(?:'([^']*)'|"([^"]*)")/g;
+  let m;
+  while((m = reCh.exec(t))) chapitres[m[1]] = { id:m[1], numeral:m[2], titre:m[3] || m[4], docs:[] };
+  const ouverts = ((t.match(/const CHAPITRES_OUVERTS = \[([^\]]*)\]/) || [])[1] || '').match(/'(\w+)'/g) || [];
+  const i0 = t.indexOf('const DOCS_CHAPITRES = {'), i1 = t.indexOf('const EXIGENCES_SECTIONS');
+  if(i0 >= 0 && i1 > i0){
+    const bloc = t.slice(i0, i1);
+    const reTout = /^ {4}(\w+): \{|\{ id:'([\w-]+)', titre:(?:"([^"]*)"|'([^']*)'),[^\n]*?recompense:(\d+)/gm;
+    let courant = null;
+    while((m = reTout.exec(bloc))){
+      if(m[1]){ courant = m[1]; continue; }
+      if(courant && chapitres[courant]) chapitres[courant].docs.push({ id:m[2], titre:m[3] || m[4], recompense:+m[5] });
+    }
+  }
+  return { chapitres, ouverts: ouverts.map(x => x.replace(/'/g, '')) };
+}
+
+/* ---------- Chargement ---------- */
+const D = { charge:false, enCours:false, eleves:[], valeurs:{}, manifeste:null, erreur:null, date:null };
+async function chargerTout(){
+  if(!CFG.URL_SCRIPT || CFG.URL_SCRIPT.indexOf('COLLE_ICI') !== -1){ $('majClasse').textContent = "Configuration incomplète : l'adresse du script manque."; return; }
+  D.enCours = true;
+  $('majClasse').textContent = 'Lecture de la feuille Google… (jusqu\'à 30 secondes si le script dormait)';
+  try{
+    const [rLot, rEleves, rGrim] = await Promise.all([
+      fetch(CFG.URL_SCRIPT + '?lot=' + encodeURIComponent('coffre_,doc_,punch_,echecs_,partie_') + '&t=' + Date.now(), { cache:'no-store' }).then(r => r.json()),
+      fetch(CFG.URL_SCRIPT + '?eleves=1&t=' + Date.now(), { cache:'no-store' }).then(r => r.json()),
+      fetch('02_interface_eleve/grimoire-des-mathematiques.html', { cache:'no-store' }).then(r => r.ok ? r.text() : '').catch(() => '')
+    ]);
+    if(!rLot || !rLot.valeurs) throw new Error((rLot && rLot.error) || 'réponse illisible');
+    D.valeurs = rLot.valeurs;
+    D.eleves = preparerEleves((rEleves && rEleves.eleves) || []);
+    D.manifeste = rGrim ? lireManifesteGrimoire(rGrim) : { chapitres:{}, ouverts:[] };
+    D.charge = true; D.erreur = null; D.date = new Date();
+  }catch(e){
+    D.erreur = e;
+    $('majClasse').textContent = 'La feuille Google ne répond pas (' + (e.message || e) + '). Réessaie avec « Actualiser ».';
+    D.enCours = false;
+    return;
+  }
+  D.enCours = false;
+  construire();
+}
+
+/* ---------- Assemblage des données par élève ---------- */
+function fiche(cle){
+  try{
+    const env = JSON.parse(D.valeurs[cle]);
+    return (env && env.donnees && E.sceau(env.donnees) === env.seal) ? env.donnees : null;
+  }catch(e){ return null; }
+}
+let ELEVES = [];
+function construire(){
+  const parSlug = {};
+  const eleve = (slug, nom) => (parSlug[slug] = parSlug[slug] || { slug, nom: nom || slug, coffre:null, docs:{}, derniere:0, punch:null, ia:0 });
+  D.eleves.forEach(e => eleve(e.slug, e.nom).dansListe = true);
+  Object.keys(D.valeurs).forEach(cle => {
+    if(cle.indexOf('coffre_') !== 0 || cle.indexOf('coffre_bak') === 0) return;
+    const slug = cle.slice(7);
+    if(slug.indexOf('test_') === 0) return;
+    const c = fiche(cle);
+    const e = eleve(slug, c && c.nom);
+    e.coffre = c;
+    if(c && c.nom && !e.dansListe) e.nom = c.nom;
+  });
+  // Documents réussis : doc_<élève>_<chapitre>_<document> — l'identifiant le plus long qui convient l'emporte.
+  const slugs = Object.keys(parSlug).sort((a, b) => b.length - a.length);
+  const chapIds = Object.keys(D.manifeste.chapitres);
+  Object.keys(D.valeurs).forEach(cle => {
+    if(cle.indexOf('doc_') !== 0) return;
+    const slug = slugs.find(s => cle.indexOf('doc_' + s + '_') === 0);
+    if(!slug) return;
+    const reste = cle.slice(('doc_' + slug + '_').length);
+    const chap = chapIds.find(c => reste.indexOf(c + '_') === 0);
+    if(!chap) return;
+    let p; try{ p = JSON.parse(D.valeurs[cle]); }catch(e){ return; }
+    if(!p || !p.done) return;
+    const e = parSlug[slug];
+    (e.docs[chap] = e.docs[chap] || new Set()).add(reste.slice(chap.length + 1));
+    e.derniere = Math.max(e.derniere, p.date || 0);
+  });
+  Object.keys(D.valeurs).forEach(cle => {
+    if(cle.indexOf('punch_') === 0){
+      const f = fiche(cle); const e = parSlug[cle.slice(6)];
+      if(f && e){ e.punch = f.best || null; if(f.best) e.derniere = Math.max(e.derniere, f.best.date || 0); }
+    }else if(cle.indexOf('echecs_') === 0){
+      const f = fiche(cle); const e = parSlug[cle.slice(7)];
+      if(f && e){ e.ia = f.vaincuMax || 0; e.derniere = Math.max(e.derniere, f.date || 0); }
+    }
+  });
+  ELEVES = Object.values(parSlug).map(e => {
+    const c = e.coffre;
+    const f = c ? E.force((c.equipement && c.equipement.equipped) || {}, c.niveauLecture || 0) : { pv: E.BASE_PV, degats: 0, rang: 0 };
+    return Object.assign(e, {
+      aJoue: !!c,
+      rang: c ? (c.niveauLecture || 0) : 0,
+      xp: c ? (c.xp || 0) : 0,
+      orGagne: c ? E.orGagne(c) : 0,
+      orPoche: c ? (c.or || 0) : 0,
+      pv: f.pv, degats: f.degats
+    });
+  });
+  $('majClasse').textContent = 'Données lues à ' + D.date.toLocaleTimeString('fr-CA', { hour:'2-digit', minute:'2-digit' }) + '.';
+  afficherClasse();
+  afficherClassements();
+  afficherEconomie();
+}
+
+/* ---------- Onglet « Tableau de classe » ---------- */
+let tri = { col:'nom', sens:1 };
+function chapitresSuivis(){
+  const M = D.manifeste;
+  return M.ouverts.map(id => M.chapitres[id]).filter(c => c && c.docs.length);
+}
+function afficherClasse(){
+  const joue = ELEVES.filter(e => e.aJoue);
+  const orClasse = joue.reduce((t, e) => t + e.orGagne, 0);
+  const moyen = joue.length ? Math.round(orClasse / joue.length) : 0;
+  $('clesClasse').innerHTML =
+    '<div class="cle majeure"><b>' + nf(orClasse) + '</b><span>or gagné par la classe</span></div>' +
+    '<div class="cle"><b>' + joue.length + ' / ' + ELEVES.length + '</b><span>élèves qui ont ouvert leur coffre</span></div>' +
+    '<div class="cle"><b>' + nf(moyen) + '</b><span>or gagné en moyenne par élève</span></div>' +
+    '<div class="cle"><b>' + nf(joue.reduce((t, e) => t + e.orPoche, 0)) + '</b><span>or encore en poche (pas dépensé)</span></div>';
+
+  const chaps = chapitresSuivis();
+  const cols = [
+    { id:'nom', t:'Élève', v:e => e.nom, f:e => esc(e.nom) },
+    { id:'rang', t:'Rang', v:e => e.rang, f:e => e.aJoue ? E.RANGS[e.rang] + ' ×' + E.MULT_RANG[e.rang] : '—' },
+    { id:'xp', t:'XP', n:1, v:e => e.xp, f:e => e.aJoue ? nf(e.xp) : '—' },
+    { id:'orGagne', t:'Or gagné', n:1, v:e => e.orGagne, f:e => e.aJoue ? '<b>' + nf(e.orGagne) + '</b>' : '—' },
+    { id:'orPoche', t:'En poche', n:1, v:e => e.orPoche, f:e => e.aJoue ? nf(e.orPoche) : '—' },
+    { id:'pv', t:'PV', n:1, v:e => e.pv, f:e => e.aJoue ? nf(e.pv) : '—' },
+    { id:'degats', t:'Dégâts', n:1, v:e => e.degats, f:e => e.aJoue ? nf(e.degats) : '—' }
+  ].concat(chaps.map(c => ({
+    id:'ch_' + c.id, t:'Chap. ' + c.numeral,
+    v:e => (e.docs[c.id] ? e.docs[c.id].size : 0),
+    f:e => { const k = e.docs[c.id] ? e.docs[c.id].size : 0, tot = c.docs.length;
+             return '<span class="barre"><i style="width:' + Math.round(100 * k / tot) + '%"></i></span>' + (k === tot ? '<span class="fait">' + k + '/' + tot + ' ✓</span>' : k + '/' + tot); }
+  }))).concat([
+    { id:'derniere', t:'Dernière réussite', v:e => e.derniere, f:e => e.derniere ? new Date(e.derniere).toLocaleDateString('fr-CA', { day:'numeric', month:'short' }) : '—' }
+  ]);
+  const col = cols.find(c => c.id === tri.col) || cols[0];
+  const liste = ELEVES.slice().sort((a, b) => {
+    const x = col.v(a), y = col.v(b);
+    return (typeof x === 'string' ? x.localeCompare(y, 'fr') : x - y) * tri.sens || a.nom.localeCompare(b.nom, 'fr');
+  });
+  $('tableClasse').innerHTML = '<thead><tr>' + cols.map(c => '<th class="tri' + (c.n ? ' n' : '') + '" data-col="' + c.id + '">' + c.t +
+      (tri.col === c.id ? (tri.sens > 0 ? ' ▲' : ' ▼') : '') + '</th>').join('') + '</tr></thead><tbody>' +
+    (liste.length ? liste.map(e => '<tr' + (e.aJoue ? '' : ' class="absent" title="N\'a pas encore ouvert son coffre"') + '>' +
+      cols.map(c => '<td' + (c.n ? ' class="n"' : '') + '>' + c.f(e) + '</td>').join('') + '</tr>').join('')
+      : '<tr><td colspan="' + cols.length + '">Aucun élève dans l\'onglet « Élèves » de la feuille.</td></tr>') + '</tbody>';
+  $('tableClasse').querySelectorAll('th.tri').forEach(th => th.addEventListener('click', () => {
+    const id = th.dataset.col;
+    tri = { col:id, sens: tri.col === id ? -tri.sens : (id === 'nom' ? 1 : -1) };
+    afficherClasse();
+  }));
+}
+
+/* ---------- Onglet « Classements » ---------- */
+const medaille = r => r <= 3 ? ['🥇','🥈','🥉'][r - 1] : r;
+const NOMS_MODES = { add:'Addition', sub:'Soustraction', mul:'Multiplication', div:'Division' };
+const ROMAINS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const BESTIAIRE = ['Gobelin','Hobgobelin','Zombie','Mimique','Cube gélatineux','Troll','Basilic','Chimère','Manticore','Démon','Dragon blanc','Le Samouraï'];
+function calculerCotes(parties){
+  const j = {};
+  const joueur = x => (j[x.slug] = j[x.slug] || { slug:x.slug, nom:x.nom, cote:1000, v:0, n:0, d:0 });
+  parties.filter(p => p.etat === 'finie' && p.blanc && p.noir && p.resultat && p.coups && p.coups.length >= 2)
+    .sort((a, b) => (a.fin || a.maj) - (b.fin || b.maj))
+    .forEach(p => {
+      const A = joueur(p.blanc), B = joueur(p.noir);
+      const att = 1 / (1 + Math.pow(10, (B.cote - A.cote) / 400));
+      const s = p.resultat === 'w' ? 1 : p.resultat === 'b' ? 0 : 0.5;
+      A.cote += 32 * (s - att); B.cote += 32 * ((1 - s) - (1 - att));
+      if(s === 1){ A.v++; B.d++; } else if(s === 0){ A.d++; B.v++; } else { A.n++; B.n++; }
+    });
+  return Object.values(j).map(x => Object.assign(x, { cote: Math.round(x.cote) })).sort((a, b) => b.cote - a.cote || b.v - a.v);
+}
+function tableOuVide(id, entete, lignes, vide){
+  $(id).innerHTML = lignes.length ? '<thead><tr>' + entete + '</tr></thead><tbody>' + lignes.join('') + '</tbody>'
+                                  : '<tbody><tr><td>' + vide + '</td></tr></tbody>';
+}
+function afficherClassements(){
+  const punch = ELEVES.filter(e => e.punch && typeof e.punch.score === 'number')
+    .sort((a, b) => b.punch.score - a.punch.score || (a.punch.date || 0) - (b.punch.date || 0));
+  tableOuVide('tablePunch', '<th></th><th>Élève</th><th class="n">Points</th><th>Meilleur combat</th>',
+    punch.map((e, i) => '<tr><td>' + medaille(i + 1) + '</td><td>' + esc(e.nom) + '</td><td class="n">' + nf(e.punch.score) + '</td><td>' +
+      (NOMS_MODES[e.punch.mode] || '') + ' · boss ' + (ROMAINS[e.punch.k] || '') + '</td></tr>'), 'Aucun combat enregistré.');
+  const ia = ELEVES.filter(e => e.ia > 0).sort((a, b) => b.ia - a.ia);
+  tableOuVide('tableEchecsIA', '<th></th><th>Élève</th><th>Plus loin dans le bestiaire</th>',
+    ia.map((e, i) => '<tr><td>' + medaille(i + 1) + '</td><td>' + esc(e.nom) + '</td><td>' + e.ia + '. ' + BESTIAIRE[e.ia - 1] + ' vaincu</td></tr>'),
+    "Personne n'a encore vaincu l'IA.");
+  const parties = [];
+  Object.keys(D.valeurs).forEach(cle => { if(cle.indexOf('partie_') === 0){ try{ parties.push(JSON.parse(D.valeurs[cle])); }catch(e){} } });
+  const duel = calculerCotes(parties);
+  tableOuVide('tableEchecsDuel', '<th></th><th>Élève</th><th class="n">Cote</th><th class="n">V</th><th class="n">N</th><th class="n">D</th>',
+    duel.map((x, i) => '<tr><td>' + medaille(i + 1) + '</td><td>' + esc(x.nom) + '</td><td class="n">' + x.cote + '</td><td class="n">' + x.v +
+      '</td><td class="n">' + x.n + '</td><td class="n">' + x.d + '</td></tr>'), 'Aucune partie terminée.');
+}
+
+/* ---------- Onglet « Économie » ---------- */
+function recompenseMoyenne(){
+  const docs = D.manifeste ? chapitresSuivis().reduce((l, c) => l.concat(c.docs), []) : [];
+  return docs.length ? { moyenne: docs.reduce((t, d) => t + d.recompense, 0) / docs.length, total: docs.reduce((t, d) => t + d.recompense, 0), nb: docs.length } : null;
+}
+const enDocs = (prix, r) => r ? (prix / r.moyenne).toFixed(1).replace('.', ',') : '—';
+
+(function initSimulateur(){
+  $('simKit').innerHTML = E.PALIERS.map((p, i) => '<option value="' + i + '"' + (i === 1 ? ' selected' : '') + '>' + p + '</option>').join('');
+  $('simRang').innerHTML = E.RANGS.map((r, i) => '<option value="' + i + '">' + r + ' (×' + E.MULT_RANG[i] + ')</option>').join('');
+  ['simN', 'simOr', 'simKit', 'simRang'].forEach(id => $(id).addEventListener('input', afficherSimulation));
+  $('simClasse').addEventListener('click', () => {
+    const joue = ELEVES.filter(e => e.aJoue);
+    if(!joue.length) return;
+    $('simN').value = joue.length;
+    $('simOr').value = Math.round(joue.reduce((t, e) => t + e.orGagne, 0) / joue.length);
+    afficherSimulation();
+  });
+})();
+
+function afficherEconomie(){
+  const r = recompenseMoyenne();
+  const kit3 = E.kitComplet(3).cout;
+  $('clesEconomie').innerHTML =
+    (r ? '<div class="cle"><b>' + nf(r.total) + '</b><span>or à gagner dans les ' + r.nb + ' documents ouverts du Grimoire</span></div>' +
+         '<div class="cle"><b>' + r.moyenne.toFixed(1).replace('.', ',') + '</b><span>or en moyenne par document</span></div>'
+       : '<div class="cle"><b>—</b><span>récompenses du Grimoire (ouvre un autre onglet pour les charger)</span></div>') +
+    '<div class="cle"><b>' + nf(E.kitComplet(1).cout) + ' / ' + nf(E.kitComplet(2).cout) + ' / ' + nf(kit3) + '</b><span>équipement complet : cuir / acier / royal</span></div>';
+
+  // Paliers × rangs
+  const kits = [0, 1, 2, 3].map(p => Object.assign(E.kitComplet(p), { palier:p }));
+  $('tableKits').innerHTML = '<thead><tr><th>Équipement</th><th class="n">Coût</th><th class="n">Documents</th>' +
+    E.RANGS.map((n, i) => '<th class="n">' + n + ' ×' + E.MULT_RANG[i] + '</th>').join('') + '</tr></thead><tbody>' +
+    kits.map(k => '<tr><td>' + E.PALIERS[k.palier] + '</td><td class="n">' + nf(k.cout) + '</td><td class="n">' + enDocs(k.cout, r) + '</td>' +
+      E.RANGS.map((_, i) => { const f = E.force(k.equipe, i); return '<td class="n">' + nf(f.pv) + ' PV · ' + nf(f.degats) + ' dég.</td>'; }).join('') +
+      '</tr>').join('') + '</tbody>';
+
+  // Catalogue
+  $('tableCatalogue').innerHTML = '<thead><tr><th>Emplacement</th><th>Objet</th><th class="n">Palier</th><th class="n">Prix</th><th>Effet</th><th class="n">Documents</th><th class="n">Prix par point</th></tr></thead><tbody>' +
+    E.EMPLACEMENTS.map(em => em.objets.map(o => {
+      const effet = o.pv ? '+' + o.pv + ' PV' : o.degats ? o.degats + ' dégâts' : '+' + o.degatsBonus + ' dégâts';
+      const pts = o.pv || o.degats || o.degatsBonus;
+      return '<tr><td>' + em.nom + '</td><td>' + esc(o.nom) + '</td><td class="n">' + o.palier + '</td><td class="n">' + o.prix + '</td><td>' + effet +
+        '</td><td class="n">' + enDocs(o.prix, r) + '</td><td class="n">' + (o.prix / pts).toFixed(1).replace('.', ',') + ' or</td></tr>';
+    }).join('')).join('') + '</tbody>';
+
+  afficherSimulation();
+}
+
+function afficherSimulation(){
+  const n = Math.max(1, parseInt($('simN').value, 10) || 1);
+  const or = Math.max(0, parseInt($('simOr').value, 10) || 0);
+  const kit = E.kitComplet(+$('simKit').value);
+  const rang = +$('simRang').value;
+  const f = E.force(kit.equipe, rang);
+  const G = n * or;
+  const reste = or - kit.cout;
+  $('simResume').innerHTML = 'Groupe : ' + n + ' élèves, ' + nf(G) + ' or gagné au total. Chaque élève : <b>' + nf(f.pv) + ' PV</b>, <b>' + nf(f.degats) +
+    ' dégâts</b>, soit <b>' + nf(n * f.degats) + '</b> dégâts du groupe par round.' +
+    (reste < 0 ? ' <span class="perdu">Attention : cet équipement coûte ' + kit.cout + ' or, plus que l\'or gagné par élève.</span>' : '');
+  $('tableMonstres').innerHTML = '<thead><tr><th>Monstre</th><th class="n">PV</th><th class="n">Dégâts / round</th><th class="n">Rounds pour le vaincre</th><th class="n">Rounds tenus</th><th>Issue</th></tr></thead><tbody>' +
+    E.MONSTRES.map((m, i) => {
+      const fm = E.forceMonstre(i, G, n);
+      const pourVaincre = f.degats > 0 ? Math.ceil(fm.pv / (n * f.degats)) : Infinity;
+      const tenus = Math.ceil(f.pv / fm.degats);        // le groupe frappe en premier à chaque round
+      const gagne = pourVaincre <= tenus;
+      return '<tr><td>' + esc(m.nom) + '</td><td class="n">' + nf(fm.pv) + '</td><td class="n">' + nf(fm.degats) + '</td><td class="n">' +
+        (isFinite(pourVaincre) ? pourVaincre : '∞') + '</td><td class="n">' + tenus + '</td><td class="' + (gagne ? 'gagne' : 'perdu') + '">' +
+        (gagne ? 'Victoire au round ' + pourVaincre : 'Défaite au round ' + tenus) + '</td></tr>';
+    }).join('') + '</tbody>';
+}
 </script>
 </body>
 </html>
