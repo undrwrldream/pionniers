@@ -7,7 +7,8 @@
    lui seul ; les autres pièces de la version de classe (l'écran d'accueil,
    la console enseignant, l'écran du tableau, le pont de stockage) ont besoin de les lire aussi.
 
-   ⚠️ À REMPLACER avant de déployer :
+   Valeurs du déploiement sur le compte scolaire (inscrites ici une fois pour
+   toutes : chaque reconstruction de 07_production les recopie partout).
    ===================================================================== */
 
 window.CONFIG_CLASSE = {

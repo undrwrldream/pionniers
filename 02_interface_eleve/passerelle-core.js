@@ -85,6 +85,7 @@ window.PasserelleCore = (function(){
       nom: nomAffiche || '',
       genre: null,           // "garcon" | "fille" | null (pas encore choisi)
       or: 0,
+      orGagne: 0,            // or gagné au total, jamais diminué (force du groupe dans l'arène)
       niveauLecture: 0,      // index dans LEVELS (Apprenti → Archimage), voir parchemins-lecture.html
       equipement: { inventory: [], equipped: {}, portraitImage: null }
     };

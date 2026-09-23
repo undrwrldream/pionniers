@@ -2,11 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<script src="config-classe.js"></script>
+<script src="garde-classe.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Le Grimoire des Mathématiques</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English&family=IM+Fell+English+SC&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
-<script src="config-classe.js"></script>
 <script src="stockage-classe.js"></script>
 <script src="passerelle-core.js"></script>
 <script src="exercices-supp-core.js"></script>
@@ -308,8 +309,25 @@
   #punchFrame{ flex:1; min-height:0; width:100%; border:none; background:#0b0705; }
   #punchCloseBtn{ background: var(--gold); border:none; border-radius:6px; padding:7px 14px; cursor:pointer; font-family:'IM Fell English SC', serif; font-size:0.95rem; white-space:nowrap; }
   #punchCloseBtn:hover{ background: var(--gold-bright); }
+  /* Le Serpent des Mesures : bouton vert, entre Punch-math! et Quêtes secondaires. */
+  #serpentBtn{
+    position:absolute; top:58px; right:14px; z-index:20; border:none; cursor:pointer;
+    display:flex; align-items:center; gap:7px;
+    background: linear-gradient(180deg, #6fce6a, #2f8f3a);
+    color:#eafff0; font-family:'IM Fell English SC', serif; font-size:0.9rem; font-weight:700; letter-spacing:0.02em;
+    padding: 7px 15px 7px 8px; border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.35);
+  }
+  #serpentBtn img{ width:26px; height:26px; object-fit:contain; display:block; filter:drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+  #serpentBtn:hover{ background: linear-gradient(180deg, #82e07c, #379943); }
+  #serpentBtn:focus-visible{ outline:3px solid #fff; outline-offset:2px; }
+  .serpent-overlay{ position:fixed; inset:0; z-index:125; display:none; flex-direction:column; background:#0b0705; }
+  .serpent-overlay.open{ display:flex; }
+  #serpentFrame{ flex:1; min-height:0; width:100%; border:none; background:#152218; }
+  #serpentCloseBtn{ background: var(--gold); border:none; border-radius:6px; padding:7px 14px; cursor:pointer; font-family:'IM Fell English SC', serif; font-size:0.95rem; white-space:nowrap; }
+  #serpentCloseBtn:hover{ background: var(--gold-bright); }
   #questTabBtn{
-    display:none; position:absolute; top:58px; right:14px; z-index:20; border:none; cursor:pointer;
+    display:none; position:absolute; top:102px; right:14px; z-index:20; border:none; cursor:pointer;
     background: linear-gradient(180deg, var(--quest-blue-bright), var(--quest-blue));
     color:#EAF1FF; font-family:'IM Fell English SC', serif; font-size:0.85rem; letter-spacing:0.02em;
     padding: 9px 14px; border-radius: 8px;
@@ -318,7 +336,9 @@
   #questTabBtn:hover{ background: linear-gradient(180deg, #3358c9, var(--quest-blue-bright)); }
   @media (max-width: 640px){
     #punchBtn{ font-size:0.8rem; padding:7px 11px; top:10px; right:10px; }
-    #questTabBtn{ font-size:0.75rem; padding:7px 10px; top:46px; right:10px; }
+    #serpentBtn{ font-size:0.75rem; padding:6px 12px 6px 6px; top:46px; right:10px; }
+    #serpentBtn img{ width:20px; height:20px; }
+    #questTabBtn{ font-size:0.75rem; padding:7px 10px; top:82px; right:10px; }
   }
 
   .quest-overlay{ position: fixed; inset:0; background: rgba(6,10,8,0.86); z-index: 110; display:none; justify-content:center; align-items:flex-start; padding: 26px 12px; overflow-y:auto; }
@@ -598,7 +618,7 @@
 
   /* le livre ne sert qu'à CHOISIR : sections à gauche, sous-sections (documents) à droite */
   .section-card.choisie{ border-color: var(--wax); box-shadow: 0 0 0 1px var(--wax); background: rgba(255,255,255,0.55); }
-  .sous-sections{ padding-top:44px; }   /* laisse la place aux boutons Punch-math! et Quêtes secondaires, en haut à droite */
+  .sous-sections{ padding-top:88px; }   /* laisse la place aux boutons Punch-math!, Le Serpent des Mesures et Quêtes secondaires, en haut à droite */
   .sous-sections h3{ font-size:1.05rem; margin-bottom:4px; }
   .sous-sections > p{ margin:0 0 4px; font-size:0.9rem; }
 
@@ -634,7 +654,7 @@
       <div id="bookBandeau"></div>
       <div id="bookPages">
         <div class="page page-left"><div class="page-inner" id="pageLeft"></div></div>
-        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="punchBtn" type="button">🥊 Punch-math!</button><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button></div>
+        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="punchBtn" type="button">🥊 Punch-math!</button><button id="serpentBtn" type="button"><img src="livre_assets/serpent-dragon-mini.png" alt="">Le Serpent des Mesures</button><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button></div>
       </div>
       <div class="astro-couche" aria-hidden="true">
         <img class="astro-fond" src="livre_assets/astrolabe.jpg" alt="">
@@ -711,6 +731,15 @@
       <button id="punchCloseBtn" type="button">✕ Fermer</button>
     </div>
     <iframe id="punchFrame" title="Punch-math!"></iframe>
+  </div>
+
+  <div id="serpentOverlay" class="serpent-overlay">
+    <div class="doc-bar">
+      <span class="doc-bar-titre">🐉 Le Serpent des Mesures</span>
+      <span class="doc-bar-etat">Grandis en mangeant les orbes, sans toucher les autres serpents</span>
+      <button id="serpentCloseBtn" type="button">✕ Fermer</button>
+    </div>
+    <iframe id="serpentFrame" title="Le Serpent des Mesures"></iframe>
   </div>
 
   <div id="dialogueOverlay" class="dialogue-overlay" role="dialog" aria-modal="true" aria-labelledby="dialogueMessage">
@@ -1148,6 +1177,13 @@
       await window.storage.set(sectionProgressKey(chapterId, sectionIdx), JSON.stringify(data), true);
     }catch(e){ /* si l'enregistrement échoue, on continue quand même l'affichage */ }
   }
+  // Or gagné au total depuis le début : ne baisse JAMAIS (ni à l'achat ni à la revente d'équipement).
+  // C'est la force du groupe dans l'arène. Un coffre d'avant ce compteur part de l'or qu'il contient.
+  function verserOr(coffre, montant){
+    if(typeof coffre.orGagne !== 'number') coffre.orGagne = coffre.or || 0;
+    coffre.or = (coffre.or || 0) + montant;
+    coffre.orGagne += montant;
+  }
   async function awardCoins(amount){
     if(amount <= 0) return;
     try{
@@ -1155,7 +1191,7 @@
       // d'équipement) pour que l'or reste une seule et même bourse partout.
       const resultat = await window.PasserelleCore.chargerCoffre(currentSlug, currentStudentName);
       const coffre = resultat.donnees;
-      coffre.or = (coffre.or || 0) + amount;
+      verserOr(coffre, amount);
       coffre.nom = currentStudentName;
       await window.PasserelleCore.sauvegarderCoffre(currentSlug, coffre);
     }catch(e){ /* la pièce d'or sera quand même reflétée dans progress_ pour la prochaine tentative */ }
@@ -2666,7 +2702,6 @@
   const PUNCH_MODES = ['add', 'sub', 'mul', 'div'];
   const PUNCH_SCORE_MAX = 1500;            // plafond de vraisemblance (le meilleur combat possible vaut 1 450)
   let punchCache = null;                   // { t, entrees } — le tableau est relu au plus toutes les 15 s
-  let punchFiche = null;                   // fiche de l'élève lue à l'ouverture (évite de la relire à chaque victoire)
   const punchCle = slug => PUNCH_PREFIXE + slug;
   function progPunch(p){
     const o = { add:0, sub:0, mul:0, div:0 };
@@ -2722,17 +2757,13 @@
         if(!currentSlug) return repondrePunch(e, d, { ok: true, slug: null });
         const r = await lireFichePunch(currentSlug, currentStudentName);
         if(r.erreur) return repondrePunch(e, d, { ok: false });
-        punchFiche = r.fiche;
         repondrePunch(e, d, { ok: true, slug: currentSlug, nom: currentStudentName, prog: r.fiche.prog });
       } else if(d.type === 'victoire'){
         const m = d.mode;
         if(!currentSlug || PUNCH_MODES.indexOf(m) === -1) return repondrePunch(e, d, { ok: false });
-        let f = (punchFiche && punchFiche.slug === currentSlug) ? punchFiche : null;
-        if(!f){
-          const r = await lireFichePunch(currentSlug, currentStudentName);
-          if(r.erreur) return repondrePunch(e, d, { ok: false });
-          f = r.fiche;
-        }
+        const r = await lireFichePunch(currentSlug, currentStudentName);
+        if(r.erreur) return repondrePunch(e, d, { ok: false });
+        const f = r.fiche;
         const k = Math.max(0, Math.min(11, d.k | 0));
         const score = Math.max(0, Math.min(PUNCH_SCORE_MAX, Math.round(+d.score) || 0));
         f.nom = currentStudentName;
@@ -2741,16 +2772,14 @@
         let record = false;
         if(!f.best || score > f.best.score){ f.best = { score, mode: m, k, date: Date.now(), coeurs: d.coeurs | 0 }; record = true; }
         await ecrireFichePunch(f);
-        punchFiche = f;
         punchCache = null;
-        repondrePunch(e, d, { ok: true, record, meilleur: f.best.score, rang: null, total: null, prog: f.prog });   // score enregistré : on le dit tout de suite
         let rang = null, total = null;
         try{
           const entrees = await entreesPunch(true);
           const i = entrees.findIndex(x => x.slug === currentSlug);
           rang = i >= 0 ? i + 1 : null; total = entrees.length;
         }catch(err){ /* le rang est facultatif : le score, lui, est bien enregistré */ }
-        try{ e.source.postMessage({ source: 'grimoire-punch', event: 'rang', rang, total }, '*'); }catch(_){ }
+        repondrePunch(e, d, { ok: true, record, meilleur: f.best.score, rang, total, prog: f.prog });
       } else if(d.type === 'classement'){
         const entrees = await entreesPunch(false);
         const propre = x => ({ nom: x.nom, score: x.score, mode: x.mode, k: x.k });
@@ -2764,7 +2793,6 @@
   });
   function ouvrirPunchMath(){
     punchCache = null;
-    punchFiche = null;
     $('punchFrame').src = 'punch-math.html';
     $('punchOverlay').classList.add('open');
   }
@@ -2775,6 +2803,19 @@
   $('punchBtn').addEventListener('click', ouvrirPunchMath);
   $('punchCloseBtn').addEventListener('click', fermerPunchMath);
   $('punchFrame').addEventListener('load', () => { try{ $('punchFrame').contentWindow.focus(); }catch(e){} });
+
+  // ---------- Le Serpent des Mesures : mini-jeu autonome (le-serpent-des-mesures.html), aucun échange avec le Grimoire ----------
+  function ouvrirSerpent(){
+    $('serpentFrame').src = 'le-serpent-des-mesures.html';
+    $('serpentOverlay').classList.add('open');
+  }
+  function fermerSerpent(){
+    $('serpentOverlay').classList.remove('open');
+    $('serpentFrame').src = 'about:blank';
+  }
+  $('serpentBtn').addEventListener('click', ouvrirSerpent);
+  $('serpentCloseBtn').addEventListener('click', fermerSerpent);
+  $('serpentFrame').addEventListener('load', () => { try{ $('serpentFrame').contentWindow.focus(); }catch(e){} });
 
   // ---------- quiz spreads ----------
   function startSection(sectionIdx){
@@ -3103,7 +3144,7 @@
       if(reussi){
         const resultatCoffre = await window.PasserelleCore.chargerCoffre(currentSlug, currentStudentName);
         const coffre = resultatCoffre.donnees;
-        coffre.or = (coffre.or || 0) + RECOMPENSE_FEUILLE_SUPP;
+        verserOr(coffre, RECOMPENSE_FEUILLE_SUPP);
         coffre.nom = currentStudentName;
         await window.PasserelleCore.sauvegarderCoffre(currentSlug, coffre);
       }
@@ -3311,7 +3352,7 @@
           const nomEleve = allSubmissions.find(s => s.slug === slug)?.name || slug;
           const resultat = await window.PasserelleCore.chargerCoffre(slug, nomEleve);
           const coffre = resultat.donnees;
-          coffre.or = (coffre.or || 0) + 1;
+          verserOr(coffre, 1);
           coffre.nom = nomEleve;
           await window.PasserelleCore.sauvegarderCoffre(slug, coffre);
           coinsCache[slug] = coffre.or;

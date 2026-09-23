@@ -2,6 +2,8 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<script src="config-classe.js"></script>
+<script src="garde-classe.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Livre d'Histoire</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -166,6 +168,33 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
 /* Barre de défilement discrète (les textes restent dans la zone du parchemin) */
 .texte,.liste{ scrollbar-width:thin; scrollbar-color:rgba(184,137,43,.7) transparent; }
 
+/* ── Bouton « Échec-et-Math » (table des matières uniquement) ── */
+.echecs-btn{
+  all:unset; box-sizing:border-box; cursor:pointer; align-self:center;
+  display:flex; align-items:center; gap:1cqw;
+  margin:.2cqw auto 1.3cqw; padding:.55cqw 1.9cqw .55cqw 1cqw;
+  border-radius:999px; border:2px solid #8a6a1f;
+  background:linear-gradient(160deg, #ffe38a, #d9a625);
+  box-shadow:0 .3cqw .8cqw -.3cqw rgba(43,26,12,.55);
+  transition:transform .15s, box-shadow .15s;
+}
+.echecs-btn:hover,.echecs-btn:focus-visible{ transform:translateY(-.15cqw); box-shadow:0 .5cqw 1.1cqw -.4cqw rgba(43,26,12,.65); }
+.echecs-btn:focus-visible{ outline:2px solid var(--vin); outline-offset:2px; }
+.echecs-btn img{ width:3.6cqw; height:3.6cqw; object-fit:contain; filter:drop-shadow(0 .2cqw .25cqw rgba(0,0,0,.5)); }
+.echecs-btn span{ font-family:'Cinzel Decorative','EB Garamond',serif; font-weight:700; letter-spacing:.03em;
+  font-size:max(1.55cqw,13px); color:#2b1a0c; }
+
+/* ── Jeu d'échecs (superposition plein écran) ── */
+.echecs-modal{ position:fixed; inset:0; z-index:80; display:none; flex-direction:column; background:#140a05; }
+.echecs-modal.open{ display:flex; }
+.echecs-modal-bar{ flex:none; display:flex; justify-content:flex-end; padding:10px 16px;
+  background:#1c130a; border-bottom:1px solid rgba(184,137,43,.5); }
+.echecs-modal-close{ all:unset; cursor:pointer; padding:8px 18px; border:1px solid var(--gold); border-radius:999px;
+  color:var(--gold-clair); font:600 14px/1 'EB Garamond',serif; letter-spacing:.03em; }
+.echecs-modal-close:hover,.echecs-modal-close:focus-visible{ background:rgba(184,137,43,.2); }
+.echecs-modal-close:focus-visible{ outline:2px solid var(--gold-clair); outline-offset:2px; }
+.echecs-modal-frame{ flex:1; width:100%; border:none; display:block; }
+
 /* ── Petits écrans (téléphone portrait) : une seule colonne, défilement interne ── */
 @media (max-width:700px){
   #app{ left:16%; right:16%; top:31%; bottom:16%; }
@@ -174,7 +203,7 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
   .fig{ height:auto; }
   .fig img{ max-height:none; }
   .titre-livre{ font-size:max(3.3cqw,13px); }
-  .sous-titre,.chemin,.retour,.compteur,.legende,.pastille,.btn,.entree .meta{ font-size:max(1.3cqw,8.5px); }
+  .sous-titre,.chemin,.retour,.compteur,.legende,.pastille,.btn,.entree .meta,.echecs-btn span{ font-size:max(1.3cqw,8.5px); }
   .texte p{ font-size:max(1.9cqw,10.5px); }
   .page--texte .texte p{ font-size:max(1.95cqw,10.5px); }
   .entree .nom{ font-size:max(2.1cqw,11px); }
@@ -222,6 +251,13 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
 
 <div class="parchemin-conteneur" id="parcheminConteneur">
   <div id="app"></div>
+</div>
+
+<div class="echecs-modal" id="echecsModal">
+  <div class="echecs-modal-bar">
+    <button class="echecs-modal-close" id="echecsCloseBtn">✕ Retour au Livre d'Histoire</button>
+  </div>
+  <iframe id="echecsFrame" class="echecs-modal-frame" title="Échec-et-Math"></iframe>
 </div>
 
 <script>
@@ -386,6 +422,10 @@ function vueListe(chemin){
     <div class="ecran">
       ${depth > 0 ? `<div class="fil">${barreRetour(chemin)}</div>` : ''}
       ${entete}
+      ${depth === 0 ? `<button class="echecs-btn" onclick="ouvrirEchecs()">
+        <img src="${esc(MINI + 'echecs-cheval.png')}" alt="">
+        <span>Échec-et-Math</span>
+      </button>` : ''}
       ${ornement()}
       <ul class="liste">
         ${node.enfants.map((c,i) => {
@@ -544,6 +584,17 @@ function changerJeu(dir){
 }
 window.addEventListener('resize', ajusterJeu);
 
+/* ── Jeu d'échecs (Échec-et-Math) : superposition plein écran, chargée à la demande ── */
+function ouvrirEchecs(){
+  const frame = document.getElementById('echecsFrame');
+  if(!frame.getAttribute('src')) frame.setAttribute('src', 'echecs/index.html');
+  document.getElementById('echecsModal').classList.add('open');
+}
+function fermerEchecs(){
+  document.getElementById('echecsModal').classList.remove('open');
+}
+document.getElementById('echecsCloseBtn').addEventListener('click', fermerEchecs);
+
 /* ── Navigation ── */
 let dernierHash = null;
 function aller(hash){ location.hash = hash; route(); }   // route() tout de suite : évite tout décalage si on appuie vite
@@ -599,6 +650,10 @@ function enCours(){   // chemin de la vue affichée (utile pour l'exercice)
 }
 window.addEventListener('hashchange', route);
 window.addEventListener('keydown', e => {
+  if(document.getElementById('echecsModal').classList.contains('open')){
+    if(e.key === 'Escape') fermerEchecs();
+    return;
+  }
   if(jeuEl){
     if(e.key === 'Escape') fermerJeu(true);
     else if(e.key === 'ArrowRight') changerJeu(1);

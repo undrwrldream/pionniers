@@ -2,6 +2,8 @@
 <html lang="fr-CA">
 <head>
 <meta charset="utf-8">
+<script src="config-classe.js"></script>
+<script src="garde-classe.js"></script>
 <title>Punch-math!</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -418,7 +420,6 @@ const PONT = (function(){
   }
   window.addEventListener('message', e=>{
     const d = e.data;
-    if(d && d.source==='grimoire-punch' && d.event==='rang'){ if(window.__surRang) window.__surRang(d); return; }
     if(!d || d.source!=='grimoire-punch' || !attentes[d.id]) return;
     const f = attentes[d.id]; delete attentes[d.id]; f(d);
   });
@@ -636,7 +637,7 @@ async function fin(victoire){
       const bonusBoss = PTS.boss*(k+1), bonusCoeurs = PTS.coeur*S.hearts;
       bilan = { pts:S.pts, bonusBoss, bonusCoeurs, total:S.pts+bonusBoss+bonusCoeurs };
       // Le score part vers le Grimoire tout de suite ; la réponse (rang) est affichée quand elle arrive.
-      if(ID.enLigne) envoi = PONT.demander('victoire', { mode:m, k, score:bilan.total, coeurs:S.hearts, bon:S.stats.bon, mauvais:S.stats.mauvais }, 60000);
+      if(ID.enLigne) envoi = PONT.demander('victoire', { mode:m, k, score:bilan.total, coeurs:S.hearts, bon:S.stats.bon, mauvais:S.stats.mauvais }, 45000);
       sfx.ko(); flottant('K.O. !', 50, 30, '#ffd86a');
       monstre.classList.add('ko');
       await sleep(1500);
@@ -653,7 +654,8 @@ async function fin(victoire){
 /* ───────── Écrans ───────── */
 function ligneIdentite(){
   return ID.enLigne ? 'Joueur : <b>'+esc(ID.nom)+'</b>'
-                    : 'Mode essai : ta progression reste sur cet appareil et aucun score n\'est envoyé au tableau.'+(ID.note?' '+ID.note:'');
+                    : (ID.note ? ID.note+' Ta progression reste sur cet appareil pour l\'instant.'
+                               : 'Mode essai : ta progression reste sur cet appareil et aucun score n\'est envoyé au tableau.');
 }
 function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -673,12 +675,12 @@ function afficherMenu(){
     '<p>Un boss lève son poing : réponds <b>juste</b> et <b>avant la fin du temps</b> pour le frapper. Sinon, c\'est lui qui te frappe !</p>'+
     '<div class="modes">'+cartes+'</div>'+
     '<div class="pied"><button class="gros" id="btnClass" type="button">🏆 Les 10 meilleurs</button>'+
-      (!ID.enLigne && PONT.enfant ? '<button class="gros sec" id="btnRetry" type="button">Réessayer la connexion</button>' : '')+
+      (!ID.enLigne && PONT.enfant ? '<button class="gros sec" id="btnReco" type="button">Réessayer la connexion</button>' : '')+
       '<span class="ident">'+ligneIdentite()+'</span></div>';
   ecran.classList.remove('cache');
   carte.querySelectorAll('.mode').forEach(b=>b.onclick=()=>{ if(b.getAttribute('aria-disabled')!=='true') afficherCarte(b.dataset.m); });
   $('btnClass').onclick = ()=> afficherClassement(afficherMenu);
-  if($('btnRetry')) $('btnRetry').onclick = connecter;
+  if($('btnReco')) $('btnReco').onclick = connecter;
   const premier = carte.querySelector('.mode:not([aria-disabled="true"])'); if(premier) premier.focus();
 }
 
@@ -707,11 +709,6 @@ function afficherCarte(m){
   const s = carte.querySelector('.boss.suivant') || carte.querySelector('.boss.fait'); if(s) s.focus();
 }
 
-window.__surRang = function(d){
-  const el = document.getElementById('rangAttente');
-  if(el && d.rang) el.innerHTML = 'Tu es <b>n° '+d.rang+'</b> sur '+d.total+' au tableau de la classe.';
-  else if(el) el.textContent = '';
-};
 function afficherFin(v, debloque, bilan, envoi){
   const m=S.mode, k=S.k, s=S.stats;
   let html = '<h1>'+(v?'Victoire !':'Défaite')+'</h1>';
@@ -743,7 +740,7 @@ function afficherFin(v, debloque, bilan, envoi){
       const el = $('ligneRang'); if(!el || S.phase!=='fin') return;
       if(!r || !r.ok){ el.textContent = 'Ton score n\'a pas pu être enregistré (connexion). Réessaie un combat plus tard.'; return; }
       el.innerHTML = (r.record ? '<b>Nouveau record personnel !</b> ' : 'Ton record reste de <b>'+fmt(r.meilleur)+' pts</b>. ')+
-                     (r.rang ? 'Tu es <b>n° '+r.rang+'</b> sur '+r.total+' au tableau de la classe.' : '<span id="rangAttente">Calcul de ton rang…</span>');
+                     (r.rang ? 'Tu es <b>n° '+r.rang+'</b> sur '+r.total+' au tableau de la classe.' : '');
     });
   }
 }
@@ -818,17 +815,22 @@ $('muet').addEventListener('click', e=>{
   e.currentTarget.blur();
 });
 
+// Le premier appel au script Google peut être lent (plus de 7 s quand il « dort ») :
+// on attend jusqu'à 45 s, et on n'annonce le mode essai que si le jeu est vraiment ouvert seul.
 async function connecter(){
   dessinerHUD();
   carte.className='carte';
-  carte.innerHTML='<h1>Punch-math!</h1><p>Connexion au tableau de la classe…<br><small>La première fois, ça peut prendre quelques secondes.</small></p>';
+  carte.innerHTML = PONT.enfant
+    ? '<h1>Punch-math!</h1><p>Connexion au tableau de la classe…<br><small>La première fois, ça peut prendre quelques secondes.</small></p>'
+    : '<h1>Punch-math!</h1><p>Chargement…</p>';
   ecran.classList.remove('cache');
   const r = await PONT.demander('init', null, 45000);
   if(r && r.ok && r.slug){
     ID.slug = r.slug; ID.nom = r.nom || ''; ID.enLigne = true; ID.note = ''; P = normaliserProg(r.prog);
   }else{
+    ID.enLigne = false;
     chargerEssai();
-    ID.note = (PONT.enfant && (!r || r.ok===false)) ? 'La connexion au tableau n\'a pas fonctionné.' : '';
+    ID.note = (PONT.enfant && (!r || r.ok===false)) ? 'La connexion au tableau de la classe n\'a pas fonctionné.' : '';
   }
   afficherMenu();
 }
