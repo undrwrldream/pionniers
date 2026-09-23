@@ -2,9 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Arène de Combat — Prototype</title>
+<script src="../02_interface_eleve/config-classe.js"></script>
+<script src="../02_interface_eleve/garde-classe.js"></script>
+<title>Arène de Combat</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="../02_interface_eleve/economie.js"></script>
 <style>
   :root{
     --parchment:#F1E4C3; --gold:#D9A62E; --iron:#5B5750; --steel:#5C7A99;
@@ -51,8 +54,8 @@
   .action-btn:disabled{ opacity:.4; cursor:not-allowed; }
 
   /* ---------- Scène : monstre en haut, élèves en demi-cercle en dessous ---------- */
-  .stage-wrap{ flex:1 1 auto; display:flex; align-items:flex-start; justify-content:center; padding:1.4vh 1vw; overflow:auto; }
-  .stage{ position:relative; width:1220px; max-width:100%; }
+  .stage-wrap{ flex:1 1 auto; min-height:0; display:flex; align-items:flex-start; justify-content:center; padding:1.4vh 1vw; overflow:hidden; }
+  .stage{ position:relative; width:1700px; max-width:100%; }
 
   .monster-block{ position:relative; text-align:center; }
   .monster-name{ font-family:'Cinzel', serif; font-size:22px; color:var(--steel); margin-bottom:4px; }
@@ -86,11 +89,23 @@
   /* Zone du demi-cercle : le pivot (haut du monstre) est au centre-haut de cette zone —
      remontée pour que le monstre agrandi occupe le centre du demi-cercle plutôt que
      de flotter au-dessus, dans son propre espace vide. */
-  .arc-zone{ position:relative; width:100%; height:460px; margin-top:-70px; }
+  /* Le pivot du demi-cercle est au CENTRE de l'image du monstre : le groupe l'entoure
+     (côtés et dessous) au lieu d'attendre plus bas. La marge négative et la hauteur
+     sont recalculées en JavaScript selon la taille réelle du monstre et le nombre d'élèves. */
+  .arc-zone{ position:relative; width:100%; height:460px; margin-top:-260px; pointer-events:none; }
+  .arc-zone .student{ pointer-events:auto; }
   .student{
-    position:absolute; width:100px; margin-left:-50px; margin-top:-4px;
+    position:absolute; width:100px; margin-left:-50px; margin-top:-50px;
     text-align:center; transition:filter .25s ease;
   }
+  .student.petit{ width:84px; margin-left:-42px; }
+  .student.petit .avatar-wrap{ width:62px; height:78px; }
+  .student.petit .student-name{ font-size:12px; }
+  .student.petit .student-substats{ font-size:10px; gap:4px; }
+  .source-eleves{ font-size:12.5px; color:#c9b98d; margin-top:10px; line-height:1.45; }
+  .presents{ max-height:220px; overflow-y:auto; border:1px solid #4a3d2c; border-radius:6px; padding:6px 8px; margin-top:4px; }
+  .presents label{ display:flex; align-items:center; gap:6px; margin:3px 0; font-size:13px; color:var(--parchment); }
+  .force-calcul{ font-size:12.5px; color:#e6d8b8; background:rgba(0,0,0,.3); border:1px solid #4a3d2c; border-radius:6px; padding:8px 10px; margin-top:8px; line-height:1.5; }
   .student.petrified{ filter:grayscale(1) brightness(.55); }
   .student.ko{ filter:grayscale(1) brightness(.32); }
   .avatar-wrap{ position:relative; width:80px; height:100px; margin:0 auto; }
@@ -137,7 +152,7 @@
   }
 
   .bottom-bar{ padding:10px 20px 14px; display:flex; flex-direction:column; gap:8px; align-items:center; }
-  .log{ width:min(760px,92vw); max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.4); border:1px solid #6b5b3d; border-radius:8px; padding:8px 14px; font-size:13.5px; }
+  .log{ width:min(760px,92vw); height:96px; overflow-y:auto; background:rgba(0,0,0,0.4); border:1px solid #6b5b3d; border-radius:8px; padding:8px 14px; font-size:13.5px; }
   .log div{ margin:2px 0; color:#e6d8b8; } .log div.gold-line{ color:#ffd35c; } .log div.bad-line{ color:#a9c1d6; } .log div.hit-line{ color:#e6a3a3; }
 
   .overlay{ display:none; position:fixed; inset:0; background:rgba(10,8,5,0.88); align-items:center; justify-content:center; z-index:50; padding:20px; }
@@ -233,6 +248,11 @@
 
   <label>Monstre du combat</label>
   <select id="monsterSelect"></select>
+  <div class="force-calcul" id="forceCalcul">—</div>
+
+  <label>Élèves présents au combat</label>
+  <div class="presents" id="presents"></div>
+  <div class="source-eleves" id="sourceEleves">Chargement des élèves…</div>
 
   <label>Bouclier d'absorption (assigné en début de combat, pour récompenser un comportement)</label>
   <select id="shieldSelect">
@@ -245,11 +265,11 @@
   <button class="tp-btn warn" id="resetBtn">Réinitialiser le combat</button>
 
   <div class="tp-note">
-    PROTOTYPE — le bouclier d'absorption ci-dessus est choisi par l'enseignant
-    UNE FOIS avant le combat, pour récompenser le comportement du groupe ; il
-    absorbe les prochains dégâts subis, PV pour PV, avant que les vraies PV
-    n'en prennent le coup. Le monstre attaque tout le groupe d'un coup, chaque
-    round. Tout est ajustable dans le bloc CONFIG du JS.
+    Le bouclier d'absorption ci-dessus est choisi par l'enseignant UNE FOIS avant
+    le combat, pour récompenser le comportement du groupe ; il absorbe les
+    prochains dégâts subis, PV pour PV. Le monstre attaque tout le groupe d'un
+    coup, chaque round. Sa force vient de l'or GAGNÉ par les élèves présents
+    (dépensé ou pas) — réglages dans 02_interface_eleve/economie.js.
   </div>
 </div>
 
@@ -260,36 +280,32 @@
 const RANKS = ["Apprenti","Novice","Invocateur","Magicien","Sorcier","Archimage"];
 const RANK_MULT = [1,2,4,8,12,20];   // niveau 1 à 6 : × sur l'attaque et les PV (Apprenti … Archimage)
 
-const WEAPON_ATK = {
-  "weapon1_dagger":4, "weapon2_longsword":6, "weapon3_shortsword":5,
-  "weapon4_axe":7, "weapon5_saber":6, "weapon6_lance":7, "weapon7_warhammer":8,
-  "weapon8_halberd":8, "weapon9_flail":6, "weapon10_2hsword":9,
-  "legend1_frostmourne":13, "legend2_dawn":13
-};
-const BASE_HP = 10;  // PV de départ, avant armure
-// PV de l'armure par pièce (casque/armure/gants/bottes/bouclier). Vide pour l'instant :
-// les élèves n'ont qu'une arme, donc 0 PV d'armure — il leur faudra vite s'équiper !
-const ARMOR_HP = {
-  "shield1_kite":6, "shield2_round":6, "shield3_heater":8, "shield4_dragon":10, "shield5_royal":12
-};
+// Force des élèves et des monstres : voir 02_interface_eleve/economie.js
+// (mêmes chiffres que la fiche de personnage et que la console enseignant).
+const E = window.Economie;
 
 const ATTACK_STAGGER_MS = 250; // délai entre chaque attaque d'élève
 
 const TUNIC_COLORS = ["#7B2D26","#3B5D42","#5C7A99","#B8860B","#5C4A8C","#2D6E6E","#B5502E","#6B7A2A","#4A5A6A","#8C2E4A","#3A4A8C","#A67C2E"];
 const SKIN_TONES = ["#E8C79E","#D9AE78","#C68E5C"];
 
-// Géométrie du demi-cercle — pivot au centre-haut de #arcZone (juste sous le monstre)
-const ARC_RADIUS = 410;
+// Géométrie du demi-cercle — pivot au centre de l'image du monstre.
+// Rayon du premier rang : juste assez pour ne pas couvrir le monstre. Au-delà de 13 élèves,
+// un second rang s'ajoute derrière le premier.
+const ARC_ECART = 36;            // espace entre le bord du monstre et le premier rang
+const ARC_RANG_SUIVANT = 118;    // distance entre deux rangs
+const PLACES_PAR_RANG = [13, 18, 22];
 
-// Élèves de démonstration : tous au niveau 1 (Apprenti) et sans équipement, comme un vrai élève qui débute.
-// (Sans arme, l'attaque de base est de 5 — voir initRoster ; sans bouclier, 0 PV d'armure.)
-const ROSTER = [
-  {name:"Alice", rankIndex:0}, {name:"Noah", rankIndex:0}, {name:"Léa",  rankIndex:0}, {name:"Zack", rankIndex:0},
-  {name:"Mia",   rankIndex:0}, {name:"Théo", rankIndex:0}, {name:"Sara", rankIndex:0}, {name:"Max",  rankIndex:0},
-  {name:"Nora",  rankIndex:0}, {name:"Eli",  rankIndex:0}, {name:"Juno", rankIndex:0}, {name:"Otto", rankIndex:0},
-];
+// Élèves de démonstration (atelier, ou si la feuille Google est injoignable) :
+// niveau 1 (Apprenti), sans équipement ni or, comme un vrai élève qui débute.
+const ROSTER_DEMO = ["Alice","Noah","Léa","Zack","Mia","Théo","Sara","Max","Nora","Eli","Juno","Otto"]
+  .map(n => ({ name:n, rankIndex:0, equipe:{}, orGagne:0 }));
+let ROSTER = ROSTER_DEMO.slice();
+let sourceRoster = 'demo';
 
-// Chaque monstre = image, PV, dégâts infligés à un élève au hasard chaque round, et événements spéciaux.
+// Chaque monstre = image et événements spéciaux. Ses PV et ses dégâts sont CALCULÉS au début du combat
+// (Economie.forceMonstre) à partir de l'or gagné par les élèves présents : maxHp et dmgPerRound ci-dessous
+// ne servent plus qu'à l'affichage de repli.
 const MONSTERS = {
   gobelin:      { name:"I. Gobelin",        img:"monster_gobelin",        maxHp:150, dmgPerRound:15,
     events:[ { trigger:"before_combat", type:"reward_quiz",
@@ -344,56 +360,171 @@ function slashSVG(){
 }
 
 function initRoster(){
-  state.students = ROSTER.map((s,i)=>{
-    const atk = WEAPON_ATK[s.weapon] || 5;
-    // PV = (10 de base + PV du bouclier équipé) × multiplicateur de rang.
-    const armorHp = ARMOR_HP[s.shield] || 0;
-    const maxHp = Math.round((BASE_HP + armorHp) * RANK_MULT[s.rankIndex]);
-    return {...s, index:i, atk, armorHp, maxHp, hp:maxHp, petrified:false, ko:false};
+  const presents = ROSTER.filter(s => s.present !== false);
+  state.students = presents.map((s,i)=>{
+    // Même calcul que la fiche de personnage : (10 + équipement) × rang pour les PV, (arme + gants) × rang pour les dégâts.
+    const f = E.force(s.equipe, s.rankIndex);
+    const eq = s.equipe || {};
+    return {...s, index:i, atk:f.degats, maxHp:f.pv, hp:f.pv, petrified:false, ko:false,
+            weaponImg: E.IMAGES_ARENE[eq.weapon] || null, shieldImg: E.IMAGES_ARENE[eq.shield] || null};
   });
 }
 
+/* ---------- Vrais élèves : coffres de la feuille Google (version de classe) ---------- */
+function configClasse(){
+  const c = window.CONFIG_CLASSE || (function(){ try{ return window.parent.CONFIG_CLASSE; }catch(e){ return null; } })();
+  return (c && c.URL_SCRIPT && c.URL_SCRIPT.indexOf('COLLE_ICI') === -1) ? c : null;
+}
+async function chargerElevesReels(){
+  const cfg = configClasse();
+  if(!cfg){ afficherSource(); return; }
+  try{
+    const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 45000);
+    const r = await fetch(cfg.URL_SCRIPT + '?lot=coffre_&t=' + Date.now(), { cache:'no-store', signal:ctrl.signal });
+    clearTimeout(t);
+    const d = await r.json();
+    const eleves = [];
+    Object.keys((d && d.valeurs) || {}).forEach(cle => {
+      if(cle.indexOf('coffre_bak') === 0) return;
+      try{
+        const env = JSON.parse(d.valeurs[cle]);
+        if(!env || !env.donnees || E.sceau(env.donnees) !== env.seal) return;   // fiche altérée : ignorée
+        const c = env.donnees;
+        const slug = cle.slice('coffre_'.length);
+        if(slug.indexOf('test_') === 0) return;                                  // accès de débogage de l'enseignant
+        eleves.push({ slug, name: c.nom || slug, rankIndex: c.niveauLecture || 0,
+                      equipe: (c.equipement && c.equipement.equipped) || {}, orGagne: E.orGagne(c), present:true });
+      }catch(e){ /* coffre illisible : ignoré */ }
+    });
+    if(!eleves.length) throw new Error('aucun coffre');
+    eleves.sort((a,b) => a.name.localeCompare(b.name, 'fr'));
+    ROSTER = eleves; sourceRoster = 'classe';
+  }catch(e){
+    ROSTER = ROSTER_DEMO.slice(); sourceRoster = 'echec';
+    if(window.GardeClasse) window.GardeClasse.signaler('arène', "Élèves réels introuvables, élèves de démonstration affichés", { raison: String(e && e.message || e) });
+  }
+  afficherSource();
+  initRoster(); renderParties(); afficherForceCalculee();
+}
+function afficherSource(){
+  const el = document.getElementById('sourceEleves');
+  el.textContent = sourceRoster === 'classe' ? ROSTER.length + ' élèves de la classe (coffres de la feuille Google).'
+    : sourceRoster === 'echec' ? "Feuille Google injoignable : élèves de démonstration."
+    : "Atelier : élèves de démonstration.";
+  const box = document.getElementById('presents');
+  box.innerHTML = ROSTER.map((s,i)=>`<label><input type="checkbox" data-i="${i}" ${s.present===false?'':'checked'}> ${s.name}</label>`).join('');
+  box.querySelectorAll('input').forEach(cb => cb.addEventListener('change', () => {
+    ROSTER[+cb.dataset.i].present = cb.checked;
+    if(!state.monsterId || document.getElementById('startBtn').disabled === false){ initRoster(); renderParties(); }
+    afficherForceCalculee();
+  }));
+}
+function orDuGroupe(){ return ROSTER.filter(s => s.present !== false).reduce((t,s)=>t + (s.orGagne||0), 0); }
+function afficherForceCalculee(){
+  const id = document.getElementById('monsterSelect').value;
+  const n = ROSTER.filter(s => s.present !== false).length;
+  const G = orDuGroupe();
+  const f = E.forceMonstre(id, G, n);
+  document.getElementById('forceCalcul').innerHTML =
+    `Or gagné par les ${n} présents : <b>${G}</b><br>Force calculée : <b>${f.pv} PV</b>, <b>${f.degats} dégâts</b> par round (×${f.facteur.toFixed(1)})`;
+}
+
 function populateMonsterSelect(){
-  document.getElementById('monsterSelect').innerHTML =
-    Object.keys(MONSTERS).map(id=>`<option value="${id}">${MONSTERS[id].name}</option>`).join('');
+  const sel = document.getElementById('monsterSelect');
+  sel.innerHTML = Object.keys(MONSTERS).map(id=>`<option value="${id}">${MONSTERS[id].name}</option>`).join('');
+  sel.addEventListener('change', afficherForceCalculee);
 }
 
 /* ---------- Formation en demi-cercle : élèves à égale distance du monstre ---------- */
 function renderParties(){
   const zone = document.getElementById('arcZone');
   zone.innerHTML = '';
-  const cx = zone.clientWidth / 2 || 610;
-  const cy = 0; // le pivot est au tout haut de la zone, juste sous le bloc du monstre
   const n = state.students.length;
+  const petit = n > 14;
+  const CARTE_L = petit ? 92 : 110, CARTE_H = petit ? 118 : 136;   // place occupée par un élève (avec son nom)
 
-  state.students.forEach((s,i)=>{
-    // theta balaie 0° à 180° : chaque élève à égale distance du monstre
-    const theta = n > 1 ? (Math.PI * i) / (n - 1) : Math.PI/2;
-    const x = cx - ARC_RADIUS * Math.cos(theta);
-    const y = cy + ARC_RADIUS * Math.sin(theta);
+  // Pivot = centre de l'image du monstre : le groupe l'entoure au lieu d'attendre plus bas.
+  const stage = document.querySelector('.stage');
+  stage.style.transform = 'none';
+  const img = document.querySelector('#monsterImgWrap img');
+  const hImg = (img && img.getBoundingClientRect().height) || Math.min(window.innerWidth*0.48, 520);
+  zone.style.marginTop = (-hImg / 2) + 'px';
 
-    const tunic = TUNIC_COLORS[s.index % TUNIC_COLORS.length];
-    const skin = SKIN_TONES[s.index % SKIN_TONES.length];
-    const div = document.createElement('div');
-    div.className = 'student';
-    div.id = 'student-'+s.index;
-    div.style.left = x + 'px';
-    div.style.top = y + 'px';
-    div.innerHTML = `
-      <div class="avatar-wrap">
-        ${buildAvatarSVG(tunic, skin)}
-        ${s.shield ? `<div class="shield-badge"><img src="arena_assets/${s.shield}.webp" alt=""></div>` : ''}
-        ${s.weapon ? `<div class="weapon-badge"><img src="arena_assets/${s.weapon}.webp" alt=""></div>` : ''}
-      </div>
-      <div class="slash-fx" id="slash-${s.index}">${slashSVG()}</div>
-      <div class="student-name">${s.name}</div>
-      <div class="student-substats">
-        <span class="stat-hp" id="stat-hp-${s.index}">PV ${s.hp}/${s.maxHp}</span>
-        <span class="stat-dmg" id="stat-dmg-${s.index}">DMG ${s.atk}</span>
-      </div>`;
-    zone.appendChild(div);
+  // Demi-ellipse plus large que haute : le groupe s'étale sur les côtés du monstre plutôt que loin en dessous.
+  const RX1 = hImg / 2 + 150, RY1 = hImg / 2 + 55, PAS_X = 175, PAS_Y = 150;
+  // Longueur « en élèves » d'une demi-ellipse : un élève ne doit jamais chevaucher son voisin
+  // (ni sur les côtés, où ils s'empilent, ni en bas, où ils sont côte à côte).
+  function echantillons(rx, ry){
+    const pts = [{ t:0, l:0 }]; let l = 0, px = rx, py = 0;
+    for(let k = 1; k <= 360; k++){
+      const t = Math.PI * k / 360, x = rx * Math.cos(t), y = ry * Math.sin(t);
+      l += Math.hypot((x - px) / CARTE_L, (y - py) / CARTE_H); px = x; py = y;
+      pts.push({ t, l });
+    }
+    return pts;
+  }
+  const rangs = []; let reste = n, rg = 0;
+  while(reste > 0){
+    const rx = RX1 + rg * PAS_X, ry = RY1 + rg * PAS_Y;
+    const pts = echantillons(rx, ry);
+    const places = Math.floor(pts[pts.length - 1].l) + 1;
+    rangs.push({ rx, ry, pts, places, combien: 0 }); reste -= places; rg++;
+  }
+  // Répartit les élèves proportionnellement à la place de chaque rang (le premier rang se remplit d'abord).
+  let aPlacer = n;
+  rangs.forEach((r, i) => { r.combien = i === rangs.length - 1 ? aPlacer : Math.min(r.places, aPlacer); aPlacer -= r.combien; });
+  if(rangs.length > 1){
+    const cap = rangs.reduce((t, r) => t + r.places, 0);
+    let reste2 = n;
+    rangs.forEach((r, i) => { r.combien = i === rangs.length - 1 ? reste2 : Math.min(r.places, Math.round(n * r.places / cap)); reste2 -= r.combien; });
+  }
+
+  const cx = zone.clientWidth / 2 || 610;
+  let idx = 0, basMax = 0;
+  rangs.forEach((r, numRang) => {
+    const L = r.pts[r.pts.length - 1].l;
+    for(let j = 0; j < r.combien; j++){
+      const s = state.students[idx++];
+      // positions également espacées le long de l'ellipse ; les rangs de derrière sont décalés d'un demi-pas
+      const cible = r.combien === 1 ? L / 2 : (numRang % 2 ? L * (j + 0.5) / r.combien : L * j / (r.combien - 1));
+      const pt = r.pts.find(p => p.l >= cible) || r.pts[r.pts.length - 1];
+      const x = cx - r.rx * Math.cos(pt.t);
+      const y = r.ry * Math.sin(pt.t);
+      basMax = Math.max(basMax, y);
+      const tunic = TUNIC_COLORS[s.index % TUNIC_COLORS.length];
+      const skin = SKIN_TONES[s.index % SKIN_TONES.length];
+      const div = document.createElement('div');
+      div.className = 'student' + (petit ? ' petit' : '');
+      div.id = 'student-'+s.index;
+      div.style.left = x + 'px';
+      div.style.top = y + 'px';
+      div.innerHTML = `
+        <div class="avatar-wrap">
+          ${buildAvatarSVG(tunic, skin)}
+          ${s.shieldImg ? `<div class="shield-badge"><img src="arena_assets/${s.shieldImg}.webp" alt=""></div>` : ''}
+          ${s.weaponImg ? `<div class="weapon-badge"><img src="arena_assets/${s.weaponImg}.webp" alt=""></div>` : ''}
+        </div>
+        <div class="slash-fx" id="slash-${s.index}">${slashSVG()}</div>
+        <div class="student-name">${s.name}</div>
+        <div class="student-substats">
+          <span class="stat-hp" id="stat-hp-${s.index}">PV ${s.hp}/${s.maxHp}</span>
+          <span class="stat-dmg" id="stat-dmg-${s.index}">DMG ${s.atk}</span>
+        </div>`;
+      zone.appendChild(div);
+    }
   });
+  zone.style.height = (basMax + CARTE_H - 40) + 'px';
+
+  // Tout doit tenir à l'écran du tableau, sans défilement : on réduit la scène au besoin.
+  const wrap = document.querySelector('.stage-wrap');
+  const dispoH = wrap.clientHeight - 8, dispoW = wrap.clientWidth - 8;
+  const besoinH = stage.scrollHeight, besoinW = Math.max(stage.scrollWidth, 2 * (RX1 + (rangs.length - 1) * PAS_X) + CARTE_L);
+  const k = Math.min(1, dispoH / besoinH, dispoW / besoinW);
+  stage.style.transformOrigin = 'top center';
+  stage.style.transform = k < 1 ? 'scale(' + k.toFixed(3) + ')' : 'none';
+  stage.style.marginBottom = k < 1 ? (-(1 - k) * besoinH) + 'px' : '0';
 }
+window.addEventListener('resize', () => { clearTimeout(window.__arcResize); window.__arcResize = setTimeout(renderParties, 150); });
 
 function log(msg, cls){
   const l = document.getElementById('log');
@@ -458,15 +589,19 @@ document.getElementById('startBtn').addEventListener('click', startCombat);
 function startCombat(){
   const monsterId = document.getElementById('monsterSelect').value;
   const monster = MONSTERS[monsterId];
-  state.monsterId = monsterId; state.monsterMaxHp = monster.maxHp; state.monsterHp = monster.maxHp;
-  state.round = 0; state.gold = 0;
   initRoster();
+  if(!state.students.length){ log("Aucun élève présent : coche au moins un élève dans le panneau enseignant (Ctrl+Maj+M)."); return; }
+  const f = E.forceMonstre(monsterId, orDuGroupe(), state.students.length);
+  state.monsterId = monsterId; state.monsterMaxHp = f.pv; state.monsterHp = f.pv; state.monsterDmg = f.degats;
+  state.round = 0; state.gold = 0;
   const shieldValue = parseInt(document.getElementById('shieldSelect').value) || 0;
   state.students.forEach(s=>{ s.absorbMax = shieldValue; s.absorb = shieldValue; });
   renderParties();
   document.getElementById('monsterName').textContent = monster.name;
   document.getElementById('monsterImgWrap').innerHTML = `<img src="arena_assets/monsters/${monster.img}.webp" alt="${monster.name}">`;
-  document.getElementById('monsterDmgStat').textContent = `Dégâts : ${monster.dmgPerRound} / round`;
+  const imgM = document.querySelector('#monsterImgWrap img');
+  if(imgM && !imgM.complete) imgM.addEventListener('load', renderParties, { once:true });
+  document.getElementById('monsterDmgStat').textContent = `Dégâts : ${state.monsterDmg} / round`;
   document.getElementById('log').innerHTML = '';
   document.getElementById('roundBadge').textContent = 'Round 0';
   updateMonsterHpUI();
@@ -558,7 +693,7 @@ function runRound(){
       return;
     }
     const s = attackers[i];
-    const finalDmg = Math.round(s.atk * RANK_MULT[s.rankIndex]);
+    const finalDmg = s.atk;   // déjà multiplié par le rang (Economie.force)
     totalDmg += finalDmg;
 
     playSlash(s.index);
@@ -580,7 +715,7 @@ function monsterRetaliate(){
   if(alive.length === 0) return;
   let newlyKO = [];
   alive.forEach(target=>{
-    let dmg = monster.dmgPerRound;
+    let dmg = state.monsterDmg;
     if(target.absorb > 0){
       const absorbed = Math.min(target.absorb, dmg);
       target.absorb -= absorbed;
@@ -595,7 +730,7 @@ function monsterRetaliate(){
       popBlocked(document.getElementById('student-'+target.index));
     }
   });
-  log(`${monster.name} attaque tout le groupe pour ${monster.dmgPerRound} dégâts chacun (avant absorption).`, 'hit-line');
+  log(`${monster.name} attaque tout le groupe pour ${state.monsterDmg} dégâts chacun (avant absorption).`, 'hit-line');
   if(newlyKO.length) log(`K.O. : ${newlyKO.join(', ')}.`, 'hit-line');
 
   const stillStanding = state.students.filter(s=>!s.ko);
@@ -636,8 +771,19 @@ document.getElementById('resetBtn').addEventListener('click', ()=>{
 
 /* ---------- Initialisation ---------- */
 populateMonsterSelect();
+// Avant le premier combat, le monstre I est affiché pour que la formation soit à sa vraie place.
+(function afficherMonstreInitial(){
+  const m = MONSTERS[document.getElementById('monsterSelect').value];
+  document.getElementById('monsterName').textContent = m.name;
+  document.getElementById('monsterImgWrap').innerHTML = `<img src="arena_assets/monsters/${m.img}.webp" alt="${m.name}">`;
+  const im = document.querySelector('#monsterImgWrap img');
+  im.addEventListener('load', renderParties, { once:true });
+})();
 initRoster();
 renderParties();
+afficherSource();
+afficherForceCalculee();
+chargerElevesReels();
 </script>
 </body>
 </html>
