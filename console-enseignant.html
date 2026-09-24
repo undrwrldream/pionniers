@@ -115,6 +115,28 @@
     background:#0f0b06; color:var(--gold-light); border:1px solid rgba(241,228,195,.35); min-width:110px; }
   .gagne{ color:var(--ok); } .perdu{ color:var(--alerte); }
   .note{ font-size:15px; opacity:.75; line-height:1.45; }
+
+  /* ---------- Rapports détaillés ---------- */
+  .alerte-rouge{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%;
+    background:#c0453a; color:#fff; font-family:'Cinzel', serif; font-weight:700; font-size:14px; line-height:1; flex:0 0 20px; }
+  .critiques{ display:flex; flex-direction:column; gap:8px; }
+  .critique{ display:flex; gap:10px; align-items:flex-start; text-align:left; font:inherit; font-size:17px; color:var(--parchment);
+    background:rgba(192,69,58,.12); border:1px solid rgba(192,69,58,.55); border-radius:6px; padding:9px 12px; cursor:pointer; width:100%; }
+  .critique:hover{ background:rgba(192,69,58,.22); }
+  .critique small{ display:block; opacity:.75; font-size:14px; }
+  .bascule{ display:flex; gap:6px; flex-wrap:wrap; }
+  .bascule .petit[aria-pressed="true"]{ background:var(--burgundy); border-color:var(--gold-light); color:var(--gold-light); }
+  tr.cliquable{ cursor:pointer; }
+  tr.choisi td{ background:rgba(217,166,46,.12); }
+  tr.groupe td{ font-family:'Cinzel', serif; font-size:13px; color:var(--gold-light); background:#150c07; padding-top:12px; }
+  td.cel{ text-align:center; font-variant-numeric:tabular-nums; min-width:44px; }
+  td.cel.ok1{ color:var(--ok); }
+  td.cel.ok2{ color:#e6c46a; }
+  td.cel.ok3{ color:#f0a35c; background:rgba(240,163,92,.08); }
+  td.cel.pas{ color:#ff9b90; background:rgba(192,69,58,.16); }
+  th.critique-col, td.critique-col{ background:rgba(192,69,58,.22) !important; }
+  tr.pied td{ font-size:14px; opacity:.9; border-top:1px solid rgba(217,166,46,.45); background:#150c07; }
+  .etat-fait{ color:var(--ok); } .etat-abandon{ color:#ff9b90; } .etat-cours{ color:#e6c46a; }
 </style>
 </head>
 <body>
@@ -128,6 +150,7 @@
     <button class="onglet" role="tab" data-vue="classe" aria-selected="false">Tableau de classe</button>
     <button class="onglet" role="tab" data-vue="classements" aria-selected="false">Classements</button>
     <button class="onglet" role="tab" data-vue="economie" aria-selected="false">Économie</button>
+    <button class="onglet" role="tab" data-vue="rapports" aria-selected="false">Rapports détaillés</button>
   </nav>
 
   <!-- ===================== ARÈNE (télécommande, inchangée) ===================== -->
@@ -207,6 +230,43 @@
 
     <section><h3>Catalogue de la boutique</h3>
       <div class="defile"><table id="tableCatalogue"></table></div></section>
+  </div>
+
+  <!-- ===================== RAPPORTS DÉTAILLÉS ===================== -->
+  <div class="vue" id="vue-rapports" hidden>
+    <div class="entete-vue">
+      <p id="majRapports">Chargement de la feuille Google…</p>
+      <button class="petit" type="button" data-actualiser>Actualiser</button>
+    </div>
+
+    <section class="panneau">
+      <h2>Points critiques</h2>
+      <div class="critiques" id="listeCritiques"></div>
+      <p class="note" style="margin-top:10px" id="regleCritiques"></p>
+    </section>
+
+    <div class="bascule" role="group" aria-label="Affichage">
+      <button class="petit" type="button" data-mode-rapport="exercice" aria-pressed="true">Par exercice</button>
+      <button class="petit" type="button" data-mode-rapport="eleve" aria-pressed="false">Par élève</button>
+    </div>
+
+    <div id="rapportParExercice">
+      <div class="defile"><table id="tableExercices"></table></div>
+      <section id="detailExercice" style="margin-top:18px" hidden>
+        <h3 id="titreDetail"></h3>
+        <div class="defile"><table id="tableDetail"></table></div>
+        <p class="note" style="margin-top:8px">Chaque case : le nombre de tentatives à ce numéro. ✓ = trouvé (vert du premier coup, jaune en 2-3, orange en 4 ou plus); ✗ = pas encore trouvé.
+          Survole une case pour voir le % d'erreur. Une réponse vide n'est pas une tentative. Colonne rouge = numéro critique.</p>
+      </section>
+    </div>
+
+    <div id="rapportParEleve" hidden>
+      <div class="reglages"><label>Élève <select id="choixEleveRapport"></select></label></div>
+      <div class="defile" style="margin-top:12px"><table id="tableEleveRapport"></table></div>
+    </div>
+
+    <p class="note">Temps d'étude = temps ACTIF seulement : la page doit être visible et l'élève doit avoir touché à quelque chose depuis moins d'une minute et demie.
+      Les rapports commencent le jour de leur mise en ligne : ce qui a été fait avant n'y apparaît pas. Les quêtes secondaires, les jeux et les textes remis à l'enseignant n'y sont pas.</p>
   </div>
 </main>
 
@@ -394,6 +454,7 @@ function ouvrirVue(vue){
   document.body.classList.toggle('large', vue !== 'arene');
   if(vue !== 'arene' && !D.charge && !D.enCours) chargerTout();
   if(vue === 'economie') afficherEconomie();
+  if(vue === 'rapports' && D.charge) afficherRapports();
 }
 document.querySelectorAll('[data-actualiser]').forEach(b => b.addEventListener('click', () => chargerTout()));
 
@@ -441,9 +502,10 @@ async function chargerTout(){
   if(!CFG.URL_SCRIPT || CFG.URL_SCRIPT.indexOf('COLLE_ICI') !== -1){ $('majClasse').textContent = "Configuration incomplète : l'adresse du script manque."; return; }
   D.enCours = true;
   $('majClasse').textContent = 'Lecture de la feuille Google… (jusqu\'à 30 secondes si le script dormait)';
+  $('majRapports').textContent = $('majClasse').textContent;
   try{
     const [rLot, rEleves, rGrim] = await Promise.all([
-      fetch(CFG.URL_SCRIPT + '?lot=' + encodeURIComponent('coffre_,doc_,punch_,echecs_,partie_') + '&t=' + Date.now(), { cache:'no-store' }).then(r => r.json()),
+      fetch(CFG.URL_SCRIPT + '?lot=' + encodeURIComponent('coffre_,doc_,punch_,echecs_,partie_,stat_') + '&t=' + Date.now(), { cache:'no-store' }).then(r => r.json()),
       fetch(CFG.URL_SCRIPT + '?eleves=1&t=' + Date.now(), { cache:'no-store' }).then(r => r.json()),
       fetch('02_interface_eleve/grimoire-des-mathematiques.html', { cache:'no-store' }).then(r => r.ok ? r.text() : '').catch(() => '')
     ]);
@@ -455,6 +517,7 @@ async function chargerTout(){
   }catch(e){
     D.erreur = e;
     $('majClasse').textContent = 'La feuille Google ne répond pas (' + (e.message || e) + '). Réessaie avec « Actualiser ».';
+    $('majRapports').textContent = $('majClasse').textContent;
     D.enCours = false;
     return;
   }
@@ -521,9 +584,11 @@ function construire(){
     });
   });
   $('majClasse').textContent = 'Données lues à ' + D.date.toLocaleTimeString('fr-CA', { hour:'2-digit', minute:'2-digit' }) + '.';
+  $('majRapports').textContent = $('majClasse').textContent;
   afficherClasse();
   afficherClassements();
   afficherEconomie();
+  afficherRapports();
 }
 
 /* ---------- Onglet « Tableau de classe » ---------- */
@@ -688,6 +753,209 @@ function afficherSimulation(){
         (gagne ? 'Victoire au round ' + pourVaincre : 'Défaite au round ' + tenus) + '</td></tr>';
     }).join('') + '</tbody>';
 }
+
+/* =====================================================================
+   ONGLET « RAPPORTS DÉTAILLÉS »
+   Lit les fiches stat_<élève>_<exercice> écrites par rapports-core.js
+   (Grimoire et Parchemins). Rien n'est écrit ici.
+   ===================================================================== */
+
+/* ----- Règles des points critiques : c'est ICI qu'on les ajuste. ----- */
+const RAPPORTS = {
+  // Un numéro est critique quand les élèves qui l'ont tenté ont, en moyenne, PLUS que ce nombre de mauvaises réponses.
+  SEUIL_RATEES_PAR_ELEVE: 5,
+  // Un exercice est critique quand au moins cette part des élèves qui l'ont ouvert l'ont quitté sans jamais le réussir.
+  SEUIL_ABANDON: 0.30,
+  // Aucune alerte tant que moins d'élèves que ça ont touché au numéro ou à l'exercice (un seul élève n'est pas « la classe »).
+  MIN_ELEVES: 3
+};
+
+let RAP = { exos:[], parExo:{}, critiques:[], mode:'exercice', exoChoisi:null, colCritique:null };
+
+function fmtTemps(ms){
+  const s = Math.round((ms || 0) / 1000);
+  if(s <= 0) return '—';
+  if(s < 60) return s + ' s';
+  const m = Math.round(s / 60);
+  if(m < 60) return m + ' min';
+  return Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0');
+}
+const pct = x => isFinite(x) ? Math.round(x * 100) + ' %' : '—';
+const dec = x => (Math.round(x * 10) / 10).toString().replace('.', ',');
+function triNumeros(a, b){ return String(a).localeCompare(String(b), 'fr', { numeric:true }); }
+const alerte = '<span class="alerte-rouge" title="Point critique">!</span>';
+
+function construireRapports(){
+  const noms = {};
+  ELEVES.forEach(e => { noms[e.slug] = e.nom; });
+  const slugs = Object.keys(noms).sort((a, b) => b.length - a.length);
+  const parExo = {};
+  Object.keys(D.valeurs).forEach(cle => {
+    if(cle.indexOf('stat_') !== 0) return;
+    let slug = slugs.find(s => cle.indexOf('stat_' + s + '_') === 0);
+    let exoId;
+    if(slug) exoId = cle.slice(('stat_' + slug + '_').length);
+    else { const m = /^stat_(.+?)_([gp]_.+)$/.exec(cle); if(!m) return; slug = m[1]; exoId = m[2]; }
+    if(slug.indexOf('test_') === 0) return;
+    let f; try{ f = JSON.parse(D.valeurs[cle]); }catch(e){ return; }
+    if(!f || typeof f !== 'object') return;
+    const x = parExo[exoId] = parExo[exoId] || { id:exoId, titre:f.titre || exoId, groupe:f.groupe || '', ordre:f.ordre || 0, nbNumeros:0, eleves:[] };
+    if(f.titre) x.titre = f.titre;
+    if(f.groupe) x.groupe = f.groupe;
+    x.nbNumeros = Math.max(x.nbNumeros, f.numeros || 0);
+    const q = f.q || {};
+    let ratees = 0, tentatives = 0;
+    Object.keys(q).forEach(n => { ratees += q[n][0] || 0; tentatives += (q[n][0] || 0) + (q[n][1] ? 1 : 0); });
+    x.eleves.push({ slug, nom: noms[slug] || slug, fiche:f, ratees, tentatives,
+      etat: f.fait ? 'fait' : (f.abandons > 0 ? 'abandon' : 'cours') });
+  });
+
+  // Statistiques par exercice et par numéro
+  Object.values(parExo).forEach(x => {
+    const labels = new Set();
+    x.eleves.forEach(e => Object.keys(e.fiche.q || {}).forEach(n => labels.add(n)));
+    const tousNumeriques = [...labels].every(n => /^\d+$/.test(n));
+    if(tousNumeriques) for(let i = 1; i <= x.nbNumeros; i++) labels.add(String(i));
+    x.numeros = [...labels].sort(triNumeros).map(n => {
+      const ceux = x.eleves.filter(e => e.fiche.q && e.fiche.q[n]);
+      const ratees = ceux.reduce((t, e) => t + (e.fiche.q[n][0] || 0), 0);
+      const trouves = ceux.filter(e => e.fiche.q[n][1]).length;
+      const moy = ceux.length ? ratees / ceux.length : 0;
+      return { n, eleves: ceux.length, ratees, trouves, moy, erreur: (ratees + trouves) ? ratees / (ratees + trouves) : NaN,
+               critique: ceux.length >= RAPPORTS.MIN_ELEVES && moy > RAPPORTS.SEUIL_RATEES_PAR_ELEVE };
+    });
+    x.ouvert = x.eleves.length;
+    x.reussi = x.eleves.filter(e => e.etat === 'fait').length;
+    x.abandonne = x.eleves.filter(e => e.etat === 'abandon').length;
+    x.tauxAbandon = x.ouvert ? x.abandonne / x.ouvert : 0;
+    x.abandonCritique = x.ouvert >= RAPPORTS.MIN_ELEVES && x.tauxAbandon >= RAPPORTS.SEUIL_ABANDON;
+    x.tempsMoyen = x.ouvert ? x.eleves.reduce((t, e) => t + (e.fiche.temps || 0), 0) / x.ouvert : 0;
+    const eleveReussi = x.eleves.filter(e => e.etat === 'fait');
+    x.tempsMoyenReussi = eleveReussi.length ? eleveReussi.reduce((t, e) => t + (e.fiche.temps || 0), 0) / eleveReussi.length : 0;
+    const R = x.eleves.reduce((t, e) => t + e.ratees, 0), T = x.eleves.reduce((t, e) => t + e.tentatives, 0);
+    x.erreur = T ? R / T : NaN;
+    x.tentativesMoy = x.ouvert ? T / x.ouvert : 0;
+    x.critique = x.abandonCritique || x.numeros.some(q => q.critique);
+  });
+
+  RAP.parExo = parExo;
+  RAP.exos = Object.values(parExo).sort((a, b) => a.ordre - b.ordre || a.titre.localeCompare(b.titre, 'fr'));
+  RAP.critiques = [];
+  RAP.exos.forEach(x => {
+    x.numeros.filter(q => q.critique).forEach(q => RAP.critiques.push({ exo:x.id, col:q.n,
+      texte: '<b>' + esc(x.titre) + '</b> — numéro ' + esc(q.n) + ' : ' + dec(q.moy) + ' mauvaises réponses en moyenne par élève',
+      sous: esc(x.groupe) + ' · ' + q.eleves + ' élèves l\'ont tenté, ' + q.trouves + ' l\'ont trouvé · ' + pct(q.erreur) + ' d\'erreur' }));
+    if(x.abandonCritique) RAP.critiques.push({ exo:x.id, col:null,
+      texte: '<b>' + esc(x.titre) + '</b> — ' + x.abandonne + ' élève' + (x.abandonne > 1 ? 's' : '') + ' sur ' + x.ouvert + ' l\'ont quitté sans le réussir (' + pct(x.tauxAbandon) + ')',
+      sous: esc(x.groupe) + ' · temps moyen d\'étude ' + fmtTemps(x.tempsMoyen) });
+  });
+}
+
+function afficherRapports(){
+  if(!D.charge) return;
+  construireRapports();
+  $('regleCritiques').textContent = 'Règles actuelles : un numéro est critique quand les élèves qui l\'ont tenté font en moyenne plus de ' +
+    RAPPORTS.SEUIL_RATEES_PAR_ELEVE + ' mauvaises réponses; un exercice est critique quand au moins ' + Math.round(RAPPORTS.SEUIL_ABANDON * 100) +
+    ' % des élèves qui l\'ont ouvert l\'ont quitté sans le réussir. Pas d\'alerte tant que moins de ' + RAPPORTS.MIN_ELEVES + ' élèves y ont touché.';
+  $('listeCritiques').innerHTML = RAP.critiques.length
+    ? RAP.critiques.map((c, i) => '<button class="critique" type="button" data-i="' + i + '">' + alerte + '<span>' + c.texte + '<small>' + c.sous + '</small></span></button>').join('')
+    : '<p class="note">' + (RAP.exos.length ? 'Aucun point critique pour l\'instant.' : 'Aucune donnée encore : les rapports se remplissent à mesure que les élèves travaillent.') + '</p>';
+  $('listeCritiques').querySelectorAll('.critique').forEach(b => b.addEventListener('click', () => {
+    const c = RAP.critiques[+b.dataset.i];
+    choisirModeRapport('exercice');
+    RAP.exoChoisi = c.exo; RAP.colCritique = c.col;
+    afficherTableExercices(); afficherDetailExercice();
+    $('detailExercice').scrollIntoView({ behavior:'smooth', block:'start' });
+  }));
+  afficherTableExercices();
+  afficherDetailExercice();
+  afficherParEleve();
+}
+
+function afficherTableExercices(){
+  let groupe = null, lignes = '';
+  RAP.exos.forEach(x => {
+    if(x.groupe !== groupe){ groupe = x.groupe; lignes += '<tr class="groupe"><td colspan="9">' + esc(groupe || 'Autres') + '</td></tr>'; }
+    lignes += '<tr class="cliquable' + (RAP.exoChoisi === x.id ? ' choisi' : '') + '" data-exo="' + esc(x.id) + '">' +
+      '<td>' + (x.critique ? alerte : '') + '</td><td>' + esc(x.titre) + '</td>' +
+      '<td class="n">' + x.ouvert + '</td><td class="n">' + x.reussi + '</td>' +
+      '<td class="n">' + (x.abandonCritique ? '<b class="perdu">' + x.abandonne + '</b>' : x.abandonne) + '</td>' +
+      '<td class="n">' + fmtTemps(x.tempsMoyen) + '</td><td class="n">' + fmtTemps(x.tempsMoyenReussi) + '</td>' +
+      '<td class="n">' + (x.numeros.length ? dec(x.tentativesMoy) : '—') + '</td><td class="n">' + pct(x.erreur) + '</td></tr>';
+  });
+  $('tableExercices').innerHTML = '<thead><tr><th></th><th>Exercice</th><th class="n">Ouvert</th><th class="n">Réussi</th><th class="n">Abandonné</th>' +
+    '<th class="n">Temps moyen</th><th class="n">… des réussis</th><th class="n">Tentatives / élève</th><th class="n">% d\'erreur</th></tr></thead><tbody>' +
+    (lignes || '<tr><td colspan="9">Aucune donnée encore.</td></tr>') + '</tbody>';
+  $('tableExercices').querySelectorAll('tr.cliquable').forEach(tr => tr.addEventListener('click', () => {
+    RAP.exoChoisi = tr.dataset.exo; RAP.colCritique = null;
+    afficherTableExercices(); afficherDetailExercice();
+  }));
+}
+
+function celluleNumero(q, crit){
+  const cc = crit ? ' critique-col' : '';
+  if(!q) return '<td class="cel' + cc + '">·</td>';
+  const ratees = q[0] || 0, trouve = !!q[1], tent = ratees + (trouve ? 1 : 0);
+  const cls = !trouve ? 'pas' : ratees === 0 ? 'ok1' : ratees <= 2 ? 'ok2' : 'ok3';
+  const titre = tent + ' tentative' + (tent > 1 ? 's' : '') + ', ' + ratees + ' ratée' + (ratees > 1 ? 's' : '') + ' — ' + Math.round(100 * ratees / Math.max(1, tent)) + ' % d\'erreur';
+  return '<td class="cel ' + cls + cc + '" title="' + titre + '">' + (trouve ? '✓' : '✗') + ' ' + tent + '</td>';
+}
+
+function afficherDetailExercice(){
+  const x = RAP.parExo[RAP.exoChoisi];
+  if(!x){ $('detailExercice').hidden = true; return; }
+  $('detailExercice').hidden = false;
+  $('titreDetail').innerHTML = (x.critique ? alerte + ' ' : '') + esc(x.titre) + ' <span style="opacity:.7;font-family:\'Crimson Text\',serif;font-size:15px;">— ' + esc(x.groupe) + '</span>';
+  const crit = q => q.critique || RAP.colCritique === q.n;
+  const ordreEtat = { abandon:0, cours:1, fait:2 };
+  const eleves = x.eleves.slice().sort((a, b) => ordreEtat[a.etat] - ordreEtat[b.etat] || b.ratees - a.ratees || a.nom.localeCompare(b.nom, 'fr'));
+  const libEtat = e => e.etat === 'fait' ? '<span class="etat-fait">Réussi</span>'
+    : e.etat === 'abandon' ? '<span class="etat-abandon">Quitté ' + e.fiche.abandons + '×, pas réussi</span>' : '<span class="etat-cours">En cours</span>';
+  const tete = '<tr><th>Élève</th><th>État</th><th class="n">Temps</th><th class="n">Ouvert</th><th class="n" title="Mains levées : fenêtre d\'aide débloquée par l\'enseignant">✋</th>' +
+    x.numeros.map(q => '<th class="n' + (crit(q) ? ' critique-col' : '') + '">' + (q.critique ? '! ' : '') + '#' + esc(q.n) + '</th>').join('') +
+    '<th class="n">Tentatives</th><th class="n">% d\'erreur</th></tr>';
+  const corps = eleves.map(e => '<tr><td>' + esc(e.nom) + '</td><td>' + libEtat(e) + '</td><td class="n">' + fmtTemps(e.fiche.temps) + '</td><td class="n">' + (e.fiche.ouvertures || 0) + '×</td><td class="n">' + (e.fiche.mains || '') + '</td>' +
+    x.numeros.map(q => celluleNumero((e.fiche.q || {})[q.n], crit(q))).join('') +
+    '<td class="n">' + e.tentatives + '</td><td class="n">' + pct(e.tentatives ? e.ratees / e.tentatives : NaN) + '</td></tr>').join('');
+  const pied = x.numeros.length ? (
+    '<tr class="pied"><td colspan="5">Mauvaises réponses en moyenne par élève</td>' + x.numeros.map(q => '<td class="n' + (q.critique ? ' critique-col' : '') + '">' + (q.eleves ? dec(q.moy) : '—') + '</td>').join('') + '<td colspan="2"></td></tr>' +
+    '<tr class="pied"><td colspan="5">% d\'erreur</td>' + x.numeros.map(q => '<td class="n' + (q.critique ? ' critique-col' : '') + '">' + pct(q.erreur) + '</td>').join('') + '<td colspan="2"></td></tr>' +
+    '<tr class="pied"><td colspan="5">Élèves qui l\'ont trouvé</td>' + x.numeros.map(q => '<td class="n">' + (q.eleves ? q.trouves + ' / ' + q.eleves : '—') + '</td>').join('') + '<td colspan="2"></td></tr>') : '';
+  $('tableDetail').innerHTML = '<thead>' + tete + '</thead><tbody>' + corps + pied + '</tbody>';
+}
+
+function afficherParEleve(){
+  const sel = $('choixEleveRapport');
+  const avec = new Set(); RAP.exos.forEach(x => x.eleves.forEach(e => avec.add(e.slug)));
+  const liste = ELEVES.filter(e => avec.has(e.slug)).sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  const avant = sel.value;
+  sel.innerHTML = liste.length ? liste.map(e => '<option value="' + esc(e.slug) + '">' + esc(e.nom) + '</option>').join('') : '<option value="">(aucune donnée)</option>';
+  if(avant && liste.some(e => e.slug === avant)) sel.value = avant;
+  const slug = sel.value;
+  let groupe = null, lignes = '';
+  RAP.exos.forEach(x => {
+    const e = x.eleves.find(y => y.slug === slug);
+    if(!e) return;
+    if(x.groupe !== groupe){ groupe = x.groupe; lignes += '<tr class="groupe"><td colspan="7">' + esc(groupe || 'Autres') + '</td></tr>'; }
+    const q = e.fiche.q || {};
+    const difficiles = Object.keys(q).filter(n => (q[n][0] || 0) >= 3).sort(triNumeros)
+      .map(n => '#' + esc(n) + ' (' + q[n][0] + (q[n][1] ? '' : ', pas trouvé') + ')');
+    lignes += '<tr><td>' + esc(x.titre) + '</td><td>' + (e.etat === 'fait' ? '<span class="etat-fait">Réussi</span>' : e.etat === 'abandon' ? '<span class="etat-abandon">Quitté sans réussir</span>' : '<span class="etat-cours">En cours</span>') +
+      '</td><td class="n">' + fmtTemps(e.fiche.temps) + '</td><td class="n">' + e.tentatives + '</td><td class="n">' + e.ratees + '</td><td class="n">' + pct(e.tentatives ? e.ratees / e.tentatives : NaN) +
+      '</td><td style="white-space:normal">' + (difficiles.join(', ') || '—') + '</td></tr>';
+  });
+  $('tableEleveRapport').innerHTML = '<thead><tr><th>Exercice</th><th>État</th><th class="n">Temps d\'étude</th><th class="n">Tentatives</th><th class="n">Ratées</th><th class="n">% d\'erreur</th><th>Numéros difficiles (3 erreurs ou plus)</th></tr></thead><tbody>' +
+    (lignes || '<tr><td colspan="7">Aucune donnée pour cet élève.</td></tr>') + '</tbody>';
+}
+$('choixEleveRapport').addEventListener('change', afficherParEleve);
+
+function choisirModeRapport(mode){
+  RAP.mode = mode;
+  document.querySelectorAll('[data-mode-rapport]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.modeRapport === mode)));
+  $('rapportParExercice').hidden = mode !== 'exercice';
+  $('rapportParEleve').hidden = mode !== 'eleve';
+}
+document.querySelectorAll('[data-mode-rapport]').forEach(b => b.addEventListener('click', () => choisirModeRapport(b.dataset.modeRapport)));
 </script>
 </body>
 </html>
