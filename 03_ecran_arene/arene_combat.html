@@ -108,6 +108,7 @@
   .force-calcul{ font-size:12.5px; color:#e6d8b8; background:rgba(0,0,0,.3); border:1px solid #4a3d2c; border-radius:6px; padding:8px 10px; margin-top:8px; line-height:1.5; }
   .student.petrified{ filter:grayscale(1) brightness(.55); }
   .student.ko{ filter:grayscale(1) brightness(.32); }
+  .student.devore{ filter:grayscale(1) sepia(1) hue-rotate(-30deg) brightness(.35); opacity:.55; }
   .avatar-wrap{ position:relative; width:80px; height:100px; margin:0 auto; }
   .avatar-wrap svg{ width:100%; height:100%; }
   .weapon-badge{
@@ -319,11 +320,39 @@ const MONSTERS = {
       question:"Quel est le pluriel de « cheval » ?", choices:["Chevals","Chevaux","Chevos","Chevales"], correctIndex:1,
       onSuccess:{ log:"Bonne réponse ! Le groupe reste vif et alerte." },
       onFail:{ log:"Mauvaise réponse... le Zombie pétrifie la moitié du groupe pour ce round !", effect:"petrify_half" } } ] },
-  chimere:      { name:"III. Chimère",      img:"monster_chimere",        maxHp:110, dmgPerRound:14, events:[] },
-  troll:        { name:"IV. Troll",         img:"monster_troll",          maxHp:130, dmgPerRound:16, events:[] },
-  cube:         { name:"V. Cube gélatineux",img:"monster_cube_gelatineux",maxHp:100, dmgPerRound:12, events:[] },
+  chimere:      { name:"III. Chimère",      img:"monster_chimere",        maxHp:110, dmgPerRound:14,
+    events:[ { trigger:"before_combat", type:"debuff_quiz",
+      flavor:"Les trois têtes de la Chimère se penchent sur le groupe : « Réponds bien… ou nous aurons un festin. »",
+      question:"Un triangle a une base de 8 cm et une hauteur de 5 cm. Quelle est son aire ?",
+      choices:["40 cm²","20 cm²","13 cm²","26 cm²"], correctIndex:1,
+      onSuccess:{ log:"Bonne réponse ! La Chimère grogne, affamée, et le combat commence." },
+      onFail:{ log:"Mauvaise réponse... la Chimère dévore 3 élèves ! Ils ne pourront pas se battre de tout le combat.", effect:"devour_3" } } ] },
+  troll:        { name:"IV. Troll",         img:"monster_troll",          maxHp:130, dmgPerRound:16,
+    // Pas de question au début : le Troll pose sa question chaque fois qu'il tombe. Mauvaise réponse = il se relève
+    // avec tous ses PV, frappe le groupe, et le combat reprend (la question suivante de la liste servira à sa prochaine chute).
+    events:[ { trigger:"on_death", type:"revive_quiz",
+      flavor:"Le Troll s'écroule… puis ouvre un œil : « Calcule ça, ou je me relève ! »",
+      questions:[
+        { question:"Combien font 2,45 × 1,20 ?", choices:["29,4","2,94","0,294","3,65"], correctIndex:1 },
+        { question:"Combien font 1,25 × 3,40 ?", choices:["4,25","42,5","4,65","0,425"], correctIndex:0 },
+        { question:"Combien font 0,75 × 2,60 ?", choices:["19,5","1,65","0,195","1,95"], correctIndex:3 }
+      ],
+      onSuccess:{ log:"Bonne réponse ! Le Troll ferme l'œil pour de bon." },
+      onFail:{ log:"Mauvaise réponse... le Troll se relève avec tous ses PV et frappe le groupe !", effect:"revive" } } ] },
+  cube:         { name:"V. Cube gélatineux",img:"monster_cube_gelatineux",maxHp:100, dmgPerRound:12,
+    events:[ { trigger:"before_combat", type:"debuff_quiz",
+      flavor:"Le Cube gélatineux tremblote et fait apparaître une question dans sa gelée.",
+      question:"Léa gagne 14 $ de l'heure. Elle travaille 3 h 30. Combien gagne-t-elle ?",
+      choices:["42 $","45,50 $","49 $","52,50 $"], correctIndex:2,
+      onSuccess:{ log:"Bonne réponse ! La gelée ramollit : le Cube peut être frappé." },
+      onFail:{ log:"Mauvaise réponse... la gelée durcit : le Cube est invincible pendant 2 rounds !", effect:"invincible_2" } } ] },
   mimique:      { name:"VI. Mimique",       img:"monster_mimique",        maxHp:120, dmgPerRound:15, events:[] },
-  hobgobelin:   { name:"VII. Hobgobelin",   img:"monster_hobgobelin",     maxHp:140, dmgPerRound:18, events:[] },
+  hobgobelin:   { name:"VII. Hobgobelin",   img:"monster_hobgobelin",     maxHp:140, dmgPerRound:18,
+    events:[ { trigger:"before_combat", type:"debuff_quiz",
+      flavor:"Le Hobgobelin frappe le sol : « Une addition de fractions. Rate-la et tu vas le regretter. »",
+      question:"Combien font 1/4 + 2/3 ?", choices:["3/7","3/12","11/12","8/12"], correctIndex:2,
+      onSuccess:{ log:"Bonne réponse ! Le Hobgobelin grommelle, mais reste calme." },
+      onFail:{ log:"Mauvaise réponse... le Hobgobelin se fâche : ses coups font DOUBLE dégâts pour tout le combat !", effect:"enrage" } } ] },
   basilic:      { name:"VIII. Basilic",     img:"monster_basilic",        maxHp:160, dmgPerRound:20, events:[] },
   demon:        { name:"IX. Démon",         img:"monster_demon",          maxHp:180, dmgPerRound:22, events:[] },
   manticore:    { name:"X. Manticore",      img:"monster_manticore",      maxHp:200, dmgPerRound:25, events:[] },
@@ -333,7 +362,7 @@ const MONSTERS = {
 /* ============================================================
    ÉTAT (en mémoire seulement — prototype)
    ============================================================ */
-let state = { monsterId:null, monsterHp:0, monsterMaxHp:0, round:0, gold:0, students:[] };
+let state = { monsterId:null, monsterHp:0, monsterMaxHp:0, round:0, gold:0, students:[], invincible:0, chutesTroll:0 };
 
 function buildAvatarSVG(tunicColor, skinColor){
   return `<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
@@ -608,6 +637,7 @@ function startCombat(){
   log(`Le combat contre ${monster.name} commence !`);
   document.getElementById('startBtn').disabled = true;
 
+  state.invincible = 0; state.chutesTroll = 0;
   const beforeEvent = monster.events.find(e=>e.trigger==='before_combat');
   if(beforeEvent){ showEvent(beforeEvent, ()=>{ document.getElementById('roundBtn').disabled = false; }); }
   else { document.getElementById('roundBtn').disabled = false; }
@@ -616,22 +646,26 @@ function startCombat(){
 /* ---------- Overlay d'événement ---------- */
 function showEvent(event, onDone){
   const overlay = document.getElementById('eventOverlay');
-  const titles = { reward_quiz:"Événement — Récompense", debuff_quiz:"Événement — Épreuve" };
+  const titles = { reward_quiz:"Événement — Récompense", debuff_quiz:"Événement — Épreuve", revive_quiz:"Événement — Le Troll se relève ?" };
   document.getElementById('eventTitle').textContent = titles[event.type] || "Événement";
   document.getElementById('eventFlavor').textContent = event.flavor || '';
-  document.getElementById('eventQuestion').textContent = event.question;
+  // Le Troll a plusieurs questions : une nouvelle à chaque chute.
+  const q = event.questions ? event.questions[state.chutesTroll % event.questions.length] : event;
+  event.__q = q; event.__reussi = null;
+  document.getElementById('eventQuestion').textContent = q.question;
   const result = document.getElementById('eventResult'); result.textContent=''; result.className='event-result';
   const contBtn = document.getElementById('eventContinueBtn'); contBtn.style.display='none';
   const grid = document.getElementById('eventChoices'); grid.innerHTML = '';
-  event.choices.forEach((c,i)=>{
+  q.choices.forEach((c,i)=>{
     const b = document.createElement('button'); b.className='choice-btn'; b.textContent=c;
-    b.addEventListener('click', ()=>resolveEvent(event, i===event.correctIndex));
+    b.addEventListener('click', ()=>resolveEvent(event, i===q.correctIndex));
     grid.appendChild(b);
   });
   overlay.classList.add('open');
-  contBtn.onclick = ()=>{ overlay.classList.remove('open'); onDone(); };
+  contBtn.onclick = ()=>{ overlay.classList.remove('open'); onDone(event.__reussi); };
 }
 function resolveEvent(event, success){
+  event.__reussi = success;
   const result = document.getElementById('eventResult');
   Array.from(document.getElementById('eventChoices').children).forEach(b=>b.disabled=true);
   if(success){
@@ -640,9 +674,26 @@ function resolveEvent(event, success){
   } else {
     result.className='event-result bad'; result.textContent=event.onFail.log;
     if(event.onFail.effect==='petrify_half') applyPetrifyHalf();
+    if(event.onFail.effect==='devour_3') applyDevour(3);
+    if(event.onFail.effect==='invincible_2'){ state.invincible = 2; }
+    if(event.onFail.effect==='enrage'){ state.monsterDmg *= 2; majForceAffichee(); }
     log(event.onFail.log, 'bad-line');
   }
   document.getElementById('eventContinueBtn').style.display='inline-block';
+}
+// Chimère : 3 élèves tirés au hasard sont dévorés — hors combat jusqu'à la fin (ni attaque, ni dégâts reçus).
+function applyDevour(n){
+  const proies = state.students.filter(s=>!s.ko).sort(()=>Math.random()-0.5).slice(0, n);
+  proies.forEach(s=>{
+    s.ko = true; s.devore = true;
+    document.getElementById('student-'+s.index).classList.add('devore');
+  });
+  if(proies.length) log(`Dévorés par la Chimère : ${proies.map(s=>s.name).join(', ')}.`, 'bad-line');
+}
+// Le Hobgobelin fâché : la nouvelle force de frappe est affichée si l'écran la montre.
+function majForceAffichee(){
+  const el = document.getElementById('monsterDmgVal');
+  if(el) el.textContent = state.monsterDmg;
 }
 function applyPetrifyHalf(){
   const active = state.students.filter(s=>!s.petrified && !s.ko);
@@ -681,11 +732,26 @@ function runRound(){
     if(i >= attackers.length){
       log(`Round ${state.round} : le groupe inflige ${totalDmg} dégâts au total.`);
       clearPetrify();
+      if(state.invincible > 0){
+        state.invincible--;
+        log(state.invincible > 0 ? 'Le Cube est invincible : aucun coup ne passe. Encore 1 round.' : 'Le Cube était invincible ce round-ci. Sa gelée ramollit enfin !', 'bad-line');
+      }
+      const chute = state.monsterHp <= 0 && MONSTERS[state.monsterId].events.find(e=>e.trigger==='on_death');
+      if(chute){
+        // Troll : il tombe, pose sa question. Réussie = victoire ; ratée = il se relève, frappe, et on continue.
+        showEvent(chute, (reussi)=>{
+          state.chutesTroll++;
+          if(reussi){ victoire(); return; }
+          state.monsterHp = state.monsterMaxHp;
+          updateMonsterHpUI();
+          log(`${MONSTERS[state.monsterId].name} se relève avec tous ses PV (${state.monsterMaxHp}) !`, 'bad-line');
+          monsterRetaliate();
+          if(state.students.some(s=>!s.ko)) document.getElementById('roundBtn').disabled = false;
+        });
+        return;
+      }
       if(state.monsterHp <= 0){
-        document.getElementById('victorySummary').textContent =
-          `Vaincu en ${state.round} round(s). Or amassé pendant le combat : ${state.gold}.`;
-        document.getElementById('victoryOverlay').classList.add('open');
-        log(`${MONSTERS[state.monsterId].name} est vaincu !`, 'gold-line');
+        victoire();
       } else {
         monsterRetaliate();
         document.getElementById('roundBtn').disabled = false;
@@ -693,10 +759,11 @@ function runRound(){
       return;
     }
     const s = attackers[i];
-    const finalDmg = s.atk;   // déjà multiplié par le rang (Economie.force)
+    const finalDmg = state.invincible > 0 ? 0 : s.atk;   // déjà multiplié par le rang (Economie.force); 0 si le Cube est invincible
     totalDmg += finalDmg;
 
     playSlash(s.index);
+    if(state.invincible > 0){ popBlocked(document.getElementById('monsterImgWrap')); i++; setTimeout(attackNext, ATTACK_STAGGER_MS); return; }
     popDamage(document.getElementById('student-'+s.index), finalDmg, false);
     state.monsterHp = Math.max(0, state.monsterHp - finalDmg);
     updateMonsterHpUI();
@@ -707,6 +774,13 @@ function runRound(){
     setTimeout(attackNext, ATTACK_STAGGER_MS);
   }
   attackNext();
+}
+
+function victoire(){
+  document.getElementById('victorySummary').textContent =
+    `Vaincu en ${state.round} round(s). Or amassé pendant le combat : ${state.gold}.`;
+  document.getElementById('victoryOverlay').classList.add('open');
+  log(`${MONSTERS[state.monsterId].name} est vaincu !`, 'gold-line');
 }
 
 function monsterRetaliate(){
