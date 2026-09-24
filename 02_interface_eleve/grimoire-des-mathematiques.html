@@ -12,6 +12,8 @@
 <script src="passerelle-core.js"></script>
 <script src="exercices-supp-core.js"></script>
 <script src="types-de-reponse.js"></script>
+<script src="aide-core.js"></script>
+<script src="rapports-core.js"></script>
 <style>
   :root{
     --parchment: #ECD9B0;
@@ -105,28 +107,28 @@
      du même sélecteur qui l'emporte en cascade). */
   @media (min-width: 861px){
     body{ height:100vh; overflow:hidden; padding:0 10px; align-items:center; }   /* livre centré verticalement */
-    /* plus de plafond à 1600 px (règle générale plus haut) : le livre suit la taille de l'écran, jusqu'à 2048 px (taille native de l'image) */
-    #bookWrap{ width: min(96vw, calc(97vh * 1.7778), 2048px); max-width:none; }
+    /* plus de plafond à 1600 px (règle générale plus haut) : le livre suit la taille de l'écran, jusqu'à 1924 px (taille native de l'image) */
+    #bookWrap{ width: min(96vw, calc(97vh * 1.738), 1924px); max-width:none; }
     #book{
       background:
         url('livre_assets/livre_ouvert.webp') center / contain no-repeat,
         linear-gradient(180deg, #4a0e14, var(--wood) 60%);
-      aspect-ratio: 2048 / 1152;
+      aspect-ratio: 1924 / 1107;
       box-shadow: 0 20px 50px rgba(0,0,0,0.4);
     }
     #bookBandeau{ display:none; }
     #bookPages{ position:relative; height:100%; display:block; padding:0; min-height:0; }
     #bookPages::before{ display:none; }
-    /* Zones mesurées sur livre_ouvert.webp (les deux rectangles de parchemin
-       clair) : x 11.3%-44.7% et 55.4%-88.4%, y 10.5%-90.3%. */
+    /* Zones mesurées sur livre_ouvert.webp (1924 × 1107, les deux rectangles de parchemin
+       clair) : x 7.7%-44.2% et 54.6%-91.3%, y 5.6%-91.8%. */
     .page{
-      position:absolute; top:10.5%; bottom:9.7%; overflow-y:auto;
+      position:absolute; top:5.6%; bottom:8.2%; overflow-y:auto;
       background:none; border-radius:0; box-shadow:none; min-height:0;
-      padding: 2.8% 3.6% 2.2%;
+      padding: 3.4% 3.2% 2.8%;
     }
     .page::after{ display:none; }
-    .page-left{ left:11.3%; width:33.4%; }
-    .page-right{ left:55.4%; width:33%; }
+    .page-left{ left:7.7%; width:36.5%; }
+    .page-right{ left:54.6%; width:36.7%; }
     #pageNav{ position:fixed; bottom:10px; left:50%; transform:translateX(-50%); margin-top:0; width:min(96vw, 1600px); }
   }
 
@@ -326,8 +328,26 @@
   #serpentFrame{ flex:1; min-height:0; width:100%; border:none; background:#152218; }
   #serpentCloseBtn{ background: var(--gold); border:none; border-radius:6px; padding:7px 14px; cursor:pointer; font-family:'IM Fell English SC', serif; font-size:0.95rem; white-space:nowrap; }
   #serpentCloseBtn:hover{ background: var(--gold-bright); }
+  #jeuCloseBtn{ background: var(--gold); border:none; border-radius:6px; padding:7px 14px; cursor:pointer; font-family:'IM Fell English SC', serif; font-size:0.95rem; white-space:nowrap; }
+  #jeuCloseBtn:hover{ background: var(--gold-bright); }
+  /* Flèche « refermer le chapitre » : collée au bord gauche de la page de droite, ramène l'astrolabe. */
+  #retourAstrolabe{
+    display:none; position:absolute; left:6px; top:50%; transform:translateY(-50%); z-index:6;
+    width:42px; height:64px; border-radius:10px; border:2px solid var(--gold); cursor:pointer;
+    background:linear-gradient(180deg, #5a1a14, #3a0f0b); color:var(--gold-bright); font-size:1.6rem; line-height:1;
+    box-shadow:0 4px 12px rgba(0,0,0,0.35); transition:transform .15s ease, box-shadow .15s ease;
+  }
+  #retourAstrolabe:hover{ transform:translateY(-50%) translateX(-3px); box-shadow:0 0 14px rgba(232,184,106,0.7); }
+  #retourAstrolabe.visible{ display:block; }
+  /* « L'astrolabe indique le chemin... » : 1,5 s avant l'ouverture d'un jeu secret */
+  #astroMessage{
+    position:fixed; z-index:140; pointer-events:none; display:flex; align-items:center; justify-content:center; text-align:center;
+    font-family:'Cinzel Decorative','Cinzel',serif; font-size:clamp(1.1rem, 2.2vw, 1.9rem); color:#ffe9a8; opacity:0;
+    text-shadow:0 0 12px rgba(255,200,90,0.9), 0 0 28px rgba(255,170,60,0.6), 0 2px 4px #000; transition:opacity .35s ease;
+  }
+  #astroMessage.visible{ opacity:1; }
   #questTabBtn{
-    display:none; position:absolute; top:102px; right:14px; z-index:20; border:none; cursor:pointer;
+    display:none; position:absolute; top:14px; right:14px; z-index:20; border:none; cursor:pointer;
     background: linear-gradient(180deg, var(--quest-blue-bright), var(--quest-blue));
     color:#EAF1FF; font-family:'IM Fell English SC', serif; font-size:0.85rem; letter-spacing:0.02em;
     padding: 9px 14px; border-radius: 8px;
@@ -338,7 +358,7 @@
     #punchBtn{ font-size:0.8rem; padding:7px 11px; top:10px; right:10px; }
     #serpentBtn{ font-size:0.75rem; padding:6px 12px 6px 6px; top:46px; right:10px; }
     #serpentBtn img{ width:20px; height:20px; }
-    #questTabBtn{ font-size:0.75rem; padding:7px 10px; top:82px; right:10px; }
+    #questTabBtn{ font-size:0.75rem; padding:7px 10px; top:10px; right:10px; }
   }
 
   .quest-overlay{ position: fixed; inset:0; background: rgba(6,10,8,0.86); z-index: 110; display:none; justify-content:center; align-items:flex-start; padding: 26px 12px; overflow-y:auto; }
@@ -534,11 +554,25 @@
   .toc-visuel img{ display:block; width:100%; height:100%; object-fit:cover; }
   /* Sur le livre en pleine image, l'astrolabe remplit toute la page de droite et passe SOUS la bordure du livre :
      l'image (astrolabe.jpg) est posée sous un cadre transparent (astrolabe_cadre.webp = la bordure du livre,
-     découpée dans livre_ouvert.webp) qui cache les bords de l'image. Zone mesurée sur livre_ouvert.webp (2048 × 1152).
+     découpée dans livre_ouvert.webp) qui cache les bords de l'image. Zone mesurée sur livre_ouvert.webp (1924 × 1107).
      Repli (petit écran, ou navigateur sans :has()) : l'ancienne image encadrée reste affichée. */
-  .astro-couche{ display:none; position:absolute; left:54.0527%; top:7.4653%; width:35.4492%; height:83.7674%; z-index:3; pointer-events:none; }
+  .astro-couche{ display:none; position:absolute; left:52.4948%; top:2.2584%; width:41.0603%; height:93.4959%; z-index:3; pointer-events:none; }
   .astro-couche img{ position:absolute; inset:0; width:100%; height:100%; display:block; }
   .astro-fond{ object-fit:cover; }
+  /* Jeux cachés dans l'astrolabe : chaque pièce colorée (calque) apparaît et brille quand la souris la survole. */
+  .toc-visuel{ position:relative; }
+  .astro-calque{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:0; pointer-events:none;
+    transition:opacity .18s ease; --lueur:#fff; }
+  .astro-calque[data-jeu="echecs"]{ --lueur:#f4ff3a; }
+  .astro-calque[data-jeu="punch"]{ --lueur:#ff5a3c; }
+  .astro-calque[data-jeu="tetris"]{ --lueur:#7f8cff; }
+  .astro-calque[data-jeu="serpent"]{ --lueur:#5dff9a; }
+  .astro-calque.actif{ opacity:1; animation:astroBrille 1.3s ease-in-out infinite alternate; }
+  @keyframes astroBrille{
+    from{ filter:drop-shadow(0 0 4px var(--lueur)) brightness(1.05); }
+    to{ filter:drop-shadow(0 0 14px var(--lueur)) drop-shadow(0 0 4px var(--lueur)) brightness(1.3); }
+  }
+  body.astro-survol, body.astro-survol *{ cursor:pointer !important; }
   @media (min-width: 861px){
     @supports selector(:has(*)){
       #book:has(.astro-slot) .astro-couche{ display:block; }
@@ -654,10 +688,14 @@
       <div id="bookBandeau"></div>
       <div id="bookPages">
         <div class="page page-left"><div class="page-inner" id="pageLeft"></div></div>
-        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="punchBtn" type="button">🥊 Punch-math!</button><button id="serpentBtn" type="button"><img src="livre_assets/serpent-dragon-mini.png" alt="">Le Serpent des Mesures</button><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button></div>
+        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button><button id="retourAstrolabe" type="button" title="Refermer le chapitre et revenir à l'astrolabe" aria-label="Refermer le chapitre">❮</button></div>
       </div>
       <div class="astro-couche" aria-hidden="true">
         <img class="astro-fond" src="livre_assets/astrolabe.jpg" alt="">
+        <img class="astro-calque" data-jeu="echecs" src="livre_assets/astrolabe_chess.webp" alt="">
+        <img class="astro-calque" data-jeu="punch" src="livre_assets/astrolabe_punch.webp" alt="">
+        <img class="astro-calque" data-jeu="tetris" src="livre_assets/astrolabe_tetris.webp" alt="">
+        <img class="astro-calque" data-jeu="serpent" src="livre_assets/astrolabe_snake.webp" alt="">
         <img class="astro-cadre" src="livre_assets/astrolabe_cadre.webp" alt="">
       </div>
     </div>
@@ -740,6 +778,15 @@
       <button id="serpentCloseBtn" type="button">✕ Fermer</button>
     </div>
     <iframe id="serpentFrame" title="Le Serpent des Mesures"></iframe>
+  </div>
+
+  <div id="jeuOverlay" class="serpent-overlay">
+    <div class="doc-bar">
+      <span class="doc-bar-titre" id="jeuOverlayTitre"></span>
+      <span class="doc-bar-etat" id="jeuOverlayEtat"></span>
+      <button id="jeuCloseBtn" type="button">✕ Fermer</button>
+    </div>
+    <iframe id="jeuFrame" title="Jeu" style="flex:1;min-height:0;width:100%;border:none;background:#140a05;"></iframe>
   </div>
 
   <div id="dialogueOverlay" class="dialogue-overlay" role="dialog" aria-modal="true" aria-labelledby="dialogueMessage">
@@ -1060,7 +1107,19 @@
           fichier:'chapitre8_aire/05-tetris-triangles-defi-pieces.html',
           desc:"Construis les 5 pièces en suivant le modèle.",
           consigne:"Construis les 5 pièces pour gagner 10 🪙",
-          libelleProgres:(v, t) => v + ' / ' + t + ' pièces construites', libelleFait:'✓ Réussi' }
+          libelleProgres:(v, t) => v + ' / ' + t + ' pièces construites', libelleFait:'✓ Réussi' },
+        { id:'angles-sportifs-1', titre:"Les angles sportifs 1", icone:'📐', mode:'exercices', total:20, recompense:20,
+          mini:'chapitre8_aire/Mini/rapporteur.webp',
+          fichier:'chapitre8_aire/07-angles-sportifs-1.html',
+          desc:"Mesure les 20 angles avec le rapporteur.",
+          consigne:"Mesure les 20 angles pour gagner 20 🪙 (le rapporteur : bouton 📐 en bas à droite)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' angles mesurés', libelleFait:'✓ Réussi' },
+        { id:'angles-sportifs-2', titre:"Les angles sportifs 2", icone:'📐', mode:'exercices', total:20, recompense:20,
+          mini:'chapitre8_aire/Mini/rapporteur.webp',
+          fichier:'chapitre8_aire/08-angles-sportifs-2.html',
+          desc:"Mesure les 20 angles avec le rapporteur.",
+          consigne:"Mesure les 20 angles pour gagner 20 🪙 (le rapporteur : bouton 📐 en bas à droite)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' angles mesurés', libelleFait:'✓ Réussi' }
       ]},
       1: { exige:'exercices-aire-2', docs: [
         { id:'tetris-reglettes', titre:"Tétris des réglettes", icone:'🧱', mode:'exercices', total:8, recompense:10,
@@ -1110,7 +1169,25 @@
           fichier:'chapitre9_heure/03-horloge-heures-et-quarts.html',
           desc:"Réussis les 6 exercices en entier.",
           consigne:"Réussis les 6 exercices pour gagner 10 🪙",
-          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' }
+          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-taux-a', titre:"L'heure et le taux horaire — série A", icone:'💰', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/Mini/horloge.webp',
+          fichier:'chapitre9_heure/07-heure-et-taux-horaire-serie-a.html',
+          desc:"Réussis les 10 numéros en entier.",
+          consigne:"Réussis les 10 numéros pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-taux-b', titre:"L'heure et le taux horaire — série B", icone:'💰', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/Mini/horloge.webp',
+          fichier:'chapitre9_heure/08-heure-et-taux-horaire-serie-b.html',
+          desc:"Réussis les 10 numéros en entier.",
+          consigne:"Réussis les 10 numéros pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-taux-c', titre:"L'heure et le taux horaire — série C", icone:'💰', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/Mini/horloge.webp',
+          fichier:'chapitre9_heure/09-heure-et-taux-horaire-serie-c.html',
+          desc:"Réussis les 10 numéros en entier.",
+          consigne:"Réussis les 10 numéros pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' }
       ]}
     }
   };
@@ -1457,7 +1534,16 @@
     return mExerciceLong(45, 1, 23, 1);
   }
   const QUEST_GENERATEURS_MULTIPLICATION = [mGenNiveau1, mGenNiveau2, mGenNiveau3, mGenNiveau4, mGenNiveau5];
-  const QUEST_RECOMPENSE_PAR_OPERATION = { addition:10, multiplication:15, heures:10 };
+  const QUEST_RECOMPENSE_PAR_OPERATION = { addition:10, multiplication:15, heures:10, angles:15 };
+  // Série d'angles sportifs : la page du générateur (quete-angles-sportifs.html) s'ouvre DANS le parchemin,
+  // avec le rapporteur; elle prévient le Grimoire par postMessage { source:'grimoire-quete-angles', type:'progress'|'termine' }.
+  const QUEST_NIVEAUX_ANGLES = [
+    { titre:'Facile', sous:'Beaucoup d\'angles droits pour apprivoiser le rapporteur' },
+    { titre:'Moyen', sous:'Des angles plats et aigus, et les premiers obtus' },
+    { titre:'Difficile', sous:'Surtout des angles aigus et obtus' },
+    { titre:'Très difficile', sous:'Des obtus partout et quelques angles pièges' },
+    { titre:'Expert', sous:'Des angles pièges au degré près' }
+  ];
   const QUETE_NB_EXERCICES = 20;
   // Cinq séries sur l'heure, toutes identiques (mêmes 5 niveaux, même tirage au hasard, même correction).
   // Chacune garde sa propre progression et verse sa propre récompense : plus de séries = plus d'or à gagner.
@@ -1671,20 +1757,26 @@
         '<span class="quest-menu-txt"><span>Invoque une série de multiplication</span>' +
         '<span class="quest-menu-sub">5 niveaux · jusqu\'à ' + (NB_NIVEAUX_QUETE*QUEST_RECOMPENSE_PAR_OPERATION.multiplication) + ' 🪙</span></span>' +
       '</button>' +
-      boutonsHeures;
+      boutonsHeures +
+      '<button class="quest-menu-btn" id="questBtnAngles" type="button">' +
+        '<span class="quest-menu-icon">📐</span>' +
+        '<span class="quest-menu-txt"><span>Invoque une série d\'angles sportifs</span>' +
+        '<span class="quest-menu-sub">5 niveaux · jusqu\'à ' + (NB_NIVEAUX_QUETE*QUEST_RECOMPENSE_PAR_OPERATION.angles) + ' 🪙</span></span>' +
+      '</button>';
     $('questBtnAddition').addEventListener('click', () => ouvrirQuestNiveaux('addition'));
     $('questBtnMultiplication').addEventListener('click', () => ouvrirQuestNiveaux('multiplication'));
     for(let n = 1; n <= NB_SERIES_HEURES; n++){ $('questBtnHeures' + n).addEventListener('click', () => ouvrirQuestNiveaux(cleSerieHeures(n))); }
+    $('questBtnAngles').addEventListener('click', () => ouvrirQuestNiveaux('angles'));
     $('questsOverlay').classList.add('open');
   }
 
   async function ouvrirQuestNiveaux(operation){
     questOperationActive = operation;
     const progres = await chargerQuestProgress(operation);
-    const niveaux = operation === 'addition' ? QUEST_NIVEAUX_ADDITION : operation === 'multiplication' ? QUEST_NIVEAUX_MULTIPLICATION : QUEST_NIVEAUX_HEURES;
+    const niveaux = operation === 'addition' ? QUEST_NIVEAUX_ADDITION : operation === 'multiplication' ? QUEST_NIVEAUX_MULTIPLICATION : operation === 'angles' ? QUEST_NIVEAUX_ANGLES : QUEST_NIVEAUX_HEURES;
     const recompense = QUEST_RECOMPENSE_PAR_OPERATION[operation];
     const or = Math.min(progres.niveauComplete, NB_NIVEAUX_QUETE) * recompense;
-    $('questOverlayTitle').textContent = operation === 'addition' ? "Série d'addition" : operation === 'multiplication' ? 'Série de multiplication' : "Série sur l'heure n° " + numSerieHeures(operation);
+    $('questOverlayTitle').textContent = operation === 'addition' ? "Série d'addition" : operation === 'multiplication' ? 'Série de multiplication' : operation === 'angles' ? 'Série d\'angles sportifs' : "Série sur l'heure n° " + numSerieHeures(operation);
     let html = '<button class="quest-back" id="questBackToMenu" type="button">‹ Retour</button>';
     html += '<div class="quest-gold-track"><span>Or amassé sur cette invocation</span><span>' + or + ' / ' + (NB_NIVEAUX_QUETE*recompense) + ' 🪙</span></div>';
     niveaux.forEach((niv, idx) => {
@@ -1728,6 +1820,8 @@
       }
       questNbReussis = 0;
       rendreQuestParchemin();
+    } else if(operation === 'angles'){
+      rendreQuestParchemAngles(niveau);
     } else if(estHeures(operation)){
       questHeuresExercices = qhGenererSerie(niveau).map(t => ({ hour:t.hour, minute:t.minute, reussi:false }));
       questHeuresNbReussis = 0;
@@ -2247,6 +2341,55 @@
     await sauvegarderQuestProgress(op, progres);
   }
 
+  // ---------- série d'angles sportifs (page du générateur dans le parchemin) ----------
+  function rendreQuestParchemAngles(niveau){
+    $('questParchmentContent').innerHTML =
+      '<p class="quest-hint">📐 Mesure chaque angle avec le rapporteur (bouton 📐 en bas à droite de la feuille), écris ta mesure et appuie sur Entrée. ' +
+        'Une erreur efface seulement cette réponse-là.</p>' +
+      '<div class="quest-progress" id="questProgress">0 / ' + QUETE_NB_EXERCICES + ' réussis</div>' +
+      '<iframe id="questAnglesFrame" title="Série d\'angles sportifs" src="quete-angles-sportifs.html?niveau=' + niveau + '&t=' + Date.now() + '" ' +
+        'style="width:100%;height:420px;border:0;border-radius:12px;background:rgba(255,255,255,0.35);"></iframe>' +
+      '<div class="quest-feedback" id="questFeedbackGlobal"></div>';
+    $('questParchmentContent').scrollTop = 0;
+    ajusterCadreAngles();
+  }
+  // La feuille défile DANS son cadre : le cadre prend toute la hauteur visible du parchemin (pas de double défilement).
+  function ajusterCadreAngles(){
+    const cadre = $('questAnglesFrame'), zone = $('questParchmentContent');
+    if(!cadre || !zone) return;
+    const dessus = cadre.getBoundingClientRect().top - zone.getBoundingClientRect().top;
+    cadre.style.height = Math.max(320, zone.clientHeight - dessus - 8) + 'px';
+  }
+  window.addEventListener('resize', ajusterCadreAngles);
+  window.addEventListener('message', (e) => {
+    const d = e.data;
+    if(!d || d.source !== 'grimoire-quete-angles' || questOperationActive !== 'angles') return;
+    const cadre = $('questAnglesFrame');
+    if(!cadre || e.source !== cadre.contentWindow || questTermine) return;
+    if(d.type === 'progress'){
+      const prog = $('questProgress');
+      if(prog) prog.textContent = Math.min(d.vus, QUETE_NB_EXERCICES) + ' / ' + QUETE_NB_EXERCICES + ' réussis';
+    } else if(d.type === 'termine'){
+      questAReussirNiveau();
+    }
+  });
+  async function questAReussirNiveau(){
+    questTermine = true;
+    const recompense = QUEST_RECOMPENSE_PAR_OPERATION.angles;
+    const fb = $('questFeedbackGlobal');
+    if(fb){
+      fb.innerHTML = '🎉 Bravo ! Les 20 angles sont mesurés.<br>+' + recompense + ' 🪙';
+      fb.className = 'quest-feedback quest-fb-win';
+      fb.insertAdjacentHTML('afterend', '<button class="quest-success-btn" id="questContinuerBtn" type="button">Continuer</button>');
+      $('questContinuerBtn').addEventListener('click', () => fermerQuestParchemin(true));
+      fb.scrollIntoView({ behavior:'smooth', block:'center' });
+    }
+    await awardCoins(recompense);
+    const progres = await chargerQuestProgress('angles');
+    progres.niveauComplete = Math.max(progres.niveauComplete, questNiveauActif);
+    await sauvegarderQuestProgress('angles', progres);
+  }
+
   function fermerQuestParchemin(viaSucces){
     if(!viaSucces && !questTermine){
       confirmerGrimoire("Fermer maintenant efface cette invocation : les exercices déjà réussis ne compteront plus, aucun or ne sera versé, et tu devras tout recommencer. Fermer quand même ?",
@@ -2363,10 +2506,15 @@
     right.innerHTML = html;
   }
 
+  function flecheRetour(visible){ const b = $('retourAstrolabe'); if(b) b.classList.toggle('visible', !!visible); }
   function renderTocView(){
+    flecheRetour(false);
+    if(window.Rapports && !docActif) window.Rapports.fin();
     $('pageNav').style.display = 'none';
     swapRight(
-      '<div class="toc-visuel astro-slot"><img src="livre_assets/astrolabe.jpg" alt="Un astrolabe de laiton sur un ciel étoilé"></div>'
+      '<div class="toc-visuel astro-slot"><img class="astro-fond" src="livre_assets/astrolabe.jpg" alt="Un astrolabe de laiton sur un ciel étoilé">' +
+        ['echecs:chess','punch:punch','tetris:tetris','serpent:snake'].map(s => '<img class="astro-calque" data-jeu="' + s.split(':')[0] + '" src="livre_assets/astrolabe_' + s.split(':')[1] + '.webp" alt="">').join('') +
+      '</div>'
     );
   }
 
@@ -2427,6 +2575,7 @@
   // Un clic sur un document l'ouvre dans la fenêtre du parchemin.
   let sectionChoisie = null;   // index de la section dont les documents sont listés à droite
   function renderChapterMenu(){
+    if(window.Rapports && !docActif) window.Rapports.fin();   // on est revenu au menu : l'exercice en cours est fermé
     $('pageNav').style.display = 'none';
     renderMenuGauche();
     renderDroiteChapitre();
@@ -2524,6 +2673,7 @@
     const cfgDocs = DOCS_CHAPITRES[currentChapter.id] || null;
     const cfg = (cfgDocs && sectionChoisie !== null) ? cfgDocs[sectionChoisie] : null;
     if(!cfg){ renderTocView(); return; }
+    flecheRetour(true);   // une section est ouverte à droite : la flèche permet de la refermer et de retrouver l'astrolabe
     const idx = sectionChoisie;
     let rows = '';
     cfg.docs.forEach(doc => {
@@ -2559,6 +2709,13 @@
 
   // ---------- documents : fenêtre plein écran, suivi et récompense ----------
   let docActif = null;   // { chapterId, sectionIdx, doc, termineTraite }
+  // Rapports détaillés : où ranger l'exercice dans la console (livre · chapitre · section) et dans quel ordre.
+  function groupeRapport(ch, sectionIdx){
+    return 'Grimoire · Chap. ' + ch.numeral + ' · ' + SECTION_META[sectionIdx].name.split('— ').pop();
+  }
+  function ordreRapport(ch, sectionIdx, rang){
+    return 1000 + CHAPTERS.findIndex(c => c.id === ch.id) * 100 + sectionIdx * 20 + Math.max(0, rang);
+  }
   function ouvrirDoc(sectionIdx, docId){
     const cfg = DOCS_CHAPITRES[currentChapter.id][sectionIdx];
     const doc = cfg.docs.find(d => d.id === docId);
@@ -2570,6 +2727,16 @@
     }
     docActif = { chapterId: currentChapter.id, sectionIdx, doc, termineTraite: false };
     const fait = docFait(doc.id);
+    // Rapports détaillés : seulement tant que le document n'est pas réussi (le relire ensuite est libre).
+    if(!fait && window.Rapports){
+      const ordreDoc = cfg.docs.findIndex(d => d.id === doc.id);
+      window.Rapports.debut(currentSlug, 'g_' + currentChapter.id + '_' + doc.id, {
+        titre: doc.titre,
+        groupe: groupeRapport(currentChapter, sectionIdx),
+        ordre: ordreRapport(currentChapter, sectionIdx, ordreDoc),
+        numeros: doc.mode === 'exercices' ? doc.total : 0
+      });
+    }
     $('docBarTitre').textContent = doc.titre;
     $('docBarEtat').textContent = fait ? '✓ Déjà réussi — tu peux le relire librement (aucun or de plus)' : doc.consigne;
     $('docBarEtat').className = 'doc-bar-etat' + (fait ? ' ok' : '');
@@ -2581,6 +2748,7 @@
     $('docOverlay').classList.add('open');
   }
   function fermerDoc(){
+    if(window.Rapports) window.Rapports.fin();
     viderSauvegardeEtatDoc();
     $('docOverlay').classList.remove('open');
     $('docFrame').src = 'about:blank';
@@ -2604,6 +2772,7 @@
     #root main > div:first-child{ padding-top: 28px !important; }
   `;
   $('docFrame').addEventListener('load', () => {
+    if(window.Rapports) window.Rapports.ecouterCadre($('docFrame'));
     try{
       const d = $('docFrame').contentDocument;
       if(!d || !d.head || d.location.href === 'about:blank' || d.getElementById('grimoire-parchemin')) return;
@@ -2640,6 +2809,7 @@
     const a = docActif;
     if(!a || a.termineTraite) return;
     a.termineTraite = true;
+    if(window.Rapports) window.Rapports.termine();
     if(etatDocMinuterie){ clearTimeout(etatDocMinuterie); etatDocMinuterie = null; }
     etatDocEnAttente = null;
     if(docFait(a.doc.id)) return;                     // déjà récompensé : aucune récompense de plus
@@ -2679,7 +2849,11 @@
     if(!d || d.source !== 'grimoire-doc' || !docActif) return;
     const cadre = $('docFrame');
     if(!cadre || e.source !== cadre.contentWindow) return;   // seulement le document ouvert
-    if(d.type === 'progress'){
+    if(window.Rapports) window.Rapports.activite();
+    if(d.type === 'tentative'){
+      // Rapports détaillés : « numéro X, bonne ou mauvaise réponse ». Rien d'autre ne change.
+      if(window.Rapports && !docFait(docActif.doc.id)) window.Rapports.tentative(d.numero, !!d.correcte);
+    } else if(d.type === 'progress'){
       if(docFait(docActif.doc.id)) return;
       $('docBarEtat').textContent = docActif.doc.consigne + '  ·  ' + docActif.doc.libelleProgres(d.vus, d.total);
     } else if(d.type === 'etat'){
@@ -2800,7 +2974,7 @@
     $('punchOverlay').classList.remove('open');
     $('punchFrame').src = 'about:blank';
   }
-  $('punchBtn').addEventListener('click', ouvrirPunchMath);
+  // (Punch-math! s'ouvre maintenant depuis l'anneau rouge de l'astrolabe : voir « jeux cachés » plus bas.)
   $('punchCloseBtn').addEventListener('click', fermerPunchMath);
   $('punchFrame').addEventListener('load', () => { try{ $('punchFrame').contentWindow.focus(); }catch(e){} });
 
@@ -2813,16 +2987,126 @@
     $('serpentOverlay').classList.remove('open');
     $('serpentFrame').src = 'about:blank';
   }
-  $('serpentBtn').addEventListener('click', ouvrirSerpent);
+  // (Le Serpent s'ouvre maintenant depuis l'étoile verte au centre de l'astrolabe.)
   $('serpentCloseBtn').addEventListener('click', fermerSerpent);
   $('serpentFrame').addEventListener('load', () => { try{ $('serpentFrame').contentWindow.focus(); }catch(e){} });
 
+  // ---------- Jeux cachés dans l'astrolabe (table des matières) ----------
+  // Survoler une pièce de l'astrolabe la colore et la fait briller; un clic lance le jeu.
+  //   anneau jaune → échecs · anneau rouge → Punch-math! · arc bleu → Tetris · étoile verte → Serpent des Mesures
+  // Les zones viennent des images astrolabe_*.webp (différence avec astrolabe.jpg), réduites au quart
+  // et codées ici en « longueur de plage » : a = rien, b = échecs, c = punch, d = tetris, e = serpent.
+  const ASTRO_CARTE = { l:250, h:318, rle:'22383a3b246a10b239a17b223a29b221a31b219a34b216a38b212a40b214a3b3a31b189a14c16a33b183a22c13a35b175a31c19a26b171a35c1a5c14a27b165a45c17a24b161a50c17a23b159a54c16a23b155a59c15a23b152a61c15a23b150a63c16a22b148a65c19a19b139a74c19a19b137a76c20a18b136a38c6a34c19a18b135a38c11a31c16a21b133a38c13a29c15a23b131a39c15a28c13a25b129a40c17a26c13a26b127a23c3a15c17a29c10a27b125a22c6a14c16a31c9a28b124a21c7a14c16a31c10a11b1a15b123a21c9a13c16a31c9a11b3a15b122a20c11a12c16a33c7a10b5a14b121a19c13a13c15a34c5a10b7a14b119a19c14a13c15a34c4a8b12a13b118a18c15a14c15a34c3a7b13a13b117a18c16a14c17a13c3a17c2a6b16a11b117a17c22a9c18a12c4a16c3a4b18a9b118a16c24a8c18a8c9a16c28a4b119a15c25a8c18a7c10a17c149a15c26a8c18a7c11a17c32a4b112a16c26a6c19a7c12a16c30a7b110a18c26a4c20a7c13a16c28a9b109a20c48a7c14a15c26a11b108a22c47a6c15a16c23a14b107a22c69a15c22a15b106a23c70a14c22a15b105a25c69a14c22a16b104a26c69a12c23a16b103a28c68a12c23a16b103a29c67a12c29a11b102a30c66a11c30a12b100a32c66a9c31a12b100a33c40a4e21a8c33a11b100a33c39a6e21a6c34a12b99a33c38a7e61a12b99a21c2a9c39a7e62a11b99a14c2a4c5a7c38a7e63a12b98a14c12a5c39a7e63a12b97a14c56a8e64a11b97a13c57a8e30a4c30a12b96a13c57a10e27a8c27a12b96a13c41a5e10a12e25a9c28a11b96a13c41a6e9a12e21a13c28a12b95a13c41a8e6a13e21a13c29a11b95a14c40a10e2a14e21a14c29a11b95a14c40a26e21a14c29a11b95a13c41a26e21a14c29a11b95a13c42a24e22a14c29a11b95a13c42a24e22a14c29a11b95a13c43a22e24a13c29a11b95a14c42a20e10a5e11a13c29a12b95a15c40a19e10a6e11a13c30a11b89a4b2a16c37a19e10a8e10a14c28a6d7b88a5b2a17c32a21e11a9e10a14c16a19d6b87a7b2a18c29a21e12a9e9a15c12a23d7b86a7b2a21c26a19e13a8e11a14c12a25d6b85a8b2a23c24a17e15a8e10a15c12a25d6b84a8b4a23c24a15e16a8e9a15c7a31d7b83a8b4a24c24a14e16a11e6a15c6a32d7b82a10b3a24c25a12e17a12e4a16c4a33d8b81a11b3a24c25a11e18a15e1a13c40d8b80a12b3a25c26a9e18a15e1a12c41d7b81a12b4a26c25a8e17a16e1a12c27d10a10b81a13b4a30c21a9e15a17e1a12c26d11a10b81a12b5a30c21a9e15a17e14c25d11a10b81a12b6a29c21a10e13a15e2a17c23d11a10b81a12b6a29c21a11e10a13e5a17c2a22d11a10b81a12b6a29c21a12e8a14e5a17c8a16d10a11b82a11b6a29c22a12e6a14e5a17c10a15d10a11b82a11b7a19c1a7c23a13e1a1e1a15e5a18c9a16d10a11b82a11b8a15c35a30e5a17c10a16d10a11b82a11b8a15c36a29e4a18c10a15d11a11b82a11b9a15c35a28e5a18c10a15d11a11b82a11b10a16c35a25e5a18c12a14d11a10b83a13b9a15c36a23e6a17c14a13d11a10b83a13b9a16c36a21e6a17c16a12d10a10b85a12b10a17c34a19e7a17c17a12d10a10b86a11b10a18c33a17e8a17c18a11d11a10b86a11b10a20c30a18e6a18c20a10d10a10b87a11b11a20c29a17e5a19c21a10d9a11b87a11b12a20c28a9e2a6e4a19c22a9d10a10b89a10b12a21c27a9e3a5e1a22c21a10d9a11b89a11b11a23c26a7e4a5e22c22a10d9a11b89a12b12a22c24a7e7a24c22a10d9a12b89a12b14a22c22a6e6a25c22a11d9a12b89a13b14a23c20a6e4a26c23a10d10a12b89a13b15a26c17a4e29c24a11d10a12b90a12b20a25c14a31c25a11d10a12b90a12b20a33c3a34c15a5d4a11d10a13b91a11b20a69c16a20d9a13b92a12b20a66c18a19d10a13b92a12b22a63c19a19d9a13b94a12b22a60c21a19d9a13b95a12b23a55c25a17d10a13b95a12b24a52c28a15d11a13b96a11b25a50c29a15d11a12b97a11b28a43c34a13d11a13b98a11b1a9b20a40c34a13d11a13b98a11b1a9b20a39c34a14d10a13b99a21b23a35c33a15d10a14b99a21b24a28c37a16d10a14b100a21b34a6c1a10c6a3d27a17d11a13b103a18b57a5d12a4d8a18d11a13b104a18b57a5d12a5d6a18d12a13b105a16b57a6d12a6d4a18d13a12b107a14b58a7d11a8d1a18d13a12b109a12b58a9d10a26d13a12b110a12b58a12d6a26d13a13b110a13b57a13d5a25d13a13b112a13b55a14d5a24d13a13b114a13b53a15d5a23d13a13b116a13b52a14d6a22d13a13b118a14b50a14d3a24d7a20b119a14b37a7d5a40d8a19b121a14b35a12d1a38d10a18b122a15b34a49d11a18b124a15b5a5b23a47d13a18b126a16b1a6b22a46d15a17b128a22b22a43d18a16b129a22b22a40d21a15b130a22b22a38d21a15b134a19b23a36d2b19a16b136a18b23a34d5b17a16b138a17b23a31d2a6b16a15b141a19b22a6d5a8d12a6b14a16b143a20b51a9b10a16b145a20b49a11b7a17b147a21b47a11b5a18b149a22b45a12b2a18b153a23b42a31b154a24b41a30b157a25b38a28b161a26b34a27b166a31b4a17b1a30b170a79b172a75b177a71b181a67b185a63b191a56b199a49b203a45b211a36b16605a' };
+  const ASTRO_ZONES = (() => {
+    const z = new Uint8Array(ASTRO_CARTE.l * ASTRO_CARTE.h), re = /(\d+)([a-e])/g; let m, i = 0;
+    while((m = re.exec(ASTRO_CARTE.rle))){ z.fill('abcde'.indexOf(m[2]), i, i + +m[1]); i += +m[1]; }
+    return z;
+  })();
+  const ASTRO_JEUX = ['', 'echecs', 'punch', 'tetris', 'serpent'];
+  // Tetris n'est pas encore prêt : dès que ce fichier existera dans 02_interface_eleve, l'arc bleu le lancera.
+  const FICHIER_TETRIS = 'tetris.html';
+
+  function astroImageVisible(){
+    const couche = document.querySelector('.astro-couche');
+    if(couche && getComputedStyle(couche).display !== 'none'){ const f = couche.querySelector('.astro-fond'); if(f) return f; }
+    const slot = document.querySelector('.astro-slot');
+    if(slot && getComputedStyle(slot).visibility !== 'hidden') return slot.querySelector('.astro-fond');
+    return null;
+  }
+  // Point de l'écran → jeu sous la souris (tient compte du recadrage « cover » de l'image).
+  function astroJeuSous(x, y){
+    if(!document.querySelector('.astro-slot')) return '';   // l'astrolabe n'est là que sur la table des matières
+    const img = astroImageVisible();
+    if(!img || !img.naturalWidth) return '';
+    const r = img.getBoundingClientRect();
+    if(x < r.left || x > r.right || y < r.top || y > r.bottom) return '';
+    const echelle = Math.max(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const ix = (x - r.left - (r.width - img.naturalWidth * echelle) / 2) / echelle;
+    const iy = (y - r.top - (r.height - img.naturalHeight * echelle) / 2) / echelle;
+    const cx = Math.floor(ix / img.naturalWidth * ASTRO_CARTE.l), cy = Math.floor(iy / img.naturalHeight * ASTRO_CARTE.h);
+    if(cx < 0 || cy < 0 || cx >= ASTRO_CARTE.l || cy >= ASTRO_CARTE.h) return '';
+    return ASTRO_JEUX[ASTRO_ZONES[cy * ASTRO_CARTE.l + cx]];
+  }
+  let astroActif = '';
+  function astroSurligner(jeu){
+    if(jeu === astroActif) return;
+    astroActif = jeu;
+    document.querySelectorAll('.astro-calque').forEach(c => c.classList.toggle('actif', !!jeu && c.dataset.jeu === jeu));
+    document.body.classList.toggle('astro-survol', !!jeu);
+  }
+  // Seulement sur le livre lui-même (pas à travers une fenêtre ouverte par-dessus), et jamais sur un bouton.
+  function astroAutreChoseDessus(e){ const c = e.target && e.target.closest; return !c || !e.target.closest('#book') || !!e.target.closest('button, a, input'); }
+  document.addEventListener('mousemove', (e) => { if(!astroEnRoute) astroSurligner(astroAutreChoseDessus(e) ? '' : astroJeuSous(e.clientX, e.clientY)); });
+  document.addEventListener('mouseleave', () => astroSurligner(''));
+  document.addEventListener('click', (e) => {
+    if(astroAutreChoseDessus(e)) return;
+    const jeu = astroJeuSous(e.clientX, e.clientY);
+    if(!jeu || astroEnRoute) return;
+    astroCheminPuis(() => lancerJeuAstrolabe(jeu), jeu);
+  });
+  // Le calque du jeu reste allumé et le message brille 1,5 s, puis le jeu s'ouvre.
+  let astroEnRoute = false;
+  function astroCheminPuis(suite, jeu){
+    astroEnRoute = true;
+    astroSurligner(jeu);
+    let m = $('astroMessage');
+    if(!m){ m = document.createElement('div'); m.id = 'astroMessage'; document.body.appendChild(m); }
+    m.textContent = "L'astrolabe indique le chemin...";
+    const img = astroImageVisible(), r = img ? img.getBoundingClientRect() : { left:0, top:0, width:innerWidth, height:innerHeight };
+    Object.assign(m.style, { left:r.left + 'px', top:(r.top + r.height * 0.8) + 'px', width:r.width + 'px', height:'3em' });
+    requestAnimationFrame(() => m.classList.add('visible'));
+    setTimeout(() => {
+      m.classList.remove('visible');
+      astroEnRoute = false;
+      astroSurligner('');
+      suite();
+    }, 1500);
+  }
+
+  async function lancerJeuAstrolabe(jeu){
+    if(jeu === 'punch') return ouvrirPunchMath();
+    if(jeu === 'serpent') return ouvrirSerpent();
+    if(jeu === 'echecs') return ouvrirJeu('echecs/index.html', "♞ Échec-et-Math", "Affronte la machine ou un camarade");
+    if(jeu === 'tetris'){
+      let existe = false;
+      try{ existe = (await fetch(FICHIER_TETRIS, { method:'HEAD', cache:'no-store' })).ok; }catch(e){}
+      if(!existe){ alerteGrimoire("Ce mécanisme de l'astrolabe tourne encore à vide… Un nouveau jeu s'y prépare. Reviens bientôt !"); return; }
+      return ouvrirJeu(FICHIER_TETRIS, '🧱 Tetris', '');
+    }
+  }
+  function ouvrirJeu(fichier, titre, etat){
+    $('jeuOverlayTitre').textContent = titre;
+    $('jeuOverlayEtat').textContent = etat || '';
+    $('jeuFrame').src = fichier;
+    $('jeuOverlay').classList.add('open');
+  }
+  function fermerJeu(){
+    $('jeuOverlay').classList.remove('open');
+    $('jeuFrame').src = 'about:blank';
+  }
+  $('jeuCloseBtn').addEventListener('click', fermerJeu);
+  // Refermer la section : l'astrolabe (et ses secrets) revient sur la page de droite.
+  $('retourAstrolabe').addEventListener('click', () => {
+    if(currentChapter){ sectionChoisie = null; renderChapterMenu(); } else renderTocView();
+  });
+  $('jeuFrame').addEventListener('load', () => { try{ $('jeuFrame').contentWindow.focus(); }catch(e){} });
+
   // ---------- quiz spreads ----------
   function startSection(sectionIdx){
+    flecheRetour(false);
     sectionChoisie = null;
     modeQuiz = 'chapitre';
     currentSectionIdx = sectionIdx;
-    sectionQuestions = shuffle(currentChapter.notions.map(n => n.render(n.sets[sectionIdx])));
+    // _n : rang de la question dans la banque du chapitre (stable malgré le brassage) → « numéro » des rapports.
+    sectionQuestions = shuffle(currentChapter.notions.map((n, k) => Object.assign({}, n.render(n.sets[sectionIdx]), { _n: k + 1 })));
+    if(window.Rapports){
+      window.Rapports.debut(currentSlug, 'g_' + currentChapter.id + '_s' + sectionIdx, {
+        titre: SECTION_META[sectionIdx].name.split('— ').pop(),
+        groupe: groupeRapport(currentChapter, sectionIdx),
+        ordre: ordreRapport(currentChapter, sectionIdx, 0),
+        numeros: sectionQuestions.length
+      });
+    }
     spreads = [];
     for(let i=0;i<sectionQuestions.length;i+=2){
       spreads.push([i, (i+1 < sectionQuestions.length) ? i+1 : null]);
@@ -2912,6 +3196,7 @@
       return;
     }
     if(await confirmerGrimoire("Tu perdras ta progression dans cette section si tu abandonnes maintenant. Veux-tu vraiment quitter ?", { texteOk:'Quitter', texteAnnuler:'Rester' })){
+      if(window.Rapports) window.Rapports.fin();
       renderChapterMenu();
     }
   });
@@ -2926,6 +3211,12 @@
     const score = details.filter(d => d.isCorrect).length;
     const total = details.length;
     const meta = SECTION_META[currentSectionIdx];
+    if(window.Rapports){
+      // Une copie scellée = une tentative pour chaque numéro répondu (les réponses vides ne comptent pas).
+      details.forEach((d, i) => { if(d.given !== '') window.Rapports.tentative(sectionQuestions[i]._n || (i + 1), d.isCorrect, { sansAide:true }); });
+      if(score >= 8) window.Rapports.termine();
+      window.Rapports.fin();
+    }
 
     // Calcule la récompense en or : proportionnelle au score, mais l'élève ne touche
     // jamais que la différence entre ce qu'il a déjà obtenu et son meilleur résultat.

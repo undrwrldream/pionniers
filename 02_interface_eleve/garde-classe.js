@@ -410,3 +410,63 @@
     envoyerMaintenant: () => envoyer(false)
   };
 })();
+
+/* =====================================================================
+   3. L'INDICATEUR DE CHARGEMENT — partout, dans la version de classe.
+   Quand un appel au script Google tarde (plus de 0,6 s), une petite
+   étiquette « Chargement… un instant de patience » apparaît en haut
+   de l'écran et disparaît dès que la réponse arrive. Les élèves savent
+   ainsi que le logiciel travaille et qu'il ne faut pas recliquer partout.
+   Les échanges qui se font en arrière-plan sans faire attendre l'élève
+   ne l'affichent jamais : statistiques des rapports (stat_…), suivi des
+   parties d'échecs (partie_…), télécommande de l'arène, rapport d'erreurs.
+   ===================================================================== */
+(function(){
+  if(!window.fetch || window.__indicateurChargement) return;
+  window.__indicateurChargement = true;
+  const DELAI_AVANT_AFFICHAGE_MS = 600;
+  let enCours = 0, minuterie = null, etiquette = null;
+
+  function arrierePlan(url, options){
+    if(/[?&](commande|cle=partie_|lot=partie_)/.test(url)) return true;
+    const corps = options && typeof options.body === 'string' ? options.body : '';
+    return /"cle"\s*:\s*"(stat_|partie_)/.test(corps) || /"action"\s*:\s*"erreurs"/.test(corps);
+  }
+  function montrer(){
+    if(!etiquette){
+      const st = document.createElement('style');
+      st.textContent =
+        '#indicateurChargement{position:fixed;top:12px;left:50%;transform:translate(-50%,-8px);z-index:2147482000;opacity:0;pointer-events:none;' +
+        'display:flex;align-items:center;gap:10px;padding:9px 18px;border-radius:999px;background:rgba(28,16,8,.92);color:#ffe9a8;' +
+        'border:1.5px solid #d9a441;box-shadow:0 6px 20px rgba(0,0,0,.45);font:600 15px/1.2 Georgia,"Times New Roman",serif;transition:opacity .2s,transform .2s}' +
+        '#indicateurChargement.visible{opacity:1;transform:translate(-50%,0)}' +
+        '#indicateurChargement i{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,233,168,.3);border-top-color:#ffe9a8;animation:indicTourne .8s linear infinite}' +
+        '@keyframes indicTourne{to{transform:rotate(360deg)}}';
+      (document.head || document.documentElement).appendChild(st);
+      etiquette = document.createElement('div');
+      etiquette.id = 'indicateurChargement';
+      etiquette.setAttribute('role', 'status');
+      etiquette.innerHTML = '<i></i><span>Chargement… un instant de patience</span>';
+    }
+    if(document.body && !etiquette.isConnected) document.body.appendChild(etiquette);
+    requestAnimationFrame(() => etiquette.classList.add('visible'));
+  }
+  function cacher(){ if(etiquette) etiquette.classList.remove('visible'); }
+  function debut(){
+    enCours++;
+    if(!minuterie) minuterie = setTimeout(() => { minuterie = null; if(enCours > 0) montrer(); }, DELAI_AVANT_AFFICHAGE_MS);
+  }
+  function fin(){
+    enCours = Math.max(0, enCours - 1);
+    if(enCours === 0){ if(minuterie){ clearTimeout(minuterie); minuterie = null; } cacher(); }
+  }
+
+  const precedent = window.fetch;
+  window.fetch = function(ressource, options){
+    const url = typeof ressource === 'string' ? ressource : (ressource && ressource.url) || '';
+    if(url.indexOf('script.google') === -1 || arrierePlan(url, options)) return precedent.apply(this, arguments);
+    debut();
+    return precedent.apply(this, arguments).then(r => { fin(); return r; }, e => { fin(); throw e; });
+  };
+  window.fetch.__original = precedent.__original || precedent;
+})();

@@ -16,5 +16,5 @@ window.CONFIG_CLASSE = {
   URL_SCRIPT: "https://script.google.com/macros/s/AKfycbx263q1bpQIZlXPcpoGy8kUlmsUjMVPIZhO9wb5cpr4cjwtdiEI1s24a8fhterD_YShAA/exec",
 
   // Le même mot secret que dans le script Apps Script (constante SECRET)
-  SECRET_PARTAGE: "chevalier1224"
+  SECRET_PARTAGE: "Chevalier1224"
 };

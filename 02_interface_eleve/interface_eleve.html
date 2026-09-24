@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <script src="stockage-classe.js"></script>
 <script src="passerelle-core.js"></script>
+<script src="aide-core.js"></script>
 <style>
   :root{
     --parchment:#F1E4C3; --parchment-dark:#E3D3A6; --ink:#2B2118;
@@ -89,7 +90,7 @@
      (même sélecteur, la déclaration la plus tardive dans le fichier l'emporte). */
   @media (min-width: 760px){
     body{ height:100vh; overflow:hidden; padding:0 10px; display:flex; align-items:center; justify-content:center; }
-    .frame{ max-width:none; width: min(96vw, calc(94vh * 1.7778), 2048px); padding:0; margin:0; }
+    .frame{ max-width:none; width: min(96vw, calc(94vh * 1.738), 1924px); padding:0; margin:0; }
 
     .livre-bandeau-haut, .livre-bandeau-bas{ display:none; }
 
@@ -97,21 +98,21 @@
       background:
         url('livre_assets/livre_ouvert.webp') center / contain no-repeat,
         linear-gradient(180deg, var(--burgundy-dark), #3a1712 90%);
-      aspect-ratio: 2048 / 1152;
+      aspect-ratio: 1924 / 1107;
       box-shadow: 0 20px 50px rgba(0,0,0,0.4);
     }
     .livre-pages{ position:relative; height:100%; display:block; }
 
-    /* Zones mesurées directement sur l'image livre_ouvert.webp (les deux
-       rectangles de parchemin clair) : x 11.3%-44.7% et 55.4%-88.4%,
-       y 9%-90.3%. Le défilement interne protège l'alignement de l'image
+    /* Zones mesurées directement sur l'image livre_ouvert.webp (1924 × 1107, les deux
+       rectangles de parchemin clair) : x 7.7%-44.2% et 54.6%-91.3%,
+       y 5.6%-91.8%. Le défilement interne protège l'alignement de l'image
        même si le contenu d'une page dépasse la hauteur disponible. */
     .page-gauche, .page-droite{
-      position:absolute; top:10.5%; bottom:9.7%;
-      overflow-y:auto; background:none; padding: 2.8% 4% 2.2%;
+      position:absolute; top:5.6%; bottom:8.2%;
+      overflow-y:auto; background:none; padding: 3.4% 3.6% 2.8%;
     }
-    .page-gauche{ left:11.3%; width:33.4%; order:initial; border-right:none; display:block; }
-    .page-droite{ left:55.4%; width:33%; order:initial; }
+    .page-gauche{ left:7.7%; width:36.5%; order:initial; border-right:none; display:block; }
+    .page-droite{ left:54.6%; width:36.7%; order:initial; }
   }
   header{ display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:18px; }
   header h1{ font-family:'Cinzel', serif; font-size:19px; margin:0; color:var(--burgundy-dark); }
@@ -482,6 +483,12 @@
     <linearGradient id="steelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#EAEDF2"/><stop offset="100%" stop-color="#6E7889"/>
     </linearGradient>
+    <linearGradient id="darkSteelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8C97A6"/><stop offset="100%" stop-color="#2B3138"/>
+    </linearGradient>
+    <linearGradient id="nightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#20305C"/><stop offset="100%" stop-color="#12193A"/>
+    </linearGradient>
     <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#F3D98A"/><stop offset="100%" stop-color="#8C6A18"/>
     </linearGradient>
@@ -674,53 +681,443 @@ function buildSaber(svg){
 }
 
 /* ---------- Catalogue (échantillon représentatif — pas les 65 objets) ---------- */
+// ---- Dessins du set complet (repris de 01_reference_inventaire/inventaire_complet.html) ----
+function aDecorateBarbarian(g){
+  for(let x=26; x<=94; x+=7) g.appendChild(el("path", {d:`M${x} 16 L${x+3.5} 26 L${x+7} 16 Z`, fill:"#4A331E"}));
+  g.appendChild(el("rect", {x:52, y:30, width:7, height:26, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  g.appendChild(el("rect", {x:61, y:30, width:7, height:26, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  g.appendChild(el("rect", {x:40, y:62, width:40, height:7, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  g.appendChild(el("rect", {x:40, y:80, width:40, height:7, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+}
+function aDecorateChainmail(g){
+  for(let row=0, y=30; y<128; y+=8, row++){
+    const offset = row%2===0 ? 0 : 5;
+    for(let x=28+offset; x<=92; x+=10) g.appendChild(el("circle", {cx:x, cy:y, r:3, fill:"none", stroke:"#7A828C", "stroke-width":1.2}));
+  }
+  g.appendChild(el("ellipse", {cx:60, cy:20, rx:16, ry:8, fill:"#8A929C"}));
+}
+function aDecorateDragon(g){
+  const colors = ["#8B2E22","#3B6B3E"]; let i=0;
+  for(let y=32; y<120; y+=13){
+    for(let x=32+(i%2===0?0:7); x<=88; x+=14){
+      g.appendChild(el("path", {d:`M${x} ${y} L${x+6} ${y+8} L${x} ${y+16} L${x-6} ${y+8} Z`, fill:colors[(Math.floor(x/14)+i)%2]}));
+    }
+    i++;
+  }
+  g.appendChild(el("line", {x1:30, y1:40, x2:90, y2:110, stroke:"#5A4022", "stroke-width":5}));
+  g.appendChild(el("line", {x1:90, y1:40, x2:30, y2:110, stroke:"#5A4022", "stroke-width":5}));
+  g.appendChild(el("circle", {cx:60, cy:75, r:4, fill:"#B8860B"}));
+}
+function aDecorateElven(g){
+  for(let row=0, y=38; y<115; y+=14, row++){
+    const offset = row%2===0 ? -6 : 6;
+    for(let x=38+offset; x<=82; x+=16){
+      g.appendChild(el("ellipse", {cx:x, cy:y, rx:7, ry:11, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8, transform:`rotate(${row%2===0?-20:20} ${x} ${y})`}));
+      g.appendChild(el("line", {x1:x, y1:y-8, x2:x, y2:y+8, stroke:"#2A4E2C", "stroke-width":0.6, transform:`rotate(${row%2===0?-20:20} ${x} ${y})`}));
+    }
+  }
+  g.appendChild(el("path", {d:VEST, fill:"none", stroke:"#B8860B", "stroke-width":1.6, transform:"scale(0.95) translate(3,4)"}));
+}
+function aDecorateMage(g){
+  g.appendChild(el("path", {d:"M60 40 L70 55 L60 90 L50 55 Z", fill:"#C9CDD6", stroke:"#3E4652", "stroke-width":1.4}));
+  g.appendChild(el("circle", {cx:60, cy:58, r:5, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.2}));
+  g.appendChild(el("circle", {cx:52, cy:66, r:2.4, fill:"#2255AA"}));
+  g.appendChild(el("circle", {cx:68, cy:66, r:2.4, fill:"#2255AA"}));
+  for(let x=36; x<=84; x+=8) g.appendChild(el("line", {x1:x, y1:118, x2:x, y2:122, stroke:"#C9CDD6", "stroke-width":1.2}));
+  g.appendChild(el("path", {d:"M30 24 Q36 16 46 20", fill:"none", stroke:"#8A929C", "stroke-width":2.4}));
+  g.appendChild(el("path", {d:"M90 24 Q84 16 74 20", fill:"none", stroke:"#8A929C", "stroke-width":2.4}));
+}
+function aDecorateObsidian(g){
+  g.appendChild(el("path", {d:"M50 22 L44 60 L52 85 L46 128", fill:"none", stroke:"#E0342A", "stroke-width":2}));
+  g.appendChild(el("path", {d:"M70 22 L76 60 L68 85 L74 128", fill:"none", stroke:"#E0342A", "stroke-width":2}));
+  [[38,50],[82,50],[40,95],[80,95]].forEach(p=>g.appendChild(el("circle", {cx:p[0], cy:p[1], r:1.6, fill:"#E0342A"})));
+  g.appendChild(el("path", {d:"M30 22 L22 14 L34 18 Z", fill:"#161616", stroke:"#E0342A", "stroke-width":1}));
+  g.appendChild(el("path", {d:"M90 22 L98 14 L86 18 Z", fill:"#161616", stroke:"#E0342A", "stroke-width":1}));
+}
+function aDecorateTemplar(g){
+  g.appendChild(el("rect", {x:55, y:36, width:10, height:70, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:34, y:62, width:52, height:10, fill:"#B5302A"}));
+  g.appendChild(el("path", {d:"M28 26 Q34 18 44 22", fill:"none", stroke:"#8A929C", "stroke-width":3}));
+  g.appendChild(el("path", {d:"M92 26 Q86 18 76 22", fill:"none", stroke:"#8A929C", "stroke-width":3}));
+}
+function bDecorateBarbarian(g){
+  for(let x=30; x<=90; x+=7) g.appendChild(el("path", {d:`M${x} 6 L${x+3.5} 16 L${x+7} 6 Z`, fill:"#4A331E"}));
+  [[44,20],[76,20],[40,44],[80,44],[48,66],[72,66]].forEach(p=>{
+    g.appendChild(el("rect", {x:p[0]-7, y:p[1], width:14, height:20, rx:4, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  });
+  [30,50,70].forEach(y=>g.appendChild(el("line", {x1:26, y1:y, x2:94, y2:y+14, stroke:"#5A4022", "stroke-width":3})));
+  for(let x=16; x<=104; x+=6) g.appendChild(el("path", {d:`M${x} 118 L${x+3} 128 L${x+6} 118 Z`, fill:"#4A331E"}));
+}
+function bDecorateChainmail(g){
+  for(let row=0, y=8; y<76; y+=8, row++){
+    const offset = row%2===0 ? 0 : 5;
+    for(let x=34+offset; x<=86; x+=10) g.appendChild(el("circle", {cx:x, cy:y, r:3, fill:"none", stroke:"#7A828C", "stroke-width":1.1}));
+  }
+  g.appendChild(el("path", {d:"M18 78 Q60 68 102 78 L99 106 Q90 122 60 122 Q30 122 21 106 Z", fill:"#8C6A3F"}));
+  [90,100].forEach(y=>{
+    g.appendChild(el("rect", {x:26, y:y-3, width:68, height:5, fill:"#5A4022"}));
+    g.appendChild(el("rect", {x:54, y:y-3.5, width:8, height:6, fill:"#8A929C", stroke:"#3A2A10", "stroke-width":0.5}));
+  });
+}
+function bDecorateDragon(g){
+  const colors = ["#8B2E22","#3B6B3E"]; let i=0;
+  for(let y=14; y<118; y+=13){
+    for(let x=30+(i%2===0?0:7); x<=90; x+=14) g.appendChild(el("path", {d:`M${x} ${y} L${x+6} ${y+8} L${x} ${y+16} L${x-6} ${y+8} Z`, fill:colors[(Math.floor(x/14)+i)%2]}));
+    i++;
+  }
+  [16,80].forEach(y=>g.appendChild(el("rect", {x:26, y, width:68, height:9, fill:"#B8860B", stroke:"#5C4210", "stroke-width":1})));
+  g.appendChild(el("path", {d:"M16 108 Q60 100 104 108 L100 120 Q60 128 20 120 Z", fill:"#B8860B", stroke:"#5C4210", "stroke-width":1}));
+}
+function bDecorateElven(g){
+  for(let row=0, y=14; y<80; y+=13, row++){
+    const offset = row%2===0 ? -5 : 5;
+    for(let x=42+offset; x<=78; x+=14){
+      g.appendChild(el("ellipse", {cx:x, cy:y, rx:7, ry:10, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8}));
+    }
+  }
+  g.appendChild(el("path", {d:"M34 10 Q60 2 86 10", fill:"none", stroke:"#B8860B", "stroke-width":1.8}));
+  g.appendChild(el("path", {d:"M20 100 Q60 90 100 100", fill:"none", stroke:"#B8860B", "stroke-width":1.6}));
+  g.appendChild(el("path", {d:"M18 78 Q60 68 102 78 L99 106 Q90 122 60 122 Q30 122 21 106 Z", fill:"#AEB6BE", opacity:0.35}));
+}
+function bDecorateMage(g){
+  g.appendChild(el("path", {d:"M46 12 L74 12 L78 34 L60 44 L42 34 Z", fill:"#C9CDD6", stroke:"#3E4652", "stroke-width":1.2}));
+  g.appendChild(el("circle", {cx:60, cy:26, r:5, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1}));
+  [48,72].forEach(x=>g.appendChild(el("circle", {cx:x, cy:30, r:2.4, fill:"#2255AA"})));
+  g.appendChild(el("path", {d:"M38 50 Q60 58 82 50 M38 66 Q60 74 82 66", fill:"none", stroke:"#8A929C", "stroke-width":1.4}));
+  for(let x=24; x<=96; x+=8) g.appendChild(el("line", {x1:x, y1:112, x2:x, y2:116, stroke:"#C9CDD6", "stroke-width":1}));
+}
+function bDecorateObsidian(g){
+  g.appendChild(el("path", {d:"M45 14 L40 50 L48 78", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  g.appendChild(el("path", {d:"M75 14 L80 50 L72 78", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  [[42,26],[78,26],[44,60],[76,60]].forEach(p=>g.appendChild(el("circle", {cx:p[0], cy:p[1], r:1.6, fill:"#E0342A"})));
+  g.appendChild(el("path", {d:"M24 100 Q60 92 96 100", fill:"none", stroke:"#E0342A", "stroke-width":1.6}));
+}
+function bDecorateTemplar(g){
+  g.appendChild(el("rect", {x:55, y:16, width:10, height:32, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:44, y:27, width:32, height:10, fill:"#B5302A"}));
+  [30,50,70,90].forEach(y=>g.appendChild(el("line", {x1:32, y1:y, x2:88, y2:y, stroke:"#8A929C", "stroke-width":1})));
+}
+function buildAxe(svg){
+  svg.appendChild(el("rect", {x:54, y:70, width:12, height:110, rx:4, fill:"#8C6A3F", stroke:"#2B2118", "stroke-width":1.6}));
+  for(let y=100; y<=170; y+=16){
+    svg.appendChild(el("line", {x1:50, y1:y, x2:70, y2:y+10, stroke:"#5A4022", "stroke-width":2.5}));
+    svg.appendChild(el("line", {x1:70, y1:y, x2:50, y2:y+10, stroke:"#5A4022", "stroke-width":2.5}));
+  }
+  svg.appendChild(el("path", {d:"M60 30 C30 30 14 44 8 62 C22 58 36 60 48 66 L60 76 L72 66 C84 60 98 58 112 62 C106 44 90 30 60 30 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.8}));
+  svg.appendChild(el("rect", {x:48, y:46, width:24, height:26, rx:3, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+  svg.appendChild(el("path", {d:"M52 50 L68 68 M68 50 L52 68", stroke:"#3E4652", "stroke-width":1.6}));
+  [[20,50],[100,50]].forEach(p=>svg.appendChild(el("circle", {cx:p[0], cy:p[1], r:1.6, fill:"#3E4652"})));
+}
+function buildFlail(svg){
+  svg.appendChild(el("rect", {x:52, y:100, width:16, height:90, rx:4, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  wGrip(52, 118, 16, 60, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("rect", {x:52, y:98, width:16, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.2}));
+  [70,80,90].forEach(y=>{
+    svg.appendChild(el("ellipse", {cx:60, cy:y, rx:5, ry:6, fill:"none", stroke:"#5C6570", "stroke-width":3}));
+  });
+  svg.appendChild(el("circle", {cx:60, cy:38, r:22, fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.8}));
+  for(let i=0;i<8;i++){
+    const a = (Math.PI*2*i)/8;
+    const x1 = 60+18*Math.cos(a), y1 = 38+18*Math.sin(a);
+    const x2 = 60+30*Math.cos(a), y2 = 38+30*Math.sin(a);
+    svg.appendChild(el("path", {d:`M${x1-3} ${y1} L${x2} ${y2} L${x1+3} ${y1} Z`, fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1}));
+  }
+  svg.appendChild(el("circle", {cx:60, cy:38, r:5, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1}));
+}
+function buildHalberd(svg){
+  svg.appendChild(el("rect", {x:55, y:78, width:10, height:122, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  for(let y=84; y<=194; y+=16) svg.appendChild(el("line", {x1:56, y1:y, x2:64, y2:y+8, stroke:"#8C7350", "stroke-width":0.8, opacity:0.6}));
+  svg.appendChild(el("path", {d:"M60 6 L70 40 L60 48 L50 40 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M52 44 C34 44 24 52 20 62 C30 60 40 62 50 66 L60 60 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M68 44 C86 44 96 52 100 62 C90 60 80 62 70 66 L60 60 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("rect", {x:50, y:56, width:20, height:16, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.3}));
+}
+function buildJester(svg){
+  svg.appendChild(el("path", {d:"M40 60 C40 36 48 22 60 22 C72 22 80 36 80 60 L80 108 L40 108 Z", fill:"#D9A62E"}));
+  svg.appendChild(el("path", {d:"M40 60 C30 66 22 78 18 96 L34 88 L40 60 Z", fill:"#3B6B3E"}));
+  svg.appendChild(el("path", {d:"M80 60 C90 66 98 78 102 96 L86 88 L80 60 Z", fill:"#B5302A"}));
+  svg.appendChild(el("circle", {cx:19, cy:98, r:5, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+  svg.appendChild(el("circle", {cx:101, cy:98, r:5, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+  svg.appendChild(el("path", {d:"M40 60 C30 66 22 78 18 96", fill:"none", stroke:"#2B2118", "stroke-width":2}));
+  svg.appendChild(el("path", {d:"M80 60 C90 66 98 78 102 96", fill:"none", stroke:"#2B2118", "stroke-width":2}));
+  svg.appendChild(outline("M40 60 C40 36 48 22 60 22 C72 22 80 36 80 60 L80 108 L40 108 Z"));
+  svg.appendChild(el("path", {d:"M32 82 Q60 72 88 82 L88 108 L32 108 Z", fill:"#D9A62E", stroke:"#2B2118", "stroke-width":2.2}));
+  svg.appendChild(el("path", {d:"M52 86 L60 78 L68 86 L60 108 Z", fill:"#F3D98A", stroke:"#8C6A18", "stroke-width":1.2}));
+  [[46,50],[54,44],[66,44],[74,50]].forEach(p=>{
+    svg.appendChild(el("line", {x1:p[0]-2, y1:p[1]-2, x2:p[0]+2, y2:p[1]+2, stroke:"#161616", "stroke-width":1}));
+    svg.appendChild(el("line", {x1:p[0]-2, y1:p[1]+2, x2:p[0]+2, y2:p[1]-2, stroke:"#161616", "stroke-width":1}));
+  });
+}
+function buildLance(svg){
+  svg.appendChild(el("rect", {x:55, y:70, width:10, height:130, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  for(let y=76; y<=192; y+=14) svg.appendChild(el("line", {x1:56, y1:y, x2:64, y2:y+8, stroke:"#8C7350", "stroke-width":0.8, opacity:0.6}));
+  svg.appendChild(el("path", {d:"M48 100 L72 100 L68 108 L52 108 Z", fill:"#5A4022", stroke:"#2B2118", "stroke-width":1.2}));
+  svg.appendChild(el("circle", {cx:60, cy:196, r:6, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.2}));
+  svg.appendChild(el("path", {d:"M60 6 L72 62 L64 70 L60 62 L56 70 L48 62 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("rect", {x:52, y:62, width:16, height:14, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.3}));
+}
+function buildPigface(svg){
+  svg.appendChild(el("path", {d:"M36 58 C36 30 46 14 60 14 C74 14 84 30 84 58 L84 92 C84 92 76 98 60 98 C44 98 36 92 36 92 Z", fill:"url(#darkSteelGrad)"}));
+  svg.appendChild(outline("M36 58 C36 30 46 14 60 14 C74 14 84 30 84 58 L84 92 C84 92 76 98 60 98 C44 98 36 92 36 92 Z"));
+  svg.appendChild(el("rect", {x:42, y:52, width:36, height:7, fill:"#161616"}));
+  svg.appendChild(el("line", {x1:60, y1:16, x2:60, y2:66, stroke:"#3E4652", "stroke-width":1.4}));
+  [24,36,48].forEach(y=>{[42,60,78].forEach(x=>svg.appendChild(el("circle", {cx:x, cy:y, r:1.3, fill:"#3E4652"})));});
+  svg.appendChild(el("path", {d:"M48 66 L48 92 Q60 106 72 92 L72 66 Z", fill:"url(#darkSteelGrad)", stroke:"#2B2118", "stroke-width":2}));
+  svg.appendChild(el("ellipse", {cx:52, cy:96, rx:3, ry:4, fill:"#161616"}));
+  svg.appendChild(el("ellipse", {cx:68, cy:96, rx:3, ry:4, fill:"#161616"}));
+  [72,80,88].forEach(y=>svg.appendChild(el("line", {x1:48, y1:y, x2:72, y2:y, stroke:"#3E4652", "stroke-width":1})));
+}
+function buildShortsword(svg){
+  svg.appendChild(el("path", {d:"M60 20 L74 108 L60 118 L46 108 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("line", {x1:60, y1:28, x2:60, y2:108, stroke:"#EAEDF2", "stroke-width":1.4, opacity:0.7}));
+  svg.appendChild(el("path", {d:"M36 118 L84 118 L78 130 L42 130 Z", fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.4}));
+  wGrip(50, 130, 20, 34, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:60, cy:172, r:11, fill:"#8C6A3F", stroke:"#5A4022", "stroke-width":1.6}));
+}
+function buildStraw(svg){
+  svg.appendChild(el("path", {d:"M32 66 C32 36 44 18 60 18 C76 18 88 36 88 66 L88 78 L32 78 Z", fill:"#D9C27E"}));
+  svg.appendChild(el("path", {d:"M28 78 Q24 100 32 118 L44 112 L40 78 Z", fill:"#D9C27E"}));
+  svg.appendChild(el("path", {d:"M92 78 Q96 100 88 118 L76 112 L80 78 Z", fill:"#D9C27E"}));
+  for(let y=28; y<=70; y+=8) svg.appendChild(el("line", {x1:32, y1:y, x2:88, y2:y, stroke:"#A88B4A", "stroke-width":1}));
+  for(let x=36; x<=84; x+=8) svg.appendChild(el("line", {x1:x, y1:20, x2:x, y2:76, stroke:"#A88B4A", "stroke-width":1, opacity:0.5}));
+  svg.appendChild(el("rect", {x:30, y:70, width:60, height:8, fill:"#C9AF63", stroke:"#8C7340", "stroke-width":1}));
+  svg.appendChild(el("path", {d:"M52 72 L68 76 M68 72 L52 76", stroke:"#8C7340", "stroke-width":1.4}));
+  svg.appendChild(el("path", {d:"M36 96 Q60 108 84 96", fill:"none", stroke:"#5A4022", "stroke-width":3}));
+  svg.appendChild(el("rect", {x:52, y:98, width:16, height:7, fill:"#5A4022", stroke:"#2B2118", "stroke-width":1}));
+  svg.appendChild(outline("M32 66 C32 36 44 18 60 18 C76 18 88 36 88 66 L88 78 L32 78 Z"));
+  svg.appendChild(outline("M28 78 Q24 100 32 118 L44 112 L40 78 Z"));
+  svg.appendChild(outline("M92 78 Q96 100 88 118 L76 112 L80 78 Z"));
+}
+function buildTwoHandedSword(svg){
+  svg.appendChild(el("path", {d:"M60 4 L70 120 L60 130 L50 120 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("line", {x1:60, y1:12, x2:60, y2:120, stroke:"#EAEDF2", "stroke-width":1.4, opacity:0.7}));
+  svg.appendChild(el("path", {d:"M60 128 C48 128 42 122 38 132 C46 132 52 138 58 134 Z", fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1.4}));
+  svg.appendChild(el("path", {d:"M60 128 C72 128 78 122 82 132 C74 132 68 138 62 134 Z", fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1.4}));
+  svg.appendChild(el("rect", {x:44, y:128, width:32, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+  wGrip(50, 136, 20, 48, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("ellipse", {cx:60, cy:190, rx:10, ry:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+}
+function buildVoodoo(svg){
+  [[30,30,-35],[24,42,-20],[90,30,35],[96,42,20]].forEach(f=>{
+    svg.appendChild(el("path", {d:"M60 40 L60 8 L64 20 Z", fill:"#6B4A2E", stroke:"#3A2A18", "stroke-width":1, transform:`rotate(${f[2]} 60 40) translate(${f[0]-60} 0)`}));
+  });
+  svg.appendChild(el("path", {d:"M40 42 C40 24 48 16 60 16 C72 16 80 24 80 42 L78 78 L60 100 L42 78 Z", fill:"#A67C4E"}));
+  svg.appendChild(outline("M40 42 C40 24 48 16 60 16 C72 16 80 24 80 42 L78 78 L60 100 L42 78 Z"));
+  svg.appendChild(el("path", {d:"M52 40 L52 74", stroke:"#8B2E22", "stroke-width":2}));
+  svg.appendChild(el("path", {d:"M68 40 L68 74", stroke:"#8B2E22", "stroke-width":2}));
+  svg.appendChild(el("ellipse", {cx:52, cy:56, rx:6, ry:9, fill:"#161616"}));
+  svg.appendChild(el("ellipse", {cx:68, cy:56, rx:6, ry:9, fill:"#161616"}));
+  for(let x=48; x<=72; x+=4) svg.appendChild(el("path", {d:`M${x} 78 L${x+2} 92 L${x+4} 78 Z`, fill:"#EDE6D6", stroke:"#8C7350", "stroke-width":0.6}));
+}
+function buildWarhammer(svg){
+  svg.appendChild(el("rect", {x:52, y:78, width:16, height:110, rx:4, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  wGrip(52, 100, 16, 60, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("rect", {x:52, y:76, width:16, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.2}));
+  svg.appendChild(el("rect", {x:52, y:180, width:16, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.2}));
+  svg.appendChild(el("rect", {x:26, y:26, width:68, height:48, rx:8, fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.8}));
+  [34,60,86].forEach(x=>{[36,50].forEach(y=>svg.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#3E4652"})));});
+  [40,60,80].forEach(x=>svg.appendChild(el("circle", {cx:x, cy:50, r:4, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1})));
+  svg.appendChild(el("path", {d:"M56 26 L60 8 L64 26 Z", fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1.4}));
+}
+function buildWizard(svg){
+  svg.appendChild(el("path", {d:"M60 6 L88 84 Q60 96 32 84 Z", fill:"url(#nightGrad)"}));
+  svg.appendChild(el("path", {d:"M60 6 L60 90", stroke:"#D9A62E", "stroke-width":3}));
+  [[45,60,5],[50,42,4],[42,34,3.5],[70,58,5],[68,40,4],[75,32,3.5],[55,72,4],[65,74,4]].forEach(s=>{
+    svg.appendChild(el("path", {d:starPath(s[0],s[1],s[2]), fill:"#D9A62E"}));
+  });
+  svg.appendChild(el("path", {d:"M60 4 L63 10 L60 16 L57 10 Z", fill:"#D9A62E"}));
+  svg.appendChild(el("path", {d:"M32 84 Q60 100 88 84 L92 96 Q60 112 28 96 Z", fill:"url(#goldGrad2)", stroke:"#5C4210", "stroke-width":2}));
+  svg.appendChild(el("path", {d:"M52 90 L60 82 L68 90 L60 104 Z", fill:"#161B33", stroke:"#D9A62E", "stroke-width":1.2}));
+  svg.appendChild(el("circle", {cx:60, cy:92, r:3, fill:"#D9A62E"}));
+  svg.appendChild(outline("M60 6 L88 84 Q60 96 32 84 Z"));
+}
+function gDecorateBarbarian(g){
+  [28,45,62,79].forEach(x=>{
+    g.appendChild(el("rect", {x:x+1, y:16, width:8, height:24, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  });
+  [70,82,94].forEach(y=>g.appendChild(el("rect", {x:20, y, width:80, height:5, fill:"#5A4022"})));
+  for(let x=18; x<=102; x+=6) g.appendChild(el("path", {d:`M${x} 118 L${x+3} 128 L${x+6} 118 Z`, fill:"#4A331E"}));
+}
+function gDecorateChainmail(g){
+  for(let row=0, y=8; y<100; y+=7, row++){
+    const offset = row%2===0 ? 0 : 4;
+    for(let x=22+offset; x<=98; x+=9) g.appendChild(el("circle", {cx:x, cy:y, r:2.6, fill:"none", stroke:"#7A828C", "stroke-width":1}));
+  }
+  g.appendChild(el("ellipse", {cx:60, cy:78, rx:16, ry:14, fill:"#8C6A3F"}));
+  [98,106,114].forEach(y=>{
+    g.appendChild(el("rect", {x:20, y:y-3, width:80, height:5, fill:"#8C6A3F"}));
+    g.appendChild(el("rect", {x:56, y:y-3.5, width:8, height:6, fill:"#8A929C", stroke:"#3A2A10", "stroke-width":0.5}));
+  });
+}
+function gDecorateDragon(g){
+  const colors = ["#8B2E22","#3B6B3E"]; let i=0;
+  for(let y=10; y<100; y+=11){
+    for(let x=26+(i%2===0?0:6); x<=90; x+=12){
+      g.appendChild(el("path", {d:`M${x} ${y} L${x+5} ${y+6} L${x} ${y+12} L${x-5} ${y+6} Z`, fill:colors[(Math.floor(x/12)+i)%2]}));
+    }
+    i++;
+  }
+  g.appendChild(el("line", {x1:20, y1:60, x2:100, y2:100, stroke:"#5A4022", "stroke-width":4}));
+  g.appendChild(el("line", {x1:100, y1:60, x2:20, y2:100, stroke:"#5A4022", "stroke-width":4}));
+}
+function gDecorateElven(g){
+  [[33,20],[50,16],[67,16],[84,22]].forEach(p=>{
+    g.appendChild(el("ellipse", {cx:p[0], cy:p[1], rx:6, ry:10, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8}));
+  });
+  [[45,58],[60,52],[75,58]].forEach(p=>{
+    g.appendChild(el("ellipse", {cx:p[0], cy:p[1], rx:7, ry:11, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8}));
+  });
+  g.appendChild(el("path", {d:"M20 98 Q60 90 100 98", fill:"none", stroke:"#B8860B", "stroke-width":1.6}));
+  g.appendChild(el("path", {d:"M20 110 Q60 118 100 110", fill:"none", stroke:"#B8860B", "stroke-width":1.6}));
+}
+function gDecorateMage(g){
+  [[33,20],[50,16],[67,16],[84,22]].forEach(p=>{
+    g.appendChild(el("path", {d:`M${p[0]} ${p[1]-6} L${p[0]+5} ${p[1]} L${p[0]} ${p[1]+6} L${p[0]-5} ${p[1]} Z`, fill:"#C9CDD6", stroke:"#3E4652", "stroke-width":1}));
+  });
+  g.appendChild(el("circle", {cx:60, cy:76, r:7, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.2}));
+  g.appendChild(el("circle", {cx:56, cy:72, r:2, fill:"#9CC3EE"}));
+  for(let x=24; x<=96; x+=8) g.appendChild(el("line", {x1:x, y1:98, x2:x, y2:102, stroke:"#C9CDD6", "stroke-width":1}));
+}
+function gDecorateObsidian(g){
+  g.appendChild(el("path", {d:"M60 55 L52 75 L64 90 L56 108", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  [[32,16],[49,12],[66,12],[83,18]].forEach(p=>g.appendChild(el("path", {d:`M${p[0]} ${p[1]} L${p[0]+5} ${p[1]-8} L${p[0]+10} ${p[1]} Z`, fill:"#161616", stroke:"#E0342A", "stroke-width":0.8})));
+  g.appendChild(el("circle", {cx:44, cy:78, r:1.6, fill:"#E0342A"}));
+  g.appendChild(el("circle", {cx:76, cy:78, r:1.6, fill:"#E0342A"}));
+}
+function gDecorateTemplar(g){
+  g.appendChild(el("rect", {x:38, y:58, width:44, height:36, fill:"#E8E8EC", stroke:"#8A929C", "stroke-width":1.4}));
+  g.appendChild(el("rect", {x:55, y:62, width:10, height:28, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:44, y:71, width:32, height:10, fill:"#B5302A"}));
+  [26,42].forEach(y=>{[28,45,62,79].forEach(x=>g.appendChild(el("line", {x1:x, y1:y, x2:x+10, y2:y, stroke:"#8A929C", "stroke-width":1})));});
+}
+function hDecorateChainmail(g){
+  for(let row=0, y=22; y<115; y+=8, row++){
+    const offset = row%2===0 ? 0 : 5;
+    for(let x=20+offset; x<=100; x+=10) g.appendChild(el("circle", {cx:x, cy:y, r:3, fill:"none", stroke:"#7A828C", "stroke-width":1.1}));
+  }
+  g.appendChild(el("path", {d:"M48 70 Q60 62 72 70 L68 110 Q60 116 52 110 Z", fill:CELL_BG}));
+  for(let x=24; x<=96; x+=8) g.appendChild(el("circle", {cx:x, cy:114, r:1.6, fill:"none", stroke:"#7A828C", "stroke-width":1}));
+}
+function hDecorateObsidian(g){
+  for(let x=26; x<=94; x+=10) g.appendChild(el("path", {d:`M${x-4} 16 L${x} 4 L${x+4} 16 Z`, fill:"#161616", stroke:"#E0342A", "stroke-width":1}));
+  g.appendChild(el("path", {d:"M45 30 L40 66 L47 90", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  g.appendChild(el("path", {d:"M75 30 L80 66 L73 90", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  g.appendChild(el("ellipse", {cx:47, cy:72, rx:7, ry:4, fill:"#E0342A"}));
+  g.appendChild(el("ellipse", {cx:73, cy:72, rx:7, ry:4, fill:"#E0342A"}));
+}
+function lionShape(cx, cy, scale, color){
+  return el("path", {
+    d:`M${cx} ${cy-20*scale} Q${cx+10*scale} ${cy-24*scale} ${cx+8*scale} ${cy-14*scale} Q${cx+16*scale} ${cy-8*scale} ${cx+10*scale} ${cy} Q${cx+14*scale} ${cy+10*scale} ${cx+6*scale} ${cy+16*scale} L${cx-2*scale} ${cy+8*scale} Q${cx-10*scale} ${cy+14*scale} ${cx-14*scale} ${cy+6*scale} Q${cx-8*scale} ${cy} ${cx-10*scale} ${cy-10*scale} Q${cx-4*scale} ${cy-18*scale} ${cx} ${cy-20*scale} Z`,
+    fill:color
+  });
+}
+function outline(d){ return el("path", {d, fill:"none", stroke:"#2B2118", "stroke-width":2.2}); }
+function starPath(cx,cy,r){
+  const pts=[]; for(let i=0;i<5;i++){ const a1=(Math.PI*2*i)/5 - Math.PI/2; pts.push([cx+r*Math.cos(a1), cy+r*Math.sin(a1)]); const a2=a1+Math.PI/5; pts.push([cx+r*0.4*Math.cos(a2), cy+r*0.4*Math.sin(a2)]); }
+  return "M"+pts.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" L")+" Z";
+}
+function sDecorateDragonScale(g){
+  const colors = ["#3B6B3E","#2A4E2C"];
+  let i=0;
+  for(let y=24; y<136; y+=12){
+    for(let x=12+(i%2===0?0:7); x<=108; x+=14){
+      g.appendChild(el("path", {d:`M${x} ${y} L${x+6} ${y+7} L${x} ${y+14} L${x-6} ${y+7} Z`, fill:colors[(Math.floor(x/14)+i)%2]}));
+    }
+    i++;
+  }
+  g.appendChild(el("circle", {cx:60, cy:80, r:52, fill:"none", stroke:"#D9A62E", "stroke-width":7}));
+  g.appendChild(el("path", {d:"M52 76 L60 68 L68 76 L64 86 L56 86 Z", fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+}
+function sDecorateTemplarCross(g){
+  g.appendChild(el("rect", {x:52, y:30, width:16, height:80, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:24, y:60, width:72, height:16, fill:"#B5302A"}));
+  g.appendChild(el("path", {d:KITE, fill:"none", stroke:"#C9CDD6", "stroke-width":5, transform:"scale(0.94) translate(4,5)"}));
+}
+
 const CATALOG = {
   helmet: {
     label:"Casque",
     items:[
-      {id:"h_leather", name:"Casque de cuir", price:20, stat:"+8 PV", hp:8, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-leather","#8C6A3F"); hDecorateLeather(g);}},
-      {id:"h_steel", name:"Heaume d'acier", price:45, stat:"+18 PV", hp:18, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-steel","url(#steelGrad)"); hDecorateSteel(g);}},
-      {id:"h_royal", name:"Heaume royal", price:120, stat:"+40 PV", hp:40, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-royal","url(#goldGrad)"); hDecorateRoyal(g);}},
+      {id:"h_straw", name:"Casque de paille", price:30, stat:"+4 PV", hp:4, draw:buildStraw},
+      {id:"h_leather", name:"Casque de cuir", price:60, stat:"+8 PV", hp:8, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-leather","#8C6A3F"); hDecorateLeather(g);}},
+      {id:"h_chainmail", name:"Coiffe de mailles", price:96, stat:"+13 PV", hp:13, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-chainmail","#9AA0A8"); hDecorateChainmail(g);}},
+      {id:"h_jester", name:"Heaume du bouffon", price:114, stat:"+15 PV", hp:15, draw:buildJester},
+      {id:"h_steel", name:"Heaume d'acier", price:135, stat:"+18 PV", hp:18, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-steel","url(#steelGrad)"); hDecorateSteel(g);}},
+      {id:"h_pigface", name:"Groin d'acier", price:165, stat:"+22 PV", hp:22, draw:buildPigface},
+      {id:"h_voodoo", name:"Masque tribal", price:195, stat:"+26 PV", hp:26, draw:buildVoodoo},
+      {id:"h_obsidian", name:"Heaume d'obsidienne", price:240, stat:"+31 PV", hp:31, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-obsidian","#161616"); hDecorateObsidian(g);}},
+      {id:"h_wizard", name:"Chapeau d'astromancien", price:300, stat:"+35 PV", hp:35, draw:buildWizard},
+      {id:"h_royal", name:"Heaume royal", price:360, stat:"+40 PV", hp:40, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-royal","url(#goldGrad)"); hDecorateRoyal(g);}},
     ]
   },
   armor: {
     label:"Armure",
     items:[
-      {id:"a_leather", name:"Plastron de cuir", price:25, stat:"+15 PV", hp:15, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-leather","#8C6A3F"); aDecorateLeather(g);}},
-      {id:"a_steel", name:"Armure d'acier", price:60, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-steel","url(#steelGrad)"); aDecorateSteel(g);}},
-      {id:"a_royal", name:"Armure royale", price:150, stat:"+100 PV", hp:100, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-royal","url(#goldGrad)"); aDecorateRoyal(g);}},
+      {id:"a_leather", name:"Plastron de cuir", price:75, stat:"+15 PV", hp:15, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-leather","#8C6A3F"); aDecorateLeather(g);}},
+      {id:"a_chainmail", name:"Cotte de mailles", price:120, stat:"+20 PV", hp:20, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-chainmail","#9AA0A8"); aDecorateChainmail(g);}},
+      {id:"a_steel", name:"Armure d'acier", price:180, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-steel","url(#steelGrad)"); aDecorateSteel(g);}},
+      {id:"a_barbarian", name:"Armure barbare", price:216, stat:"+35 PV", hp:35, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-barbarian","#6B4A2E"); aDecorateBarbarian(g);}},
+      {id:"a_templar", name:"Armure templière", price:255, stat:"+45 PV", hp:45, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-templar","#E8E8EC"); aDecorateTemplar(g);}},
+      {id:"a_elven", name:"Armure elfique", price:294, stat:"+55 PV", hp:55, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-elven","#AEB6BE"); aDecorateElven(g);}},
+      {id:"a_dragon", name:"Armure d'écailles", price:336, stat:"+68 PV", hp:68, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-dragon","#5C4530"); aDecorateDragon(g);}},
+      {id:"a_obsidian", name:"Armure d'obsidienne", price:375, stat:"+78 PV", hp:78, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-obsidian","#161616"); aDecorateObsidian(g);}},
+      {id:"a_mage", name:"Armure runique", price:414, stat:"+88 PV", hp:88, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-mage","#1B2A4A"); aDecorateMage(g);}},
+      {id:"a_royal", name:"Armure royale", price:450, stat:"+100 PV", hp:100, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-royal","url(#goldGrad)"); aDecorateRoyal(g);}},
     ]
   },
   gloves: {
     label:"Gants",
     items:[
-      {id:"g_leather", name:"Gants de cuir", price:15, stat:"+2 dégâts", dmgBonus:2, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-leather","#8C6A3F"); gDecorateLeather(g);}},
-      {id:"g_steel", name:"Gants d'acier", price:35, stat:"+4 dégâts", dmgBonus:4, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-steel","url(#steelGrad)"); gDecorateSteel(g);}},
-      {id:"g_royal", name:"Gants royaux", price:90, stat:"+8 dégâts", dmgBonus:8, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-royal","url(#goldGrad)"); gDecorateRoyal(g);}},
+      {id:"g_leather", name:"Gants de cuir", price:45, stat:"+2 dégâts", dmgBonus:2, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-leather","#8C6A3F"); gDecorateLeather(g);}},
+      {id:"g_chainmail", name:"Gants de mailles", price:75, stat:"+3 dégâts", dmgBonus:3, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-chainmail","#9AA0A8"); gDecorateChainmail(g);}},
+      {id:"g_steel", name:"Gants d'acier", price:105, stat:"+4 dégâts", dmgBonus:4, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-steel","url(#steelGrad)"); gDecorateSteel(g);}},
+      {id:"g_barbarian", name:"Gants barbares", price:126, stat:"+5 dégâts", dmgBonus:5, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-barbarian","#6B4A2E"); gDecorateBarbarian(g);}},
+      {id:"g_templar", name:"Gants templiers", price:150, stat:"+5 dégâts", dmgBonus:5, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-templar","#E8E8EC"); gDecorateTemplar(g);}},
+      {id:"g_elven", name:"Gants elfiques", price:174, stat:"+6 dégâts", dmgBonus:6, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-elven","#AEB6BE"); gDecorateElven(g);}},
+      {id:"g_dragon", name:"Gants d'écailles", price:198, stat:"+6 dégâts", dmgBonus:6, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-dragon","#5C4530"); gDecorateDragon(g);}},
+      {id:"g_obsidian", name:"Gants d'obsidienne", price:222, stat:"+7 dégâts", dmgBonus:7, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-obsidian","#161616"); gDecorateObsidian(g);}},
+      {id:"g_mage", name:"Gants runiques", price:246, stat:"+7 dégâts", dmgBonus:7, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-mage","#1B2A4A"); gDecorateMage(g);}},
+      {id:"g_royal", name:"Gants royaux", price:270, stat:"+8 dégâts", dmgBonus:8, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-royal","url(#goldGrad)"); gDecorateRoyal(g);}},
     ]
   },
   boots: {
     label:"Bottes",
     items:[
-      {id:"b_leather", name:"Bottes de cuir", price:15, stat:"+15 PV · 5 combats", hp:15, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-leather","#8C6A3F"); bDecorateLeather(g);}},
-      {id:"b_steel", name:"Bottes d'acier", price:40, stat:"+25 PV · 8 combats", hp:25, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-steel","url(#steelGrad)"); bDecorateSteel(g);}},
-      {id:"b_royal", name:"Bottes royales", price:100, stat:"+60 PV · 12 combats", hp:60, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-royal","url(#goldGrad)"); bDecorateRoyal(g);}},
+      {id:"b_leather", name:"Bottes de cuir", price:45, stat:"+15 PV · 5 combats", hp:15, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-leather","#8C6A3F"); bDecorateLeather(g);}},
+      {id:"b_chainmail", name:"Bottes de mailles", price:84, stat:"+20 PV · 6 combats", hp:20, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-chainmail","#9AA0A8"); bDecorateChainmail(g);}},
+      {id:"b_steel", name:"Bottes d'acier", price:120, stat:"+25 PV · 8 combats", hp:25, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-steel","url(#steelGrad)"); bDecorateSteel(g);}},
+      {id:"b_barbarian", name:"Bottes barbares", price:144, stat:"+30 PV · 8 combats", hp:30, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-barbarian","#6B4A2E"); bDecorateBarbarian(g);}},
+      {id:"b_templar", name:"Bottes templières", price:168, stat:"+35 PV · 9 combats", hp:35, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-templar","#E8E8EC"); bDecorateTemplar(g);}},
+      {id:"b_elven", name:"Bottes elfiques", price:192, stat:"+40 PV · 10 combats", hp:40, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-elven","#AEB6BE"); bDecorateElven(g);}},
+      {id:"b_dragon", name:"Bottes d'écailles", price:219, stat:"+45 PV · 10 combats", hp:45, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-dragon","#5C4530"); bDecorateDragon(g);}},
+      {id:"b_obsidian", name:"Bottes d'obsidienne", price:246, stat:"+50 PV · 11 combats", hp:50, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-obsidian","#161616"); bDecorateObsidian(g);}},
+      {id:"b_mage", name:"Bottes runiques", price:273, stat:"+55 PV · 11 combats", hp:55, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-mage","#1B2A4A"); bDecorateMage(g);}},
+      {id:"b_royal", name:"Bottes royales", price:300, stat:"+60 PV · 12 combats", hp:60, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-royal","url(#goldGrad)"); bDecorateRoyal(g);}},
     ]
   },
   weapon: {
     label:"Arme",
     items:[
-      {id:"w_dague", name:"Dague", price:18, stat:"8 dégâts", dmg:8, draw:buildDagger},
-      {id:"w_epee", name:"Épée longue", price:50, stat:"20 dégâts", dmg:20, draw:buildLongsword},
-      {id:"w_sabre", name:"Sabre", price:52, stat:"22 dégâts", dmg:22, draw:buildSaber},
+      {id:"w_dague", name:"Dague", price:54, stat:"8 dégâts", dmg:8, draw:buildDagger},
+      {id:"w_2mains", name:"Épée à deux mains", price:81, stat:"12 dégâts", dmg:12, draw:buildTwoHandedSword},
+      {id:"w_hallebarde", name:"Hallebarde", price:84, stat:"10 dégâts", dmg:10, draw:buildHalberd},
+      {id:"w_courte", name:"Épée courte", price:105, stat:"15 dégâts", dmg:15, draw:buildShortsword},
+      {id:"w_epee", name:"Épée longue", price:150, stat:"20 dégâts", dmg:20, draw:buildLongsword},
+      {id:"w_lance", name:"Lance", price:150, stat:"24 dégâts", dmg:24, draw:buildLance},
+      {id:"w_sabre", name:"Sabre", price:156, stat:"22 dégâts", dmg:22, draw:buildSaber},
+      {id:"w_fleau", name:"Fléau d'armes", price:174, stat:"20 dégâts", dmg:20, draw:buildFlail},
+      {id:"w_hache", name:"Hache de bataille", price:219, stat:"30 dégâts", dmg:30, draw:buildAxe},
+      {id:"w_marteau", name:"Marteau de guerre", price:234, stat:"26 dégâts", dmg:26, draw:buildWarhammer},
     ]
   },
   shield: {
     label:"Bouclier",
     items:[
-      {id:"s_rond", name:"Bouclier rond", price:25, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-rond","#A88B5C",true); sDecorateWood(g);}},
-      {id:"s_acier", name:"Écu d'acier", price:46, stat:"+45 PV", hp:45, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-acier","url(#steelGrad)",false); sDecorateSteelLion(g);}},
-      {id:"s_royal", name:"Bouclier royal", price:115, stat:"+120 PV", hp:120, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-royal","url(#goldGrad)",false); sDecorateRoyal(g);}},
+      {id:"s_rond", name:"Bouclier rond", price:75, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-rond","#A88B5C",true); sDecorateWood(g);}},
+      {id:"s_acier", name:"Écu d'acier", price:138, stat:"+45 PV", hp:45, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-acier","url(#steelGrad)",false); sDecorateSteelLion(g);}},
+      {id:"s_templier", name:"Bouclier templier", price:192, stat:"+65 PV", hp:65, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-templier","#E8E8EC",false); sDecorateTemplarCross(g);}},
+      {id:"s_ecailles", name:"Bouclier d'écailles", price:264, stat:"+90 PV", hp:90, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-ecailles","#3B6B3E",true); sDecorateDragonScale(g);}},
+      {id:"s_royal", name:"Bouclier royal", price:345, stat:"+120 PV", hp:120, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-royal","url(#goldGrad)",false); sDecorateRoyal(g);}},
     ]
   },
 };

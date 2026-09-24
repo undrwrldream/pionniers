@@ -43,7 +43,7 @@ window.PasserelleCore = (function(){
 
   // ⚠️ À REMPLACER : choisis un mot secret et mets EXACTEMENT le même
   // dans la constante SECRET du script Apps Script côté Google.
-  const SECRET_PARTAGE = "chevalier1224";
+  const SECRET_PARTAGE = "Chevalier1224";
 
   /* ---------- Identité (fournie par l'enseignant via l'URL) ---------- */
 

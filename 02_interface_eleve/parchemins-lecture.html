@@ -11,6 +11,8 @@
 <script src="stockage-classe.js"></script>
 <script src="passerelle-core.js"></script>
 <script src="types-de-reponse.js"></script>
+<script src="aide-core.js"></script>
+<script src="rapports-core.js"></script>
 <script src="evocations-data.js"></script>
 <script src="conjugaison-data.js"></script>
 <style>
@@ -1762,7 +1764,51 @@ document.getElementById("closeSpecialOverlay").addEventListener("click", () => {
   document.getElementById("specialOverlay").classList.remove("open");
 });
 
+/* ---------------- Rapports détaillés (console enseignant) ----------------
+   Le temps et les tentatives de chaque exercice corrigé automatiquement :
+   Invocations, Conjurations et épreuves de promotion. Les textes remis à
+   l'enseignant et les productions écrites n'y sont pas (pas de correction
+   automatique). Rien ici ne touche à l'XP, au rang ni à la progression. */
+let rapportDerniereErreur = {};   // numéro -> dernière réponse fausse déjà comptée (recorriger sans rien changer ne compte pas)
+function exerciceRapport(){
+  if(!identiteEleve || !identiteEleve.slug) return null;
+  if(view.mode === "evoc-section"){
+    const s = EVOCATIONS_DATA.find(x => x.id === view.id);
+    if(!s) return null;
+    return { id:"p_inv_" + s.id, meta:{ titre:s.titre, groupe:"Parchemins · Chap. 1 · Invocations", ordre:2000 + EVOCATIONS_DATA.indexOf(s), numeros:s.exercices.length } };
+  }
+  if(view.mode === "conj-section"){
+    const th = DATA[1].texts.find(x => x.themeId === view.themeId);
+    const serie = view.serie || 1;
+    if(!th) return null;
+    return { id:"p_conj_" + view.themeId + "_s" + serie, meta:{ titre:th.title + " — série " + serie, groupe:"Parchemins · Chap. 2 · Conjurations", ordre:2100 + view.themeId * 2 + serie } };
+  }
+  if(view.mode === "promotion-exercise"){
+    const topic = HOMOPHONES_TOPICS[view.topicIdx];
+    return { id:"p_boss_" + view.ch + "_" + view.text + "_" + view.sub, meta:{ titre:(topic ? topic.title : "Épreuve"), groupe:"Parchemins · Épreuves de promotion (chap. " + (view.ch + 1) + ")", ordre:2500 + view.ch * 20 + view.text * 2 + view.sub, numeros:15 } };
+  }
+  return null;
+}
+function suivreRapport(){
+  if(!window.Rapports) return;
+  const ex = exerciceRapport();
+  const actuel = window.Rapports.enCours();
+  if(ex && actuel && actuel.exoId === ex.id) return;          // même exercice (ex. question suivante de l'épreuve)
+  if(!ex){ window.Rapports.fin(); return; }
+  rapportDerniereErreur = {};
+  window.Rapports.debut(identiteEleve.slug, ex.id, ex.meta);
+}
+function tentativeRapport(numero, valeur, correcte){
+  if(!window.Rapports) return;
+  const v = String(valeur == null ? "" : valeur).trim().toLowerCase();
+  if(!v) return;                                                 // une case vide n'est pas une tentative
+  if(!correcte && rapportDerniereErreur[numero] === v) return;   // même erreur, déjà comptée
+  if(!correcte) rapportDerniereErreur[numero] = v;
+  window.Rapports.tentative(numero, correcte);
+}
+
 function render(){
+  suivreRapport();
   const conteneur = document.getElementById('parcheminConteneur');
   const estVocabulaire = view.mode === 'evoc-liste' || view.mode === 'evoc-section';
   if(conteneur) conteneur.classList.toggle('sans-fond', estVocabulaire);
@@ -1970,6 +2016,7 @@ function corrigerEvocations(section){
     const valeurs = typeDef.lireValeurs(i);
     const q = { reponse: { val: ex.reponse } };
     const correcte = typeDef.estCorrecte(q, valeurs);
+    tentativeRapport(i + 1, valeurs.val, correcte);
     if(correcte) score++;
     const row = document.getElementById("evocQ-" + i);
     row.classList.remove("correcte", "incorrecte");
@@ -1978,6 +2025,7 @@ function corrigerEvocations(section){
 
   document.getElementById("evocScoreZone").innerHTML =
     `<div class="evoc-score">Score : ${score} / 20</div>`;
+  if(window.Rapports) window.Rapports.termine();   // même règle que le jeu : la section compte dès sa première correction
   fermerVocabPanel();
 
   (async () => {
@@ -2289,9 +2337,12 @@ function finishPromotionExercise(){
   const topic = HOMOPHONES_TOPICS[topicIdx];
   let score = 0;
   topic.sentences.forEach(([sentence, answer], i) => {
-    if(answers[i] && answers[i].toLowerCase() === answer.toLowerCase()) score++;
+    const bonne = !!(answers[i] && answers[i].toLowerCase() === answer.toLowerCase());
+    if(bonne) score++;
+    if(window.Rapports && answers[i]) window.Rapports.tentative(i + 1, bonne);
   });
   const passed = score >= 10;
+  if(passed && window.Rapports) window.Rapports.termine();
   const st = ensurePromotionState(ci, ti);
   const premiereReussite = passed && st.sousExercices[sub].statut !== "reussi";
   if(passed){ st.sousExercices[sub].statut = "reussi"; sauvegarderPromotion(ci, ti); }
@@ -2502,13 +2553,16 @@ function corrigerConj(){
   const typeMot = window.TypesDeReponse.obtenir("mot");
   let score = 0;
   attendues.forEach((rep, i) => {
-    const correcte = typeMot.estCorrecte({ reponse:{ val: rep } }, typeMot.lireValeurs(i));
+    const valeurs = typeMot.lireValeurs(i);
+    const correcte = typeMot.estCorrecte({ reponse:{ val: rep } }, valeurs);
+    tentativeRapport(i + 1, valeurs.val, correcte);
     if(correcte) score++;
     const row = document.getElementById("conjQ-" + i);
     row.classList.remove("correcte", "incorrecte");
     row.classList.add(correcte ? "correcte" : "incorrecte");
   });
   const total = attendues.length;
+  if(window.Rapports) window.Rapports.termine();
   document.getElementById("conjScoreZone").innerHTML = `<div class="evoc-score">Score : ${score} / ${total}</div><div id="conjMessage"></div>`;
   (async () => {
     const prog = await chargerProgressionConj(themeId, serie);
