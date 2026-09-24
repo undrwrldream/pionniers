@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Échecs du Royaume</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=EB+Garamond:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<style>
+  :root{
+    --parchment:#f0e4c8;
+    --parchment-dark:#d9c79e;
+    --ink:#2c1e0f;
+    --gold:#b8860b;
+    --gold-light:#e6c565;
+    --square-light:#e8d9b5;
+    --square-dark:#8a6a3f;
+    --square-select:#7fb069aa;
+    --square-move:#e6c56599;
+    --square-check:#c0392baa;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background: radial-gradient(circle at 50% 0%, #4a3521, #1c130a 70%);
+    font-family:'EB Garamond', serif;
+    font-size:19px;
+    color:var(--parchment);
+    display:flex; flex-direction:column; align-items:center;
+    padding:36px 20px 90px;
+  }
+  h1{
+    font-family:'Cinzel Decorative', serif;
+    color:var(--gold-light);
+    text-shadow: 0 0 16px rgba(230,197,101,.5);
+    font-size:2.6rem; text-align:center; margin-bottom:6px;
+  }
+  .subtitle{ opacity:.75; font-style:italic; margin-bottom:36px; font-size:1.1rem; }
+  .screen{ display:none; width:100%; max-width:1200px; flex-direction:column; align-items:center; }
+  .screen.active{ display:flex; }
+
+  /* --- Écran d'accueil --- */
+  .mode-cards{ display:flex; gap:32px; flex-wrap:wrap; justify-content:center; margin-top:16px; }
+  .mode-card{
+    background:linear-gradient(160deg, #3a2a17, #241708);
+    border:2px solid var(--gold);
+    border-radius:14px; padding:38px 42px; width:320px; text-align:center;
+    cursor:pointer; transition:transform .15s, box-shadow .15s;
+  }
+  .mode-card:hover{ transform:translateY(-4px); box-shadow:0 8px 24px rgba(230,197,101,.25); }
+  .mode-card h2{ font-family:'Cinzel Decorative'; font-size:1.4rem; color:var(--gold-light); margin:0 0 12px; }
+  .mode-card p{ font-size:1.1rem; opacity:.8; margin:0; }
+
+  /* --- Écran de sélection de niveau --- */
+  .levels-grid{
+    display:grid; grid-template-columns:repeat(4, 1fr); gap:18px;
+    width:100%; margin-top:10px;
+  }
+  .level-card{
+    background:linear-gradient(160deg, #3a2a17, #241708);
+    border:2px solid var(--parchment-dark);
+    border-radius:12px; padding:20px 14px; text-align:center; cursor:pointer;
+    transition:transform .15s, border-color .15s;
+  }
+  .level-card:hover{ transform:translateY(-3px); border-color:var(--gold-light); }
+  .level-card .num{ font-family:'Cinzel Decorative'; color:var(--gold-light); font-size:1.7rem; display:block; }
+  .level-card .level-thumb{ width:64px; height:64px; object-fit:contain; display:block; margin:6px auto; filter:drop-shadow(0 4px 4px rgba(0,0,0,.5)); }
+  .level-card .name{ font-size:1.05rem; opacity:.85; }
+  .level-card.boss{ border-color:#c0392b; }
+  .level-card.boss .num{ color:#e67e6b; }
+  .level-card.locked{ opacity:.4; cursor:not-allowed; filter:grayscale(70%); }
+  .level-card.locked:hover{ transform:none; border-color:var(--parchment-dark); }
+  .level-card.locked .name{ text-decoration:line-through; }
+  .level-card .lock-hint{ font-size:.8rem; opacity:.7; display:block; margin-top:2px; }
+  .back-link{ align-self:flex-start; margin-bottom:18px; cursor:pointer; color:var(--gold-light); text-decoration:underline; font-size:1.1rem; }
+
+  /* --- Écran de jeu --- */
+  .board-stage{
+    position:relative;
+    perspective:2000px; padding:70px 56px 96px;
+    background:radial-gradient(ellipse at 50% 30%, #5a3f22, #201407 75%);
+    border-radius:20px;
+  }
+  #enemy-portrait{
+    position:absolute; top:14px; right:14px; z-index:5;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    background:rgba(0,0,0,.35); border:2px solid var(--gold); border-radius:10px;
+    padding:10px 14px; min-width:110px; text-align:center;
+  }
+  #enemy-portrait img{ width:80px; height:80px; object-fit:contain; }
+  #enemy-portrait .enemy-name{ font-family:'Cinzel Decorative'; font-size:.85rem; color:var(--gold-light); }
+  #enemy-portrait:empty{ display:none; }
+  #enemy-portrait.thinking{ animation:enemyPulse 1s ease-in-out infinite; }
+  @keyframes enemyPulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+  #board{
+    display:grid; grid-template-columns:repeat(8, 96px); grid-template-rows:repeat(8, 96px);
+    border:5px solid var(--gold); border-radius:4px; overflow:visible;
+    transform:rotateX(28deg) scale(1.02);
+    transform-style:preserve-3d;
+    box-shadow:
+      0 2px 0 #5c4110, 0 8px 0 #4a3410, 0 18px 30px rgba(0,0,0,.55),
+      0 50px 55px -10px rgba(0,0,0,.65);
+  }
+  .square{
+    width:96px; height:96px; display:flex; align-items:center; justify-content:center;
+    position:relative; cursor:pointer; user-select:none; overflow:visible;
+    box-shadow:inset 0 0 10px rgba(0,0,0,.18);
+  }
+  .square.light{ background:linear-gradient(160deg, var(--square-light), #d7c393); }
+  .square.dark{ background:linear-gradient(160deg, var(--square-dark), #6f5230); }
+  .square img.piece{
+    max-height:96%; max-width:96%; object-fit:contain; pointer-events:none; position:relative; z-index:2;
+    transition:transform .15s ease-out;
+    transform:translateY(-2px);
+  }
+  .square img.piece.side-w{
+    filter:drop-shadow(0 10px 6px rgba(0,0,0,.55)) drop-shadow(0 0 5px #fff8e6) drop-shadow(0 0 9px #fff8e6);
+  }
+  .square img.piece.side-b{
+    filter:drop-shadow(0 10px 6px rgba(0,0,0,.6)) drop-shadow(0 0 5px #0a0a0a) drop-shadow(0 0 9px #241f33);
+  }
+  .square.has-piece::before{
+    /* ombre portée au sol, sous chaque pièce, pour ancrer l'effet 3D */
+    content:""; position:absolute; left:50%; bottom:8px; width:60%; height:12px;
+    background:radial-gradient(ellipse, rgba(0,0,0,.45), transparent 70%);
+    transform:translateX(-50%); z-index:1; pointer-events:none;
+  }
+  .square:hover img.piece{ transform:translateY(-6px) scale(1.06); }
+  .square.selected img.piece{ transform:translateY(-10px) scale(1.1); }
+  @keyframes pieceLand{
+    0%{ transform:translateY(-30px) scale(.9); }
+    60%{ transform:translateY(2px) scale(1.03); }
+    100%{ transform:translateY(-2px) scale(1); }
+  }
+  .square img.piece.landed{ animation:pieceLand .32s ease-out; }
+  .crown-badge{
+    position:absolute; top:-8px; left:50%; transform:translateX(-50%);
+    width:26px; height:18px; z-index:4; pointer-events:none;
+    clip-path:polygon(0% 100%, 0% 45%, 22% 62%, 50% 15%, 78% 62%, 100% 45%, 100% 100%);
+  }
+  .crown-rose{ background:#ff7fa8; filter:drop-shadow(0 0 4px #ff7fa8); }
+  .crown-bleu{ background:#6fb3ff; filter:drop-shadow(0 0 4px #6fb3ff); }
+  .square.selected::after{ content:""; position:absolute; inset:0; background:var(--square-select); }
+  .square.legal::after{ content:""; position:absolute; width:20px; height:20px; border-radius:50%; background:var(--square-move); }
+  .square.legal-capture::after{ content:""; position:absolute; inset:5px; border-radius:50%; border:5px solid var(--square-move); background:transparent; }
+  .square.in-check{ background:var(--square-check) !important; }
+
+  [hidden]{ display:none !important; }
+  .bouton-classements{ margin-top:28px; font-family:'EB Garamond'; font-weight:600; font-size:1.1rem; background:transparent; color:var(--gold-light);
+    border:2px solid var(--gold); border-radius:999px; padding:10px 26px; cursor:pointer; }
+  .bouton-classements:hover{ background:rgba(184,134,11,.18); }
+  .ligne-joueur{ opacity:.7; font-style:italic; margin-top:14px; }
+  .bouton-or{ font-family:'EB Garamond'; font-weight:600; font-size:1.1rem; background:var(--gold); color:#241708; border:none; border-radius:8px; padding:12px 26px; cursor:pointer; }
+  .bouton-or:disabled{ opacity:.5; cursor:default; }
+  .bouton-sec{ font-family:'EB Garamond'; font-weight:600; font-size:1rem; background:transparent; color:var(--parchment); border:1.5px solid var(--parchment-dark); border-radius:8px; padding:8px 18px; cursor:pointer; }
+  .salon{ width:100%; max-width:720px; display:flex; flex-direction:column; gap:18px; }
+  .salon-actions{ display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+  .salon-aide{ margin:0; opacity:.75; flex:1; min-width:240px; }
+  .salon-titre{ font-family:'Cinzel Decorative'; color:var(--gold-light); font-size:1.2rem; margin:8px 0 0; }
+  .salon-liste{ display:flex; flex-direction:column; gap:10px; }
+  .salon-vide{ opacity:.7; font-style:italic; margin:0; }
+  .partie-ligne, .ma-partie{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:14px 18px;
+    background:linear-gradient(160deg, #3a2a17, #241708); border:1.5px solid var(--parchment-dark); border-radius:10px; }
+  .ma-partie{ border-color:var(--gold); }
+  .partie-ligne b, .ma-partie b{ color:var(--gold-light); }
+  .horloge{ position:absolute; left:14px; z-index:5; display:flex; align-items:center; gap:14px; padding:8px 16px;
+    background:rgba(0,0,0,.45); border:2px solid var(--parchment-dark); border-radius:10px; }
+  .horloge-adv{ top:14px; }
+  .horloge-moi{ bottom:14px; }
+  .horloge.actif{ border-color:var(--gold-light); box-shadow:0 0 14px rgba(230,197,101,.45); }
+  .horloge.bas .h-temps{ color:#ff8a7a; }
+  .h-nom{ font-size:1.05rem; max-width:240px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .h-temps{ font-family:'Cinzel Decorative'; font-size:1.5rem; color:var(--gold-light); min-width:84px; text-align:right; font-variant-numeric:tabular-nums; }
+  .bouton-abandon{ position:absolute; right:14px; bottom:14px; z-index:5; font-family:'EB Garamond'; font-size:1rem; background:rgba(0,0,0,.45);
+    color:#e8b0a8; border:1.5px solid #8a3a3a; border-radius:8px; padding:8px 16px; cursor:pointer; }
+  .etat-ligne{ position:absolute; left:50%; bottom:22px; transform:translateX(-50%); margin:0; font-style:italic; opacity:.8; white-space:nowrap; }
+  .onglets-classement{ display:flex; gap:10px; margin-bottom:18px; }
+  .onglet-cl{ font-family:'EB Garamond'; font-weight:600; font-size:1.05rem; background:transparent; color:var(--parchment);
+    border:1.5px solid var(--parchment-dark); border-radius:999px; padding:8px 20px; cursor:pointer; }
+  .onglet-cl.actif{ background:var(--gold); color:#241708; border-color:var(--gold); }
+  .classement-corps{ width:100%; max-width:640px; }
+  .table-cl{ width:100%; border-collapse:collapse; }
+  .table-cl th{ text-align:left; font-weight:600; color:var(--gold-light); border-bottom:1.5px solid var(--gold); padding:8px 10px; }
+  .table-cl td{ padding:8px 10px; border-bottom:1px solid rgba(217,199,158,.2); }
+  .table-cl td.n{ text-align:right; font-variant-numeric:tabular-nums; }
+  .table-cl tr.moi td{ background:rgba(184,134,11,.2); }
+  .table-cl td.mini img{ width:34px; height:34px; object-fit:contain; vertical-align:middle; }
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.75);
+    align-items:center; justify-content:center; z-index:10;
+  }
+  .modal-overlay.active{ display:flex; }
+  .modal-box{
+    background:linear-gradient(160deg, #3a2a17, #1c130a); border:2px solid var(--gold);
+    border-radius:12px; padding:32px 40px; text-align:center; max-width:340px;
+  }
+  .modal-box h2{ font-family:'Cinzel Decorative'; color:var(--gold-light); }
+  .modal-box button{
+    margin-top:16px; font-family:'EB Garamond'; font-weight:600; background:var(--gold); color:#241708;
+    border:none; border-radius:6px; padding:10px 20px; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>⚔️ Échecs du Royaume</h1>
+
+<!-- ÉCRAN 1 : choix du mode -->
+<div class="screen active" id="screen-home">
+  <div class="mode-cards">
+    <div class="mode-card" id="carteEnLigne" onclick="EnLigne.ouvrirSalon()" hidden>
+      <h2>Contre un élève</h2>
+      <p>Chacun sur son appareil. 10 minutes par joueur.</p>
+    </div>
+    <div class="mode-card" onclick="startPvP()">
+      <h2>Même plateau</h2>
+      <p>Deux joueurs se partagent le même appareil, à tour de rôle.</p>
+    </div>
+    <div class="mode-card" onclick="showScreen('screen-levels')">
+      <h2>Vs IA — Le Bestiaire</h2>
+      <p>Affronte 12 adversaires, du plus maladroit au plus redoutable.</p>
+    </div>
+  </div>
+  <button class="bouton-classements" id="btnClassements" onclick="EnLigne.ouvrirClassements()" hidden>🏆 Classements</button>
+  <p class="ligne-joueur" id="ligneJoueur"></p>
+</div>
+
+<!-- ÉCRAN : salon des parties en ligne -->
+<div class="screen" id="screen-salon">
+  <div class="back-link" onclick="EnLigne.quitterSalon()">← Retour</div>
+  <div class="salon">
+    <div class="salon-actions">
+      <button class="bouton-or" id="btnCreer" onclick="EnLigne.creerPartie()">Créer une partie</button>
+      <p class="salon-aide" id="salonAide">Crée une partie et attends qu'un élève la rejoigne, ou rejoins une partie ci-dessous.</p>
+    </div>
+    <div id="salonMaPartie"></div>
+    <h2 class="salon-titre">Parties ouvertes</h2>
+    <div id="salonListe" class="salon-liste"><p class="salon-vide">Chargement…</p></div>
+  </div>
+</div>
+
+<!-- ÉCRAN : classements -->
+<div class="screen" id="screen-classements">
+  <div class="back-link" onclick="showScreen('screen-home')">← Retour</div>
+  <div class="onglets-classement">
+    <button class="onglet-cl actif" data-cl="ia" onclick="EnLigne.ongletClassement('ia')">Contre l'IA</button>
+    <button class="onglet-cl" data-cl="duel" onclick="EnLigne.ongletClassement('duel')">Un contre un</button>
+  </div>
+  <div id="classementCorps" class="classement-corps"><p>Chargement…</p></div>
+</div>
+
+<!-- ÉCRAN 2 : choix du niveau IA -->
+<div class="screen" id="screen-levels">
+  <div class="back-link" onclick="showScreen('screen-home')">← Retour</div>
+  <div class="levels-grid" id="levels-grid"></div>
+</div>
+
+<!-- ÉCRAN 3 : jeu -->
+<div class="screen" id="screen-game">
+  <div class="back-link" onclick="confirmQuit()">← Quitter la partie</div>
+  <div class="board-stage">
+    <div id="enemy-portrait"></div>
+    <div class="horloge horloge-adv" id="horlogeAdv" hidden><span class="h-nom" id="nomAdv"></span><span class="h-temps" id="tempsAdv">10:00</span></div>
+    <div id="board"></div>
+    <div class="horloge horloge-moi" id="horlogeMoi" hidden><span class="h-nom" id="nomMoi"></span><span class="h-temps" id="tempsMoi">10:00</span></div>
+    <button class="bouton-abandon" id="btnAbandon" onclick="EnLigne.abandonner()" hidden>Abandonner</button>
+    <p class="etat-ligne" id="etatLigne"></p>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <h2 id="modal-title">Fin de partie</h2>
+    <p id="modal-text"></p>
+    <button id="modalBouton" onclick="closeModalAndRestart()">Rejouer</button>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   BESTIAIRE — 12 niveaux de difficulté
+   ===================================================================== */
+const BESTIARY = [
+  { id:1,  name:"Gobelin",           img:"enemies/01_goblin.webp",         depth:1, blunderRate:0.90 },
+  { id:2,  name:"Hobgobelin",        img:"enemies/02_hobgoblin.webp",      depth:1, blunderRate:0.65 },
+  { id:3,  name:"Zombie",            img:"enemies/03_zombie.webp",         depth:2, blunderRate:0.45 },
+  { id:4,  name:"Mimique",           img:"enemies/04_mimic.webp",          depth:2, blunderRate:0.30 },
+  { id:5,  name:"Cube gélatineux",   img:"enemies/05_cube_gelatineux.webp",depth:2, blunderRate:0.18 },
+  { id:6,  name:"Troll",             img:"enemies/06_troll.webp",          depth:3, blunderRate:0.10 },
+  { id:7,  name:"Basilic",           img:"enemies/07_basilic.webp",        depth:3, blunderRate:0.05 },
+  { id:8,  name:"Chimère",           img:"enemies/08_chimere.webp",        depth:3, blunderRate:0.02 },
+  { id:9,  name:"Manticore",         img:"enemies/09_manticore.webp",      depth:4, blunderRate:0.00 },
+  { id:10, name:"Démon",             img:"enemies/10_demon.webp",          depth:4, blunderRate:0.00 },
+  { id:11, name:"Dragon blanc",      img:"enemies/11_dragon_blanc.webp",   depth:4, blunderRate:0.00, refined:true },
+  { id:12, name:"Le Samouraï 👑",    img:"enemies/12_samourai.png",        depth:5, blunderRate:0.00, refined:true, boss:true },
+];
+
+/* =====================================================================
+   ÉTAT DU JEU
+   ===================================================================== */
+const game = new Chess();
+let mode = 'pvp';          // 'pvp' | 'ai'
+let aiLevel = null;        // objet BESTIARY
+let humanColor = 'w';      // en mode IA, l'humain joue toujours les Blancs
+let selectedSquare = null;
+let legalTargets = [];
+let aiThinking = false;
+let lastMoveTo = null;
+let lastMoveAnimated = false;
+let flipBoard = false;     // en ligne, les Noirs voient le plateau de leur côté
+
+/* Camp "w" (Blancs) = Égypte : Osiris, Cléopâtre, évêque, cavalier blanc, tour égyptienne, pion égyptien
+   Camp "b" (Noirs)  = Mésopotamie : Gilgamesh, Ishtar, bouffon, cavalier noir, tour ziggurat, pion romain */
+const PIECE_IMAGES = {
+  w:{ k:'pieces/osiris_king.png',    q:'pieces/cleopatra_queen.png', b:'pieces/eveque_bishop.png',
+      n:'pieces/knight_white.png',   r:'pieces/rook_egyptian.png',   p:'pieces/pawn_egyptian.png' },
+  b:{ k:'pieces/gilgamesh_king.png', q:'pieces/ishtar_queen.png',    b:'pieces/jester_bishop.png',
+      n:'pieces/knight_black.png',   r:'pieces/rook_ziggurat.png',   p:'pieces/pawn_roman.png' }
+};
+
+/* =====================================================================
+   NAVIGATION ENTRE ÉCRANS
+   ===================================================================== */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id === 'screen-levels') buildLevelsGrid();
+}
+
+const PROGRESS_KEY = 'echecsBestiaireUnlocked';
+function getUnlockedLevel(){
+  let stored = 1;
+  try{ stored = parseInt(localStorage.getItem(PROGRESS_KEY), 10); }catch(e){}
+  stored = (stored >= 1 && stored <= 12) ? stored : 1;
+  // Progression de l'élève dans la feuille Google (suit l'élève d'un appareil à l'autre).
+  const enLigne = window.EnLigne ? EnLigne.niveauDebloque() : 1;
+  return Math.max(stored, enLigne);
+}
+function unlockNextLevel(defeatedId){
+  const current = getUnlockedLevel();
+  if(defeatedId === current && current < 12){
+    try{ localStorage.setItem(PROGRESS_KEY, String(current + 1)); }catch(e){}
+  }
+  if(window.EnLigne) EnLigne.victoireIA(defeatedId);
+}
+
+function buildLevelsGrid(){
+  const grid = document.getElementById('levels-grid');
+  grid.innerHTML = '';
+  const unlocked = getUnlockedLevel();
+  BESTIARY.forEach(lvl => {
+    const isLocked = lvl.id > unlocked;
+    const card = document.createElement('div');
+    card.className = 'level-card' + (lvl.boss ? ' boss' : '') + (isLocked ? ' locked' : '');
+    card.innerHTML = `<span class="num">${lvl.id}</span>` +
+      `<img class="level-thumb" src="${lvl.img}" alt="${lvl.name}">` +
+      `<span class="name">${lvl.name}</span>` +
+      (isLocked ? `<span class="lock-hint">🔒 verrouillé</span>` : '');
+    if(!isLocked) card.onclick = () => startVsAI(lvl);
+    grid.appendChild(card);
+  });
+}
+buildLevelsGrid();
+
+function startPvP(){
+  mode = 'pvp';
+  flipBoard = false;
+  aiLevel = null;
+  resetBoardState();
+  showScreen('screen-game');
+}
+
+function startVsAI(lvl){
+  mode = 'ai';
+  flipBoard = false;
+  aiLevel = lvl;
+  resetBoardState();
+  showScreen('screen-game');
+}
+
+function confirmQuit(){
+  if(mode === 'ligne'){ EnLigne.quitterPartie(); return; }
+  if(confirm("Quitter la partie en cours ?")){
+    showScreen(mode === 'ai' ? 'screen-levels' : 'screen-home');
+  }
+}
+
+/* =====================================================================
+   RENDU DU PLATEAU
+   ===================================================================== */
+function resetBoardState(){
+  game.reset();
+  selectedSquare = null;
+  legalTargets = [];
+  aiThinking = false;
+  lastMoveTo = null;
+  lastMoveAnimated = true;
+  renderEnemyPortrait();
+  renderBoard();
+}
+
+function renderEnemyPortrait(){
+  const el = document.getElementById('enemy-portrait');
+  if(mode !== 'ai' || !aiLevel){ el.innerHTML = ''; return; }
+  el.innerHTML = `<img src="${aiLevel.img}" alt="${aiLevel.name}"><span class="enemy-name">${aiLevel.name}</span>`;
+}
+
+function squareId(row, col){
+  const file = 'abcdefgh'[col];
+  const rank = 8 - row;
+  return file + rank;
+}
+
+function renderBoard(){
+  const board = document.getElementById('board');
+  board.innerHTML = '';
+  const pos = game.board(); // [row0=rank8 ... row7=rank1][col0=a ... col7=h]
+
+  for(let dr=0; dr<8; dr++){
+    for(let dc=0; dc<8; dc++){
+      const row = flipBoard ? 7-dr : dr, col = flipBoard ? 7-dc : dc;
+      const sq = squareId(row, col);
+      const div = document.createElement('div');
+      div.className = 'square ' + (((row+col)%2===0) ? 'light' : 'dark');
+      div.dataset.square = sq;
+
+      const piece = pos[row][col];
+      if(piece){
+        div.classList.add('has-piece');
+        const img = document.createElement('img');
+        img.className = 'piece side-' + piece.color + (sq === lastMoveTo && !lastMoveAnimated ? ' landed' : '');
+        img.src = PIECE_IMAGES[piece.color][piece.type];
+        img.alt = piece.color + piece.type;
+        img.draggable = false;
+        div.appendChild(img);
+
+        if(piece.type === 'k' || piece.type === 'q'){
+          const crown = document.createElement('div');
+          crown.className = 'crown-badge ' + (piece.color === 'w' ? 'crown-rose' : 'crown-bleu');
+          div.appendChild(crown);
+        }
+      }
+
+      if(sq === selectedSquare) div.classList.add('selected');
+      const target = legalTargets.find(t => t.to === sq);
+      if(target) div.classList.add(target.captured ? 'legal-capture' : 'legal');
+
+      div.addEventListener('click', () => onSquareClick(sq));
+      board.appendChild(div);
+    }
+  }
+  lastMoveAnimated = true; // l'animation "landed" ne doit jouer qu'une seule fois par coup
+
+  // surligner un roi en échec
+  if(game.in_check()){
+    const kingColor = game.turn();
+    const kSq = findKingSquare(kingColor);
+    if(kSq){
+      const el = document.querySelector(`.square[data-square="${kSq}"]`);
+      if(el) el.classList.add('in-check');
+    }
+  }
+}
+
+function findKingSquare(color){
+  const pos = game.board();
+  for(let row=0; row<8; row++)
+    for(let col=0; col<8; col++){
+      const p = pos[row][col];
+      if(p && p.type==='k' && p.color===color) return squareId(row,col);
+    }
+  return null;
+}
+
+/* =====================================================================
+   INTERACTION — sélection / déplacement
+   ===================================================================== */
+function onSquareClick(sq){
+  if(aiThinking) return;
+  if(isGameOver()) return;
+
+  // en mode IA, on ne laisse cliquer que si c'est le tour de l'humain
+  if(mode === 'ai' && game.turn() !== humanColor) return;
+  // en ligne, seulement à son tour et pendant une partie en cours
+  if(mode === 'ligne' && !(window.EnLigne && EnLigne.peutJouer())) return;
+
+  if(selectedSquare){
+    const move = legalTargets.find(t => t.to === sq);
+    if(move){
+      playMove(selectedSquare, sq);
+      selectedSquare = null; legalTargets = [];
+      renderBoard();
+      afterMovePlayed();
+      return;
+    }
+  }
+
+  const piece = game.get(sq);
+  if(piece && piece.color === game.turn()){
+    selectedSquare = sq;
+    legalTargets = game.moves({ square:sq, verbose:true }).map(m => ({ to:m.to, captured: !!m.captured }));
+  } else {
+    selectedSquare = null; legalTargets = [];
+  }
+  renderBoard();
+}
+
+function playMove(from, to){
+  // promotion automatique en dame pour ce prototype
+  const piece = game.get(from);
+  const isPromotion = piece.type === 'p' && (to[1]==='8' || to[1]==='1');
+  const move = game.move({ from, to, promotion: isPromotion ? 'q' : undefined });
+  if(move){ lastMoveTo = to; lastMoveAnimated = false; }
+  return move;
+}
+
+function afterMovePlayed(){
+  if(mode === 'ligne'){ EnLigne.apresMonCoup(); return; }
+  updateStatus();
+  if(checkGameOver()) return;
+  if(mode === 'ai' && game.turn() !== humanColor){
+    aiThinking = true;
+    updateStatus('thinking');
+    setTimeout(() => {
+      const move = chooseAIMove(aiLevel);
+      if(move){
+        playMove(move.from, move.to);
+      }
+      aiThinking = false;
+      renderBoard();
+      updateStatus();
+      checkGameOver();
+    }, 2000 + Math.random() * 600); // au moins 2 s de "réflexion" avant de jouer
+  }
+}
+
+function restartGame(){
+  closeModal();
+  resetBoardState();
+}
+
+/* =====================================================================
+   STATUT / FIN DE PARTIE
+   ===================================================================== */
+function updateStatus(mode2){
+  // Le bandeau de statut a été retiré de l'interface ; seul le portrait de
+  // l'adversaire (en haut à droite) affiche un indicateur discret de réflexion.
+  const el = document.getElementById('enemy-portrait');
+  if(!el) return;
+  el.classList.toggle('thinking', mode2 === 'thinking');
+}
+
+function isGameOver(){ return game.game_over(); }
+
+function checkGameOver(){
+  if(!game.game_over()) return false;
+  let title, text;
+  if(game.in_checkmate()){
+    const checkmatedColor = game.turn(); // le camp qui vient d'être maté
+    const winner = checkmatedColor === 'w' ? 'Noirs' : 'Blancs';
+    title = "Échec et mat !";
+    text = `Victoire des ${winner}.`;
+    if(mode === 'ai' && checkmatedColor !== humanColor){
+      unlockNextLevel(aiLevel.id);
+      if(aiLevel.id < 12) text += ` ${BESTIARY[aiLevel.id].name} est débloqué !`;
+    }
+  } else if(game.in_stalemate()){
+    title = "Pat"; text = "Partie nulle par pat.";
+  } else if(game.in_threefold_repetition()){
+    title = "Nulle"; text = "Triple répétition de position.";
+  } else if(game.insufficient_material()){
+    title = "Nulle"; text = "Matériel insuffisant pour mater.";
+  } else {
+    title = "Partie nulle"; text = "Règle des 50 coups.";
+  }
+  showModal(title, text);
+  return true;
+}
+
+function showModal(title, text){
+  document.getElementById('modalBouton').textContent = mode === 'ligne' ? 'Retour au salon' : 'Rejouer';
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-text').textContent = text;
+  document.getElementById('modal').classList.add('active');
+}
+function closeModal(){ document.getElementById('modal').classList.remove('active'); }
+function closeModalAndRestart(){
+  if(mode === 'ligne'){ closeModal(); EnLigne.ouvrirSalon(); return; }
+  restartGame();
+}
+
+/* =====================================================================
+   INTELLIGENCE ARTIFICIELLE
+   ===================================================================== */
+const PIECE_VALUES = { p:100, n:320, b:330, r:500, q:900, k:20000 };
+
+function centerBonus(row, col){
+  // légère préférence pour le centre (files/rangs proches du milieu)
+  return (3.5 - Math.abs(3.5-row)) + (3.5 - Math.abs(3.5-col));
+}
+
+function evaluateBoard(g, refined){
+  const board = g.board();
+  let score = 0;
+  for(let row=0; row<8; row++){
+    for(let col=0; col<8; col++){
+      const sq = board[row][col];
+      if(!sq) continue;
+      let val = PIECE_VALUES[sq.type];
+      if(sq.type !== 'k' && sq.type !== 'r'){
+        val += centerBonus(row, col) * (refined ? 4 : 2);
+      }
+      score += (sq.color === 'w') ? val : -val;
+    }
+  }
+  if(refined && g.in_check()){
+    // pénalise légèrement le camp au trait s'il est en échec
+    score += (g.turn()==='w') ? -30 : 30;
+  }
+  return score;
+}
+
+function orderedMoves(g){
+  const moves = g.moves({ verbose:true });
+  moves.sort((a,b) => (b.captured?1:0) - (a.captured?1:0));
+  return moves;
+}
+
+// minimax + élagage alpha-bêta ; "isMax" = on maximise le score (perspective Blancs)
+function minimax(g, depth, alpha, beta, isMax, refined){
+  if(depth === 0 || g.game_over()){
+    return { score: evaluateBoard(g, refined) };
+  }
+  const moves = orderedMoves(g);
+  let best = null;
+  if(isMax){
+    let maxEval = -Infinity;
+    for(const m of moves){
+      g.move(m);
+      const res = minimax(g, depth-1, alpha, beta, false, refined);
+      g.undo();
+      if(res.score > maxEval){ maxEval = res.score; best = m; }
+      alpha = Math.max(alpha, res.score);
+      if(beta <= alpha) break;
+    }
+    return { score:maxEval, move:best };
+  } else {
+    let minEval = Infinity;
+    for(const m of moves){
+      g.move(m);
+      const res = minimax(g, depth-1, alpha, beta, true, refined);
+      g.undo();
+      if(res.score < minEval){ minEval = res.score; best = m; }
+      beta = Math.min(beta, res.score);
+      if(beta <= alpha) break;
+    }
+    return { score:minEval, move:best };
+  }
+}
+
+// Choisit délibérément un coup faible parmi les pires (sacrifie des pièces)
+function chooseBlunderMove(g){
+  const moves = g.moves({ verbose:true });
+  const aiIsWhite = g.turn() === 'w';
+  const scored = moves.map(m => {
+    g.move(m);
+    // valeur après la meilleure réponse adverse à 1 coup (perspective Blancs)
+    const reply = minimax(g, 1, -Infinity, Infinity, !aiIsWhite, false);
+    g.undo();
+    return { move:m, score: aiIsWhite ? reply.score : -reply.score };
+  });
+  scored.sort((a,b) => a.score - b.score); // du pire au meilleur pour l'IA
+  const worstQuartile = scored.slice(0, Math.max(1, Math.ceil(scored.length * 0.35)));
+  const pick = worstQuartile[Math.floor(Math.random() * worstQuartile.length)];
+  return pick.move;
+}
+
+function chooseAIMove(level){
+  if(Math.random() < level.blunderRate){
+    return chooseBlunderMove(game);
+  }
+  const aiIsWhite = game.turn() === 'w';
+  const result = minimax(game, level.depth, -Infinity, Infinity, aiIsWhite, level.refined);
+  return result.move || game.moves({ verbose:true })[0];
+}
+</script>
+<script src="en-ligne.js"></script>
+</body>
+</html>
