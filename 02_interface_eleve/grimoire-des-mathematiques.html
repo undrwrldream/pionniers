@@ -2521,15 +2521,15 @@
   // ---------- chapter menu (choose section) ----------
   async function openChapterMenu(chapterId){
     currentChapter = CHAPTERS.find(c => c.id === chapterId);
-    try{
-      const res = await window.storage.get('eval_unlocked', true);
-      evalUnlocked = !!(res && res.value === 'true');
-    }catch(e){ evalUnlocked = false; }
+    // Toutes les lectures partent EN MÊME TEMPS (la version de classe les regroupe en une seule
+    // requête au script Google) au lieu d'attendre chaque réponse l'une après l'autre.
     sectionProgressCache = {};
-    for(let idx=0; idx<SECTION_META.length; idx++){
-      sectionProgressCache[idx] = await loadSectionProgress(currentChapter.id, idx);
-    }
-    await chargerProgressionDocs(currentChapter.id);
+    await Promise.all([
+      window.storage.get('eval_unlocked', true)
+        .then(res => { evalUnlocked = !!(res && res.value === 'true'); }, () => { evalUnlocked = false; }),
+      ...SECTION_META.map((m, idx) => loadSectionProgress(currentChapter.id, idx).then(p => { sectionProgressCache[idx] = p; })),
+      chargerProgressionDocs(currentChapter.id)
+    ]);
     sectionChoisie = null;
     renderChapterMenu();
   }
@@ -2541,14 +2541,13 @@
     docProgressCache = {};
     const cfg = DOCS_CHAPITRES[chapterId];
     if(!cfg) return;
-    for(const idx of Object.keys(cfg)){
-      for(const doc of cfg[idx].docs){
-        try{
-          const res = await window.storage.get(docProgressKey(chapterId, doc.id), true);
-          docProgressCache[doc.id] = (res && res.value) ? JSON.parse(res.value) : { done:false };
-        }catch(e){ docProgressCache[doc.id] = { done:false }; }
-      }
-    }
+    const docs = Object.keys(cfg).flatMap(idx => cfg[idx].docs);
+    await Promise.all(docs.map(async doc => {
+      try{
+        const res = await window.storage.get(docProgressKey(chapterId, doc.id), true);
+        docProgressCache[doc.id] = (res && res.value) ? JSON.parse(res.value) : { done:false };
+      }catch(e){ docProgressCache[doc.id] = { done:false }; }
+    }));
   }
   function docFait(docId){ const p = docProgressCache[docId]; return !!(p && p.done); }
   // Un document est verrouillé tant que le précédent, dans la même section, n'est pas terminé

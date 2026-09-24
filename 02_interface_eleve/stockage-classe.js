@@ -75,14 +75,44 @@
     throw derniere;
   }
 
+  const LOT_DELAI_MS = 30, LOT_MAX = 40;
+  let enAttente = [], minuterieLot = null;
+  function reponse(d, valeur){
+    if(valeur === null || valeur === undefined || valeur === '') d.rejeter(erreur('ABSENTE', 'Clé introuvable : ' + d.cle));
+    else d.resoudre({ key: d.cle, value: String(valeur), shared: true });
+  }
+  async function envoyerLot(){
+    if(minuterieLot){ clearTimeout(minuterieLot); minuterieLot = null; }
+    const groupe = enAttente; enAttente = [];
+    if(!groupe.length) return;
+    try{
+      if(groupe.length === 1){
+        const data = await avecEssais(CFG.URL_SCRIPT + '?cle=' + encodeURIComponent(groupe[0].cle));
+        if(!data || data.error) throw erreur('SERVEUR', (data && data.error) || 'Réponse illisible.');
+        reponse(groupe[0], data.value);
+        return;
+      }
+      const cles = [...new Set(groupe.map(d => d.cle))];
+      const data = await avecEssais(CFG.URL_SCRIPT + '?lot=' + encodeURIComponent(cles.join(',')));
+      if(!data || data.error || !data.valeurs) throw erreur('SERVEUR', (data && data.error) || 'Réponse illisible.');
+      groupe.forEach(d => reponse(d, data.valeurs[d.cle]));   // chaque clé exacte (le lot peut en rapporter d'autres qui commencent pareil)
+    }catch(e){
+      groupe.forEach(d => d.rejeter(e));
+    }
+  }
+
   window.storage = {
     __classe: true,
 
-    async get(cle /*, shared */){
-      const data = await avecEssais(CFG.URL_SCRIPT + '?cle=' + encodeURIComponent(cle));
-      if(!data || data.error) throw erreur('SERVEUR', (data && data.error) || 'Réponse illisible.');
-      if(data.value === null || data.value === undefined || data.value === '') throw erreur('ABSENTE', 'Clé introuvable : ' + cle);
-      return { key: cle, value: String(data.value), shared: true };
+    // Les lectures demandées presque en même temps (ex. les 12 clés lues à l'ouverture d'un chapitre)
+    // partent ensemble en UNE seule requête ?lot= au lieu d'une requête chacune : une seule attente
+    // du script Google au lieu d'une douzaine.
+    get(cle /*, shared */){
+      return new Promise((resoudre, rejeter) => {
+        enAttente.push({ cle, resoudre, rejeter });
+        if(enAttente.length >= LOT_MAX) envoyerLot();
+        else if(!minuterieLot) minuterieLot = setTimeout(envoyerLot, LOT_DELAI_MS);
+      });
     },
 
     async set(cle, valeur /*, shared */){

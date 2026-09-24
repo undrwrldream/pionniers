@@ -1932,8 +1932,9 @@ async function renderEvocationsListe(){
   const zone = document.getElementById("evocListeItems");
   let html = "";
   let precedenteTerminee = true;
-  for(const section of EVOCATIONS_DATA){
-    const prog = await chargerProgressionEvoc(section.id);
+  const toutesProgs = await Promise.all(EVOCATIONS_DATA.map(s => chargerProgressionEvoc(s.id)));   // une seule attente
+  for(const [k, section] of EVOCATIONS_DATA.entries()){
+    const prog = toutesProgs[k];
     const terminee = prog.meilleurScore != null;
     const debloquee = precedenteTerminee;
     const scoreTxt = terminee ? `Meilleur score : ${prog.meilleurScore}/20` : (debloquee ? "Pas encore fait" : "Termine la section précédente");
@@ -2043,11 +2044,9 @@ function corrigerEvocations(section){
 // enregistré au moins une fois), et met à jour le cache utilisé par
 // chapterUnlocked() pour savoir si le Chapitre 2 doit se débarrer.
 async function calculerInvocationsTerminees(){
-  let n = 0;
-  for(const section of EVOCATIONS_DATA){
-    const prog = await chargerProgressionEvoc(section.id);
-    if(prog.meilleurScore != null) n++;
-  }
+  // Les 10 lectures partent en même temps (regroupées en une seule requête dans la version de classe).
+  const progs = await Promise.all(EVOCATIONS_DATA.map(section => chargerProgressionEvoc(section.id)));
+  const n = progs.filter(prog => prog.meilleurScore != null).length;
   invocationsToutesTerminees = n >= EVOCATIONS_DATA.length;
   evocNbTerminees = n;
   return n;
