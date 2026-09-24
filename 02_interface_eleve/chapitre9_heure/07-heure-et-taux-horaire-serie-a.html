@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'heure et le taux horaire — série A</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:880px; margin:0 auto; padding:22px 16px 40px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:rgba(255,250,236,0.78); border:1px solid #d9c49a; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; }
+  .entete p{ margin:2px 0 0; font-size:14px; opacity:.75; }
+  .score{ font-weight:800; font-size:17px; background:#fff; border:1px solid #d9c49a; border-radius:999px; padding:6px 14px; white-space:nowrap; }
+  .barre{ height:8px; border-radius:99px; background:rgba(59,42,26,.12); overflow:hidden; margin-top:8px; width:100%; }
+  .barre i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#e8b86a,#b45309); transition:width .3s; }
+  .carte{ background:rgba(255,252,244,0.9); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; display:flex; gap:14px; }
+  .carte.ok{ border-color:#86c79a; background:rgba(240,253,244,0.92); }
+  .num{ flex:0 0 36px; height:36px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; }
+  .carte.ok .num{ background:#16a34a; }
+  .corps{ flex:1; min-width:0; }
+  .enonce{ margin:4px 0 12px; font-size:17px; line-height:1.45; font-weight:700; }
+  .sous{ margin:10px 0 6px; font-size:15px; font-weight:700; opacity:.85; }
+  .rangee{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .champ{ display:flex; align-items:center; gap:6px; }
+  input{ font:inherit; font-size:17px; width:120px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input:focus{ outline:none; border-color:#b45309; }
+  input:disabled{ background:#f0fdf4; border-color:#86c79a; color:#14532d; }
+  .unite{ font-weight:800; opacity:.7; }
+  .actions{ display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
+  button{ font:inherit; font-weight:800; font-size:16px; padding:9px 18px; border-radius:10px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button:disabled{ background:#16a34a; cursor:default; }
+  .msg{ font-weight:800; font-size:15px; }
+  .msg.bon{ color:#15803d; } .msg.faux{ color:#b91c1c; }
+  @keyframes secoue{ 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+  .secoue{ animation:secoue .35s ease; }
+  .astuce{ text-align:center; font-size:14px; opacity:.7; }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <div style="flex:1;min-width:220px">
+      <h1>L'heure et le taux horaire — série A</h1>
+      <p>Réussis les 10 numéros. Tu peux écrire avec une virgule ou un point.</p>
+      <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div class="score" id="score">0 / 10 réussis</div>
+  </div>
+  <div id="liste"></div>
+  <p class="astuce">Une réponse fausse ? Relis le problème, refais ton calcul et réessaie.</p>
+</main>
+<script>
+(function(){
+  const QUESTIONS = [{"type": "nombre", "texte": "Combien y a-t-il de minutes dans 3 heures ?", "attendu": 180, "unite": "min"}, {"type": "duree", "texte": "150 minutes, c'est combien d'heures et de minutes ?", "minutes": 150, "strict": true}, {"type": "nombre", "texte": "Léo commence à travailler à 9h00 et finit à 11h00. Combien d'heures a-t-il travaillé ?", "attendu": 2, "unite": "h"}, {"type": "duree", "texte": "Sophie garde des enfants de 13h30 à 15h00. Quelle est la durée de son travail ?", "minutes": 90}, {"type": "nombre", "texte": "Alex est payé 10 $ de l'heure. Il travaille pendant 4 heures. Combien d'argent gagne-t-il ?", "attendu": 40, "unite": "$"}, {"type": "nombre", "texte": "Emma gagne 12 $ de l'heure. Elle travaille pendant 2h30. Combien gagne-t-elle au total ?", "attendu": 30, "unite": "$"}, {"type": "nombre", "texte": "Lucas a travaillé 5 heures et a reçu 75 $. Quel est son taux horaire ?", "attendu": 15, "unite": "$/h"}, {"type": "nombre", "texte": "Mia travaille de 8h00 à 12h00. Elle prend une pause de 30 minutes qui n'est pas payée. Elle est payée 14 $ de l'heure. Combien va-t-elle gagner ?", "attendu": 49, "unite": "$"}, {"type": "nombre", "texte": "Noah travaille lundi de 16h00 à 18h00 et mercredi de 16h00 à 19h00. Il est payé 13 $ de l'heure. Combien gagne-t-il pour la semaine ?", "attendu": 65, "unite": "$"}, {"type": "q10", "texte": "Zoé travaille samedi de 9h15 à 12h45. Elle est payée 15 $ de l'heure.", "a": 210, "b": 52.5, "cArgent": 82.5, "cMin": 330}];
+  const etatInitial = (function(){ try{ return JSON.parse(new URLSearchParams(location.search).get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};           // "3:h" -> texte saisi
+  const reussis = new Set((etatInitial && etatInitial.ok) || []);   // indices réussis
+  const derniereErreur = {};                                         // numéro -> réponse fausse déjà comptée
+
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+
+  // Lecture d'un nombre : « 3,5 », « 3.5 », « 49 $ », « 2h30 » (= 2,5 h).
+  function lire(txt){
+    if(txt == null) return null;
+    let n = String(txt).trim().toLowerCase().replace(/\$/g, '').replace(/\s+/g, '').replace(/,/g, '.');
+    if(!n) return null;
+    if(n.includes('h')){
+      const [a, b] = n.split('h');
+      const h = parseFloat(a), m = parseFloat((b || '').replace(/[^0-9.]/g, ''));
+      if(!isNaN(h) && !isNaN(m)) return h + m / 60;
+      if(!isNaN(h)) return h;
+    }
+    const x = parseFloat(n.replace(/[^0-9.\-]/g, ''));
+    return isNaN(x) ? null : x;
+  }
+  const egal = (a, b) => a !== null && Math.abs(a - b) < 0.01;
+  // Durée donnée en heures + minutes. strict : les minutes doivent être entre 0 et 59 (question de conversion).
+  function duree(h, m, attendu, strict){
+    const H = lire(h), M = lire(m);
+    if(H === null && M === null) return false;
+    if(strict) return H !== null && M !== null && Number.isInteger(H) && M >= 0 && M < 60 && egal(H * 60 + M, attendu);
+    if(H !== null && M === null) return egal(H * 60, attendu);
+    if(H === null && M !== null) return egal(M, attendu);
+    return egal(H * 60 + M, attendu);
+  }
+
+  function champ(i, cle, ph, unite){
+    const id = 'c' + i + '_' + cle;
+    return '<span class="champ"><input id="' + id + '" data-q="' + i + '" data-cle="' + cle + '" placeholder="' + ph + '" inputmode="decimal" autocomplete="off">' +
+      (unite ? '<span class="unite">' + unite + '</span>' : '') + '</span>';
+  }
+  function champs(q, i){
+    if(q.type === 'nombre') return '<div class="rangee">' + champ(i, 'r', 'Ta réponse', q.unite) + '</div>';
+    if(q.type === 'duree') return '<div class="rangee">' + champ(i, 'h', 'heures', 'h') + champ(i, 'm', 'minutes', 'min') + '</div>';
+    return '<p class="sous">a) Combien d\'heures a-t-elle travaillé samedi ?</p><div class="rangee">' + champ(i, 'ah', 'heures', 'h') + champ(i, 'am', 'minutes', 'min') + '</div>' +
+      '<p class="sous">b) Combien a-t-elle gagné samedi ?</p><div class="rangee">' + champ(i, 'b', '$', '$') + '</div>' +
+      '<p class="sous">c) Si elle travaille 2 heures de plus le dimanche, combien d\'heures et combien d\'argent pour tout le week-end ?</p>' +
+      '<div class="rangee">' + champ(i, 'ch', 'heures', 'h') + champ(i, 'cm', 'minutes', 'min') + champ(i, 'c', '$', '$ au total') + '</div>';
+  }
+  const v = (i, cle) => { const el = document.getElementById('c' + i + '_' + cle); return el ? el.value : ''; };
+  function estVide(i){ return [...document.querySelectorAll('input[data-q="' + i + '"]')].every(el => !el.value.trim()); }
+  function signature(i){ return [...document.querySelectorAll('input[data-q="' + i + '"]')].map(el => el.value.trim().toLowerCase()).join('|'); }
+  function correct(q, i){
+    if(q.type === 'nombre') return egal(lire(v(i, 'r')), q.attendu);
+    if(q.type === 'duree') return duree(v(i, 'h'), v(i, 'm'), q.minutes, !!q.strict);
+    return duree(v(i, 'ah'), v(i, 'am'), q.a, false) && egal(lire(v(i, 'b')), q.b) &&
+           egal(lire(v(i, 'c')), q.cArgent) && duree(v(i, 'ch'), v(i, 'cm'), q.cMin, false);
+  }
+
+  const liste = document.getElementById('liste');
+  liste.style.display = 'flex'; liste.style.flexDirection = 'column'; liste.style.gap = '14px';
+  liste.innerHTML = QUESTIONS.map((q, i) =>
+    '<div class="carte" id="carte' + i + '"><div class="num">' + (i + 1) + '</div><div class="corps">' +
+      '<p class="enonce">' + q.texte + '</p>' + champs(q, i) +
+      '<div class="actions"><button type="button" data-verifier="' + i + '">Vérifier</button><span class="msg" id="msg' + i + '"></span></div>' +
+    '</div></div>').join('');
+
+  // Reprise : réponses déjà tapées et numéros déjà réussis.
+  document.querySelectorAll('input[data-q]').forEach(el => {
+    const k = el.dataset.q + ':' + el.dataset.cle;
+    if(valeurs[k] != null) el.value = valeurs[k];
+    el.addEventListener('input', () => { valeurs[k] = el.value; envoyerEtat(); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter') verifier(+el.dataset.q); });
+  });
+  reussis.forEach(i => marquer(i, false));
+
+  document.querySelectorAll('[data-verifier]').forEach(b => b.addEventListener('click', () => verifier(+b.dataset.verifier)));
+
+  function marquer(i, annoncer){
+    const carte = document.getElementById('carte' + i);
+    if(!carte) return;
+    carte.classList.add('ok');
+    carte.querySelector('.num').textContent = '✓';
+    carte.querySelectorAll('input').forEach(el => el.disabled = true);
+    const b = carte.querySelector('button'); b.disabled = true; b.textContent = '✓ Réussi';
+    if(annoncer){ const m = document.getElementById('msg' + i); m.textContent = 'Bonne réponse !'; m.className = 'msg bon'; }
+  }
+
+  function verifier(i){
+    if(reussis.has(i)) return;
+    if(estVide(i)) return;                                  // une réponse vide n'est pas une tentative
+    const ok = correct(QUESTIONS[i], i);
+    const sig = signature(i);
+    if(ok || derniereErreur[i] !== sig){
+      parent({ type:'tentative', numero:String(i + 1), correcte:ok });
+      if(!ok) derniereErreur[i] = sig;
+    }
+    const m = document.getElementById('msg' + i);
+    if(ok){
+      reussis.add(i);
+      marquer(i, true);
+      maj();
+    } else {
+      m.textContent = 'Pas tout à fait, réessaie !'; m.className = 'msg faux';
+      const carte = document.getElementById('carte' + i);
+      carte.classList.remove('secoue'); void carte.offsetWidth; carte.classList.add('secoue');
+    }
+    envoyerEtat();
+  }
+
+  function envoyerEtat(){
+    const vide = reussis.size === 0 && Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: (vide || reussis.size === QUESTIONS.length) ? null : { v: valeurs, ok: [...reussis] } });
+  }
+  function maj(){
+    const n = reussis.size;
+    document.getElementById('score').textContent = n + ' / ' + QUESTIONS.length + ' réussis';
+    document.getElementById('barre').style.width = (100 * n / QUESTIONS.length) + '%';
+    parent({ type:'progress', vus:n, total:QUESTIONS.length });
+    if(n === QUESTIONS.length) parent({ type:'termine' });
+  }
+  maj();
+})();
+</script>
+</body>
+</html>
