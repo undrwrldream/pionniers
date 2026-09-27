@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="config-classe.js"></script>
+<script src="garde-classe.js" data-garde="sortie"></script>
+<title>Mon Chevalier — Royaume des Savants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<script src="stockage-classe.js"></script>
+<script src="passerelle-core.js"></script>
+<script src="xp-core.js"></script>
+<script src="aide-core.js"></script>
+<script src="compagnon-core.js"></script>
+<script src="lecture-magique.js"></script>
+<style>
+  :root{
+    --parchment:#F1E4C3; --parchment-dark:#E3D3A6; --ink:#2B2118;
+    --burgundy:#7B2D26; --burgundy-dark:#5C201B; --gold:#B8860B; --gold-light:#D9A62E;
+    --forest:#3B5D42; --iron:#5B5750; --cellbg:#FBF6E9;
+  }
+
+  /* ================= PASSERELLE D'ENTRÉE ================= */
+  #passerelleOverlay{
+    position:fixed; inset:0; z-index:999998;
+    display:flex; align-items:center; justify-content:center;
+    background:radial-gradient(ellipse at center, #241109 0%, #0d0704 75%);
+    transition:opacity 1s ease, visibility 1s ease;
+  }
+  #passerelleOverlay.masquee{ opacity:0; visibility:hidden; pointer-events:none; }
+  #passerelleOverlay .contenu{ display:flex; flex-direction:column; align-items:center; gap:24px; padding:20px; text-align:center; }
+
+  #passerelleEcranInvalide{ display:none; max-width:420px; }
+  #passerelleEcranInvalide h2{ font-family:'Cinzel', serif; color:#e3a8a0; font-size:22px; margin:0 0 12px; }
+  #passerelleEcranInvalide p{ color:var(--parchment); opacity:0.9; line-height:1.5; font-size:16px; }
+
+  #passerelleEcranChoix{ display:none; flex-direction:column; align-items:center; gap:16px; }
+  #passerelleEcranChoix h1{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:24px; margin:0 0 4px; text-shadow:0 0 16px rgba(217,166,46,0.55); }
+  #passerelleEcranChoix p.consigne{ color:var(--parchment); opacity:0.85; font-style:italic; margin:0 0 8px; }
+  .passerelle-choix-conteneur{ display:flex; gap:32px; flex-wrap:wrap; justify-content:center; }
+  .passerelleCarte{ cursor:pointer; border:none; background:none; padding:0; width:min(42vw,210px); display:flex; flex-direction:column; align-items:center; gap:10px; transition:transform .3s ease; }
+  .passerelleCarte:hover, .passerelleCarte:focus-visible{ transform:translateY(-6px) scale(1.03); }
+  .passerelleCarte .cadre{ width:100%; aspect-ratio:3/4.2; border-radius:10px; overflow:hidden; box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 0 2px rgba(217,166,46,.4); }
+  .passerelleCarte:hover .cadre, .passerelleCarte:focus-visible .cadre{ box-shadow:0 14px 36px rgba(0,0,0,.6), 0 0 0 3px var(--gold-light), 0 0 34px rgba(217,166,46,.4); }
+  .passerelleCarte img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .passerelleCarte .etiquette{ font-family:'Cinzel', serif; color:var(--gold-light); font-size:14px; letter-spacing:1px; text-transform:uppercase; }
+
+  #passerelleEcranCouverture{ display:none; flex-direction:column; align-items:center; gap:20px; }
+  #passerelleEcranCouverture .cadre{ position:relative; width:min(70vw,320px); aspect-ratio:3/4.2; border-radius:12px; overflow:hidden; box-shadow:0 20px 55px rgba(0,0,0,.6), 0 0 36px rgba(217,166,46,.2); }
+  #passerelleEcranCouverture img{ width:100%; height:100%; object-fit:cover; display:block; }
+  #passerelleVoile{ position:absolute; left:50%; bottom:14%; width:34%; aspect-ratio:1; transform:translateX(-50%); border-radius:50%; background:radial-gradient(circle, rgba(255,225,140,.85) 0%, rgba(255,200,80,.35) 45%, transparent 70%); animation:passerellePulse 1.4s ease-in-out infinite; mix-blend-mode:screen; pointer-events:none; }
+  @keyframes passerellePulse{ 0%,100%{ opacity:.35; transform:translateX(-50%) scale(.9); } 50%{ opacity:.9; transform:translateX(-50%) scale(1.15); } }
+  #passerelleFlash{ position:absolute; inset:0; background:radial-gradient(circle at 50% 82%, rgba(255,240,200,.95) 0%, rgba(255,215,120,.4) 30%, transparent 60%); opacity:0; pointer-events:none; }
+  #passerelleFlash.actif{ animation:passerelleFlashAnim .9s ease-out forwards; }
+  @keyframes passerelleFlashAnim{ 0%{opacity:0;} 35%{opacity:1;} 100%{opacity:0;} }
+  #passerelleStatut{ font-family:'Crimson Text', serif; font-style:italic; color:var(--parchment); opacity:.85; min-height:24px; max-width:340px; }
+
+  /* ================= LIVRE À DEUX PAGES (base visuelle partagée) ================= */
+  /* Sur mobile (<760px), les deux "pages" restent empilées dans l'ordre déjà
+     éprouvé (personnage d'abord, navigation ensuite) — le format livre à deux
+     pages côte à côte ne s'active qu'à partir d'une largeur de type tablette. */
+  .livre-conteneur{
+    background: linear-gradient(180deg, var(--burgundy-dark), #3a1712 90%);
+    border-radius: 10px; overflow:hidden; margin-bottom:22px;
+    box-shadow: 0 14px 34px rgba(0,0,0,0.35), 0 0 0 1px rgba(217,166,46,0.2);
+  }
+  .livre-bandeau-haut, .livre-bandeau-bas{
+    width:100%; height:30px; background-image:url('livre_assets/bandeau_runique.jpg');
+    background-size:cover; background-position:center;
+  }
+  .livre-bandeau-bas{ background-image:url('livre_assets/bandeau_runique_bas.jpg'); }
+  .livre-pages{ display:flex; flex-direction:column; }
+  .page-gauche, .page-droite{
+    background: var(--parchment);
+    padding: 18px 16px 22px;
+  }
+  .page-gauche{ order:2; }
+  .page-droite{ order:1; }
+  .page-gauche .eyebrow-page{ font-family:'Cinzel', serif; font-size:12px; color:var(--burgundy); opacity:0.8; margin:0 0 4px; }
+  .page-gauche h2{ font-family:'Cinzel', serif; font-size:16px; color:var(--burgundy-dark); margin:0 0 14px; }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--parchment);
+    background-image:radial-gradient(circle at 15% 20%, rgba(0,0,0,0.03) 0, transparent 40%), radial-gradient(circle at 85% 80%, rgba(0,0,0,0.03) 0, transparent 40%);
+    color:var(--ink); font-family:'Crimson Text', serif; font-size:16px;
+  }
+  .frame{ max-width:480px; margin:0 auto; padding:18px 14px 50px; }
+
+  /* Sur écran large (portable/ordinateur, format paysage), le livre s'élargit,
+     affiche la vraie image du livre ouvert en fond, et les deux pages se
+     positionnent précisément dans les zones de parchemin de cette image —
+     DOIT venir après la règle .frame ci-dessus pour la remplacer correctement
+     (même sélecteur, la déclaration la plus tardive dans le fichier l'emporte). */
+  @media (min-width: 760px){
+    body{ height:100vh; overflow:hidden; padding:0 10px; display:flex; align-items:center; justify-content:center; }
+    .frame{ max-width:none; width: min(96vw, calc(94vh * 1.738), 1924px); padding:0; margin:0; }
+
+    .livre-bandeau-haut, .livre-bandeau-bas{ display:none; }
+
+    .livre-conteneur{
+      background:
+        url('livre_assets/livre_ouvert.webp') center / contain no-repeat,
+        linear-gradient(180deg, var(--burgundy-dark), #3a1712 90%);
+      aspect-ratio: 1924 / 1107;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+    }
+    .livre-pages{ position:relative; height:100%; display:block; }
+
+    /* Zones mesurées directement sur l'image livre_ouvert.webp (1924 × 1107, les deux
+       rectangles de parchemin clair) : x 7.7%-44.2% et 54.6%-91.3%,
+       y 5.6%-91.8%. Le défilement interne protège l'alignement de l'image
+       même si le contenu d'une page dépasse la hauteur disponible. */
+    .page-gauche, .page-droite{
+      position:absolute; top:5.6%; bottom:8.2%;
+      overflow-y:auto; background:none; padding: 3.4% 3.6% 2.8%;
+    }
+    .page-gauche{ left:7.7%; width:36.5%; order:initial; border-right:none; display:block; }
+    .page-droite{ left:54.6%; width:36.7%; order:initial; }
+  }
+  header{ display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:10px; margin-bottom:18px; }
+  header h1{ font-family:'Cinzel', serif; font-size:19px; margin:0; color:var(--burgundy-dark); }
+  .gold-counter{ display:flex; align-items:center; gap:6px; font-family:'Cinzel', serif; font-size:16px; color:var(--burgundy-dark); }
+  .gold-counter svg{ width:20px; height:20px; }
+  .gold-amount.bump{ animation:bump 0.25s ease; }
+  @keyframes bump{ 50%{ transform:scale(1.3); } }
+
+  /* ---- Poupée d'équipement ---- */
+  .doll-wrap{ position:relative; margin-bottom:22px; }
+  .doll{
+    display:grid;
+    grid-template-columns:64px 1fr 64px;
+    grid-template-rows:repeat(3, 112px);
+    grid-template-areas:
+      "helm    portrait armor"
+      "weapon  portrait shield"
+      "gloves  portrait boots";
+    gap:8px;
+    align-items:center;
+    justify-items:center;
+  }
+  .slot{
+    width:56px; height:56px; background:var(--cellbg); border:2px solid var(--ink);
+    display:flex; align-items:center; justify-content:center; cursor:pointer; position:relative;
+    transition:transform 0.15s ease, border-color 0.15s ease;
+  }
+  .slot:hover{ transform:translateY(-2px); border-color:var(--gold); }
+  .slot svg{ width:44px; height:52px; }
+  .slot.empty{ opacity:0.35; }
+  .slot-label{
+    position:absolute; bottom:-16px; font-size:9px; font-family:'Cinzel', serif; color:var(--iron);
+    white-space:nowrap;
+  }
+  .slot-helm{ grid-area:helm; } .slot-weapon{ grid-area:weapon; } .slot-shield{ grid-area:shield; }
+  .slot-armor{ grid-area:armor; } .slot-gloves{ grid-area:gloves; } .slot-boots{ grid-area:boots; }
+
+  .portrait-wrap{ grid-area:portrait; text-align:center; }
+  .portrait{
+    width:176px; height:228px; margin:0 auto;
+    background:var(--parchment-dark) center/cover no-repeat;
+    border:3px solid var(--ink); position:relative;
+    background-position:center 12%;
+    clip-path:polygon(50% 0%, 100% 12%, 100% 76%, 50% 100%, 0% 76%, 0% 12%);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .portrait::after{
+    content:""; position:absolute; inset:5px;
+    border:1px solid var(--gold); clip-path:polygon(50% 0%, 100% 12%, 100% 76%, 50% 100%, 0% 76%, 0% 12%);
+    pointer-events:none;
+  }
+  .portrait-placeholder{ color:var(--iron); font-size:12px; font-style:italic; padding:0 16px; text-align:center; }
+  .stats-row{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
+  .hp-badge{
+    display:inline-block; padding:4px 12px;
+    background:var(--cellbg); border:2px solid var(--burgundy);
+    font-family:'Cinzel', serif; font-size:14px; font-weight:700; color:#B5302A;
+    transition:opacity 0.15s ease;
+  }
+  .dmg-badge{
+    display:inline-block; padding:4px 12px;
+    background:var(--cellbg); border:2px solid var(--ink);
+    font-family:'Cinzel', serif; font-size:13px; font-weight:700; color:var(--burgundy-dark);
+    transition:opacity 0.15s ease;
+  }
+  .hp-badge.frozen, .dmg-badge.frozen{ opacity:0.4; color:var(--iron); }
+  .hp-badge.reveal, .dmg-badge.reveal{ animation:bump 0.3s ease; }
+
+  .freeze-overlay{
+    position:absolute; inset:0; background:rgba(43,33,24,0.55);
+    display:none; align-items:center; justify-content:center;
+    font-family:'Cinzel', serif; font-size:15px; color:var(--parchment);
+    letter-spacing:2px; z-index:999; text-shadow:0 2px 6px rgba(0,0,0,0.6);
+  }
+  .freeze-overlay.active{ display:flex; }
+  .freeze-overlay .dots span{ display:inline-block; font-size:34px; margin:0 2px; animation:pulseDots 1s ease-in-out infinite; }
+  .freeze-overlay .dots span:nth-child(2){ animation-delay:0.15s; }
+  .freeze-overlay .dots span:nth-child(3){ animation-delay:0.3s; }
+  @keyframes pulseDots{ 0%,100%{opacity:0.25; transform:translateY(0);} 50%{opacity:1; transform:translateY(-4px);} }
+
+  /* ---- Magasin ---- */
+  .store h2{ font-family:'Cinzel', serif; font-size:16px; color:var(--burgundy-dark); border-bottom:2px solid var(--ink); padding-bottom:6px; margin:0 0 10px; }
+  /* Onglets du Marché : ils se partagent toute la largeur, sans barre de défilement, pour que
+     toutes les catégories (Armes comprises) soient toujours visibles ; sur une page trop étroite,
+     ils passent sur une deuxième ligne plutôt que de se cacher. */
+  .tabs{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px; }
+  .tab{
+    flex:1 1 0; min-width:max-content; text-align:center;
+    font-family:'Cinzel', serif; font-size:clamp(9.5px, 0.8vw, 12px); padding:6px 5px; white-space:nowrap;
+    background:var(--parchment-dark); border:1px solid var(--ink); cursor:pointer; color:var(--ink);
+  }
+  .tab.active{ background:var(--burgundy); color:var(--parchment); border-color:var(--burgundy); }
+
+  .item-row{
+    display:grid; grid-template-columns:48px 1fr auto auto; align-items:center; gap:10px;
+    padding:10px 4px; border-bottom:1px solid rgba(43,33,24,0.18);
+  }
+  .item-row:first-of-type{ border-top:1px solid rgba(43,33,24,0.18); }
+  .item-row svg{ width:40px; height:46px; }
+  .item-info .item-name{ font-weight:600; display:block; font-size:14px; }
+  .item-info .item-stat{ font-size:12px; color:var(--iron); font-style:italic; }
+  .item-price{ font-family:'Cinzel', serif; font-size:13px; color:var(--burgundy-dark); white-space:nowrap; }
+  .item-row button{
+    font-family:'Crimson Text', serif; font-size:13px; padding:6px 12px; border:1px solid var(--ink);
+    background:var(--parchment); cursor:pointer; white-space:nowrap;
+  }
+  .item-row button:hover:not(:disabled){ background:var(--gold-light); }
+  .item-row button:disabled{ opacity:0.4; cursor:not-allowed; }
+  .item-row button.equipped{ background:var(--forest); color:var(--parchment); border-color:var(--forest); }
+  .action-group{ display:flex; flex-direction:column; gap:4px; }
+  .action-group .sell-btn{ font-size:11px; color:var(--burgundy); }
+
+  .demo-earn{
+    display:block; margin:0 auto 20px; font-family:'Crimson Text', serif; font-style:italic; font-size:13px;
+    background:none; border:1px dashed var(--iron); color:var(--iron); padding:7px 14px; cursor:pointer;
+  }
+
+  /* ---- Grimoire ---- */
+  .grimoire-section{ margin-top:26px; }
+  .grimoire-toggle{
+    width:100%; display:flex; align-items:center; gap:12px; text-align:left;
+    padding:14px 16px; background:linear-gradient(180deg, #2A2118, #1B150F);
+    border:2px solid var(--gold); border-radius:8px; cursor:pointer;
+    box-shadow:0 4px 10px rgba(0,0,0,0.35);
+  }
+  .grimoire-toggle:hover{ background:linear-gradient(180deg, #332818, #221A10); }
+  .grimoire-toggle-inactif, .grimoire-toggle-inactif:hover{
+    cursor:not-allowed; filter:grayscale(0.9) brightness(0.72);
+    background:linear-gradient(180deg, #2A2118, #1B150F); box-shadow:none;
+  }
+  .grimoire-icon{ font-size:26px; flex:0 0 auto; }
+  .grimoire-icon .grimoire-mini{ width:38px; height:38px; object-fit:contain; display:block; }   /* vignette (dossier mini/) à la place de l'emoji */
+  .grimoire-toggle-text{ flex:1; display:flex; flex-direction:column; gap:2px; }
+  .grimoire-title{ font-family:'Cinzel', serif; font-size:14px; color:var(--gold-light); letter-spacing:0.3px; }
+  .grimoire-subtitle{ font-family:'Crimson Text', serif; font-style:italic; font-size:12px; color:#C9BB98; }
+  .grimoire-chevron{ color:var(--gold-light); font-size:16px; transition:transform 0.25s ease; flex:0 0 auto; }
+
+  .grimoire-chevron{ color:var(--gold-light); font-size:20px; flex:0 0 auto; }
+
+  .grimoire-toggle-bonus{
+    border-color: #6B8FD9;
+    background: linear-gradient(180deg, #1a1f33, #10131f);
+    box-shadow: 0 4px 14px rgba(107,143,217,0.25);
+  }
+  .grimoire-toggle-bonus:hover{ background: linear-gradient(180deg, #222a45, #151a2b); }
+  .grimoire-toggle-bonus .grimoire-title{ color:#A9C0F5; }
+
+  .grimoire-modal{
+    position:fixed; inset:0; background:#0E0B07; z-index:9999;
+    display:none; flex-direction:column;
+  }
+  .grimoire-modal.open{ display:flex; }
+  /* Le bouton de retour flotte dans le coin : plus de bande pleine largeur en haut, tout l'écran va au livre. */
+  .grimoire-modal-bar{
+    position:absolute; top:6px; left:8px; z-index:5; height:0; overflow:visible;
+  }
+  .grimoire-modal-close{
+    font-family:'Cinzel', serif; font-size:12px; color:var(--gold-light);
+    background:rgba(27,21,15,0.82); border:1px solid var(--gold); border-radius:6px;
+    padding:4px 10px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.4); opacity:.8;
+  }
+  .grimoire-modal-close:hover{ background:rgba(60,40,15,0.95); opacity:1; }
+  .grimoire-modal-frame{ flex:1; width:100%; border:none; display:block; }
+
+  /* ligne d'expérience (XP) sous les points de vie et l'attaque — un clic ouvre le détail des niveaux */
+  .xp-row{
+    display:block; width:100%; max-width:236px; margin:7px auto 0; padding:4px 10px 6px;
+    background:var(--cellbg); border:2px solid var(--gold); cursor:pointer; text-align:center;
+    font-family:'Cinzel', serif; font-size:12px; font-weight:700; color:var(--ink);
+  }
+  .xp-row:hover{ filter:brightness(1.07); }
+  .xp-row:focus-visible{ outline:2px solid var(--burgundy); outline-offset:2px; }
+  .xp-track{ display:block; height:6px; margin-top:4px; background:rgba(0,0,0,0.16); border-radius:99px; overflow:hidden; }
+  .xp-track i{ display:block; height:100%; width:0; background:linear-gradient(90deg,var(--gold),var(--gold-light)); border-radius:99px; transition:width 0.4s ease; }
+  .xp-modal{ position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(14,11,7,0.72); }
+  .xp-modal.open{ display:flex; }
+  .xp-carte{
+    width:min(94vw, 460px); max-height:92vh; overflow-y:auto; padding:18px 20px 16px;
+    background:var(--parchment); border:3px solid var(--gold); border-radius:8px; box-shadow:0 12px 40px rgba(0,0,0,0.6);
+    font-family:'Crimson Text', serif; color:var(--ink);
+  }
+  .xp-carte h2{ margin:0 0 10px; font-family:'Cinzel', serif; font-size:18px; text-align:center; color:var(--burgundy-dark); }
+  .xp-niveaux{ list-style:none; margin:0 0 12px; padding:0; }
+  .xp-niveaux li{ display:flex; justify-content:space-between; gap:10px; padding:6px 10px; margin-bottom:5px; border:1px solid rgba(90,60,20,0.35); border-radius:5px; background:rgba(255,255,255,0.35); font-size:15px; }
+  .xp-niveaux li b{ font-family:'Cinzel', serif; font-size:13px; }
+  .xp-niveaux li.actuel{ background:rgba(212,160,23,0.28); border-color:var(--gold); }
+  .xp-niveaux li.actuel::after{ content:"◀ toi"; font-size:12px; color:var(--burgundy); align-self:center; }
+  .xp-comment{ font-size:14px; line-height:1.4; margin:0 0 12px; color:var(--ink-soft, var(--ink)); }
+  .xp-fermer{ display:block; margin:0 auto; font-family:'Cinzel', serif; font-size:13px; color:var(--parchment); background:var(--burgundy); border:none; border-radius:6px; padding:8px 18px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div id="passerelleOverlay">
+  <div class="contenu">
+
+    <div id="passerelleEcranInvalide">
+      <h2>⚠ Lien invalide</h2>
+      <p>Ce grimoire n'a pas reconnu ton identité. Demande à ton enseignant de te fournir ton lien personnel, puis ouvre-le à nouveau.</p>
+    </div>
+
+    <div id="passerelleEcranChoix">
+      <h1>Choisis ton Grimoire</h1>
+      <p class="consigne">Ce choix est définitif pour ton aventure.</p>
+      <div class="passerelle-choix-conteneur">
+        <button class="passerelleCarte" data-genre="garcon" aria-label="Choisir le grimoire du protecteur">
+          <div class="cadre"><img src="couverture_assets/couverture_garcon.webp" alt="Couverture du grimoire, version garçon"></div>
+          <span class="etiquette">Le Protecteur</span>
+        </button>
+        <button class="passerelleCarte" data-genre="fille" aria-label="Choisir le grimoire de la protectrice">
+          <div class="cadre"><img src="couverture_assets/couverture_fille.webp" alt="Couverture du grimoire, version fille"></div>
+          <span class="etiquette">La Protectrice</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="passerelleEcranCouverture">
+      <div class="cadre">
+        <img id="passerelleImage" src="" alt="Couverture de ton grimoire">
+        <div id="passerelleVoile"></div>
+        <div id="passerelleFlash"></div>
+      </div>
+      <div id="passerelleStatut">Le sceau reconnaît ta présence...</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="frame">
+  <div class="livre-conteneur">
+    <div class="livre-bandeau-haut"></div>
+    <div class="livre-pages">
+
+      <div class="page-gauche">
+        <p class="eyebrow-page">Le grimoire est ouvert</p>
+        <h2>Choisis ton chemin</h2>
+        <div class="grimoire-section" style="margin-top:0;">
+          <button class="grimoire-toggle" id="grimoireToggle">
+            <span class="grimoire-icon">📖</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Le Grimoire des Mathématiques</span>
+              <span class="grimoire-subtitle">Complète des quêtes pour gagner de l'or</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle" id="parcheminsToggle" style="margin-top:8px;">
+            <span class="grimoire-icon">🪶</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Les Parchemins de Lecture</span>
+              <span class="grimoire-subtitle">Gravis les rangs de mage</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle" id="histoireToggle" style="margin-top:8px;">
+            <span class="grimoire-icon">🏛️</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Le Livre d'Histoire</span>
+              <span class="grimoire-subtitle">Voyage à travers le temps</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle grimoire-toggle-inactif" id="exercicesSuppToggle" style="margin-top:8px;" disabled aria-disabled="true" title="Bientôt disponible">
+            <span class="grimoire-icon">✦</span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Exercices supplémentaires</span>
+              <span class="grimoire-subtitle">Pratique ciblée assignée par ton enseignant</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+          <button class="grimoire-toggle grimoire-toggle-bonus" id="cassiopeeToggle" style="margin-top:8px;">
+            <span class="grimoire-icon"><img class="grimoire-mini" src="mini/cassiopee.webp" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('🌀'))"></span>
+            <span class="grimoire-toggle-text">
+              <span class="grimoire-title">Cassiopée</span>
+              <span class="grimoire-subtitle">Chapitre bonus — un portail t'attend</span>
+            </span>
+            <span class="grimoire-chevron">›</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="page-droite">
+        <header>
+          <h1 id="rangTitre">Apprenti</h1>
+          <div class="gold-counter">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#D9A62E" stroke="#7B2D26" stroke-width="1.5"/></svg>
+            <span class="gold-amount" id="goldAmount">0</span>
+          </div>
+        </header>
+
+        <div class="doll-wrap" id="dollWrap">
+        <div class="doll" id="doll">
+          <div class="slot slot-helm" data-slot="helmet"><span class="slot-label">Casque</span></div>
+          <div class="slot slot-weapon" data-slot="weapon"><span class="slot-label">Arme</span></div>
+          <div class="slot slot-gloves" data-slot="gloves"><span class="slot-label">Gants</span></div>
+          <div class="portrait-wrap">
+            <div class="portrait" id="portrait">
+              <div class="portrait-placeholder" id="portraitPlaceholder"></div>
+            </div>
+            <div class="stats-row">
+              <div class="hp-badge" id="hpBadge">10/10</div>
+              <div class="dmg-badge" id="dmgBadge">DMG: 0</div>
+            </div>
+            <button class="xp-row" id="xpRow" type="button" aria-label="Voir ce que rapporte chaque niveau">
+              <span id="xpTexte">XP : 0 / 1000</span>
+              <span class="xp-track"><i id="xpRemplissage"></i></span>
+            </button>
+          </div>
+          <div class="slot slot-armor" data-slot="armor"><span class="slot-label">Armure</span></div>
+          <div class="slot slot-shield" data-slot="shield"><span class="slot-label">Bouclier</span></div>
+          <div class="slot slot-boots" data-slot="boots"><span class="slot-label">Bottes</span></div>
+        </div>
+          <div class="freeze-overlay" id="freezeOverlay"><div class="dots"><span>●</span><span>●</span><span>●</span></div></div>
+        </div>
+
+        <div class="store">
+          <h2>Le Marché</h2>
+          <div class="tabs" id="tabs"></div>
+          <div id="storeList"></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="livre-bandeau-bas"></div>
+  </div>
+</div>
+
+<div class="xp-modal" id="xpModal" role="dialog" aria-modal="true" aria-labelledby="xpTitre">
+  <div class="xp-carte">
+    <h2 id="xpTitre">Ce que rapporte chaque niveau</h2>
+    <ul class="xp-niveaux" id="xpNiveaux"></ul>
+    <p class="xp-comment">Gagne de l'expérience (XP) dans les Parchemins de lecture (<b>100 XP</b> par section des Invocations, <b>200 XP</b> par section des Conjurations, <b>200 XP</b> par exercice de l'épreuve de promotion réussi) et dans le Livre d'Histoire (<b>100 XP</b> par lecture ou questionnaire réussi, <b>50 XP</b> par Cherche et trouve). Rangs : Novice 1 000 · Invocateur 2 500 · Magicien 5 000 · Sorcier 10 000 XP.</p>
+    <button class="xp-fermer" id="xpFermer" type="button">Fermer</button>
+  </div>
+</div>
+
+<div class="grimoire-modal" id="grimoireModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="grimoireCloseBtn">✕ Fiche de personnage</button>
+  </div>
+  <iframe id="grimoireFrame" class="grimoire-modal-frame" title="Le Grimoire des Mathématiques"></iframe>
+</div>
+
+<div class="grimoire-modal" id="parcheminsModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="parcheminsCloseBtn">✕ Fiche de personnage</button>
+  </div>
+  <iframe id="parcheminsFrame" class="grimoire-modal-frame" title="Les Parchemins de Lecture"></iframe>
+</div>
+
+<div class="grimoire-modal" id="histoireModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="histoireCloseBtn">✕ Fiche de personnage</button>
+  </div>
+  <iframe id="histoireFrame" class="grimoire-modal-frame" title="Le Livre d'Histoire" allow="fullscreen" allowfullscreen></iframe>
+</div>
+
+<div class="grimoire-modal" id="cassiopeeModal">
+  <div class="grimoire-modal-bar">
+    <button class="grimoire-modal-close" id="cassiopeeCloseBtn">✕ Fiche de personnage</button>
+  </div>
+  <iframe id="cassiopeeFrame" class="grimoire-modal-frame" title="Cassiopée"></iframe>
+</div>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="steelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EAEDF2"/><stop offset="100%" stop-color="#6E7889"/>
+    </linearGradient>
+    <linearGradient id="darkSteelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8C97A6"/><stop offset="100%" stop-color="#2B3138"/>
+    </linearGradient>
+    <linearGradient id="nightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#20305C"/><stop offset="100%" stop-color="#12193A"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F3D98A"/><stop offset="100%" stop-color="#8C6A18"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const CELL_BG = "#FBF6E9";
+function el(tag, attrs){ const e = document.createElementNS(NS, tag); for(const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+/* ---------- ARMURE (VEST) ---------- */
+const VEST = "M60 10 C50 10 41 15 36 24 L27 38 L33 130 L87 130 L93 38 L84 24 C79 15 70 10 60 10 Z";
+function buildArmorBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  clip.appendChild(el("path", {d:VEST})); defs.appendChild(clip); svg.appendChild(defs);
+  svg.appendChild(el("path", {d:VEST, fill}));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  svg.appendChild(el("path", {d:VEST, fill:"none", stroke:"#2B2118", "stroke-width":2.5}));
+  return g;
+}
+function aDecorateLeather(g){
+  for(let y=38; y<=118; y+=14) for(let x=36; x<=84; x+=12) g.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#C9CDD6"}));
+  [52,78,104].forEach(y=>{
+    g.appendChild(el("rect", {x:26, y, width:68, height:7, fill:"#5A4022"}));
+    g.appendChild(el("rect", {x:44, y:y+1, width:9, height:5, fill:"#B8860B", stroke:"#3A2A10", "stroke-width":0.6}));
+  });
+}
+function aDecorateSteel(g){
+  [45,60,75,90,105,120].forEach(y=>{
+    g.appendChild(el("line", {x1:25, y1:y, x2:95, y2:y, stroke:"#5A6577", "stroke-width":1.4}));
+    [42,60,78].forEach(x=>g.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#3E4652"})));
+  });
+  g.appendChild(el("line", {x1:60, y1:16, x2:60, y2:128, stroke:"#5A6577", "stroke-width":1.2}));
+}
+function aDecorateRoyal(g){
+  g.appendChild(el("circle", {cx:60, cy:52, r:9, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.4}));
+  g.appendChild(el("circle", {cx:57, cy:49, r:2.4, fill:"#9CC3EE"}));
+  g.appendChild(el("path", {d:"M46 66 Q60 60 74 66", fill:"none", stroke:"#8C6A18", "stroke-width":1.4}));
+  g.appendChild(el("path", {d:"M32 34 Q45 26 60 30", fill:"none", stroke:"#8C6A18", "stroke-width":1.6, opacity:0.7}));
+  g.appendChild(el("path", {d:"M88 34 Q75 26 60 30", fill:"none", stroke:"#8C6A18", "stroke-width":1.6, opacity:0.7}));
+}
+
+/* ---------- CASQUE (HELM) ---------- */
+const HELM = "M60 16 C34 16 20 34 20 54 C20 68 26 76 34 82 L86 82 C94 76 100 68 100 54 C100 34 86 16 60 16 Z";
+function buildHelmBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  clip.appendChild(el("path", {d:HELM})); defs.appendChild(clip); svg.appendChild(defs);
+  svg.appendChild(el("path", {d:HELM, fill}));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  svg.appendChild(el("path", {d:HELM, fill:"none", stroke:"#2B2118", "stroke-width":2.5}));
+  return g;
+}
+function hDecorateLeather(g){
+  [30,42].forEach(y=>{
+    g.appendChild(el("circle", {cx:60, cy:y, r:2, fill:"#C9CDD6"}));
+    g.appendChild(el("circle", {cx:44, cy:y+4, r:2, fill:"#C9CDD6"}));
+    g.appendChild(el("circle", {cx:76, cy:y+4, r:2, fill:"#C9CDD6"}));
+  });
+  g.appendChild(el("rect", {x:20, y:66, width:80, height:9, fill:"#5A4022"}));
+}
+function hDecorateSteel(g){
+  g.appendChild(el("rect", {x:18, y:60, width:84, height:10, fill:"#5A6577"}));
+  g.appendChild(el("line", {x1:60, y1:18, x2:60, y2:82, stroke:"#5A6577", "stroke-width":1.6}));
+  g.appendChild(el("path", {d:"M56 16 L60 6 L64 16 Z", fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1}));
+  [40,80].forEach(x=>g.appendChild(el("circle", {cx:x, cy:65, r:1.5, fill:"#3E4652"})));
+}
+function hDecorateRoyal(g){
+  [38,50,60,70,82].forEach((x,i)=>{
+    const h = i===2 ? 14 : 9;
+    g.appendChild(el("path", {d:`M${x-4} 22 L${x} ${22-h} L${x+4} 22 Z`, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+  });
+  g.appendChild(el("circle", {cx:60, cy:26, r:4, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1}));
+  g.appendChild(el("rect", {x:26, y:66, width:68, height:9, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+}
+
+/* ---------- GANTS ---------- */
+const GLOVE_PARTS = [
+  {tag:"rect", attrs:{x:28, y:10, width:10, height:50, rx:5}},
+  {tag:"rect", attrs:{x:45, y:6,  width:10, height:54, rx:5}},
+  {tag:"rect", attrs:{x:62, y:6,  width:10, height:54, rx:5}},
+  {tag:"rect", attrs:{x:79, y:12, width:10, height:48, rx:5}},
+  {tag:"rect", attrs:{x:2,  y:55, width:14, height:32, rx:6, transform:"rotate(-35 9 55)"}},
+  {tag:"rect", attrs:{x:22, y:52, width:76, height:46, rx:14}},
+  {tag:"rect", attrs:{x:18, y:90, width:84, height:32, rx:10}},
+];
+function buildGloveBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  GLOVE_PARTS.forEach(p=>clip.appendChild(el(p.tag, p.attrs))); defs.appendChild(clip); svg.appendChild(defs);
+  GLOVE_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill}))));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  GLOVE_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill:"none", stroke:"#2B2118", "stroke-width":2}))));
+  return g;
+}
+function gDecorateLeather(g){
+  [[33,20],[50,18],[67,18],[84,24],[60,70],[40,70],[80,70]].forEach(p=>g.appendChild(el("circle", {cx:p[0], cy:p[1], r:2, fill:"#C9CDD6"})));
+  g.appendChild(el("rect", {x:16, y:96, width:88, height:8, fill:"#5A4022"}));
+}
+function gDecorateSteel(g){
+  [26,42].forEach(y=>{[28,45,62,79].forEach(x=>g.appendChild(el("line", {x1:x, y1:y, x2:x+10, y2:y, stroke:"#5A6577", "stroke-width":1.2})));});
+  g.appendChild(el("line", {x1:24, y1:64, x2:96, y2:64, stroke:"#5A6577", "stroke-width":1.4}));
+}
+function gDecorateRoyal(g){
+  [33,50,67,84].forEach(x=>g.appendChild(el("path", {d:`M${x} 28 L${x+5} 20 L${x+10} 28 L${x+5} 34 Z`, fill:"#8C6A18"})));
+  g.appendChild(el("circle", {cx:60, cy:105, r:6, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.2}));
+}
+
+/* ---------- BOTTES ---------- */
+const BOOT_PARTS = [
+  {tag:"rect", attrs:{x:34, y:6, width:52, height:78, rx:8}},
+  {tag:"path", attrs:{d:"M18 78 Q60 68 102 78 L99 106 Q90 122 60 122 Q30 122 21 106 Z"}},
+];
+function buildBootBase(svg, clipId, fill){
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  BOOT_PARTS.forEach(p=>clip.appendChild(el(p.tag, p.attrs))); defs.appendChild(clip); svg.appendChild(defs);
+  BOOT_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill}))));
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  BOOT_PARTS.forEach(p=>svg.appendChild(el(p.tag, Object.assign({}, p.attrs, {fill:"none", stroke:"#2B2118", "stroke-width":2}))));
+  return g;
+}
+function bDecorateLeather(g){
+  for(let y=12; y<=80; y+=10) for(let x=38; x<=82; x+=12) g.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#C9CDD6"}));
+  [26,46,66].forEach(y=>g.appendChild(el("rect", {x:30, y, width:60, height:7, fill:"#5A4022"})));
+}
+function bDecorateSteel(g){
+  [30,50,70].forEach(y=>g.appendChild(el("rect", {x:32, y, width:56, height:7, fill:"#5A6577"})));
+  g.appendChild(el("path", {d:"M20 100 Q60 92 100 100", fill:"none", stroke:"#8C97A6", "stroke-width":2.4}));
+}
+function bDecorateRoyal(g){
+  [40,80].forEach(x=>g.appendChild(el("path", {d:`M${x-4} 20 L${x} 12 L${x+4} 20 Z`, fill:"#D9A62E"})));
+  g.appendChild(el("path", {d:"M24 100 Q60 90 96 100", fill:"none", stroke:"#8C6A18", "stroke-width":1.6}));
+  [36,84].forEach(x=>g.appendChild(el("circle", {cx:x, cy:96, r:2.4, fill:"#2255AA"})));
+}
+
+/* ---------- BOUCLIERS ---------- */
+const KITE = "M60 8 C40 8 28 20 22 34 L22 88 Q22 128 60 150 Q98 128 98 88 L98 34 C92 20 80 8 60 8 Z";
+function buildShieldBase(svg, clipId, fill, isRound){
+  const shape = isRound ? el("circle", {cx:60, cy:80, r:52}) : el("path", {d:KITE});
+  const defs = el("defs", {}); const clip = el("clipPath", {id:clipId});
+  clip.appendChild(shape.cloneNode()); defs.appendChild(clip); svg.appendChild(defs);
+  const fillShape = shape.cloneNode(); fillShape.setAttribute("fill", fill); svg.appendChild(fillShape);
+  const g = el("g", {"clip-path":`url(#${clipId})`}); svg.appendChild(g);
+  const outlineShape = shape.cloneNode();
+  outlineShape.setAttribute("fill", "none"); outlineShape.setAttribute("stroke", "#2B2118"); outlineShape.setAttribute("stroke-width", 2.5);
+  svg.appendChild(outlineShape);
+  return g;
+}
+function sDecorateWood(g){
+  for(let i=0;i<16;i++){
+    const a = (Math.PI*2*i)/16;
+    g.appendChild(el("line", {x1:60, y1:80, x2:60+55*Math.cos(a), y2:80+55*Math.sin(a), stroke:"#5A4022", "stroke-width":1.4, opacity:0.6}));
+  }
+  g.appendChild(el("circle", {cx:60, cy:80, r:14, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.6}));
+}
+function sDecorateSteelLion(g){
+  g.appendChild(el("path", {d:"M60 60 Q70 56 68 66 Q76 72 70 80 Q74 90 66 96 L58 88 Q50 94 46 86 Q52 80 50 70 Q56 62 60 60 Z", fill:"#2255AA"}));
+}
+function sDecorateRoyal(g){
+  g.appendChild(el("path", {d:"M46 12 L50 0 L54 8 L60 -2 L66 8 L70 0 L74 12 Z", fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1.2}));
+  g.appendChild(el("rect", {x:48, y:76, width:24, height:20, rx:4, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.6}));
+  g.appendChild(el("circle", {cx:60, cy:86, r:8, fill:"#4488DD", stroke:"#0E2C55", "stroke-width":1.2}));
+}
+
+/* ---------- ARMES ---------- */
+function wGrip(x, y, w, h, color){
+  const parts = [el("rect", {x, y, width:w, height:h, rx:3, fill:color, stroke:"#2B2118", "stroke-width":1.5})];
+  for(let i=0; i<5; i++){
+    const yy = y + 3 + i*(h-6)/4;
+    parts.push(el("line", {x1:x, y1:yy, x2:x+w, y2:yy+ (h-6)/8, stroke:"#2B2118", "stroke-width":0.8, opacity:0.5}));
+  }
+  return parts;
+}
+function buildDagger(svg){
+  svg.appendChild(el("path", {d:"M60 8 L72 100 L60 112 L48 100 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M40 112 L80 112 L74 122 L46 122 Z", fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.4}));
+  wGrip(52, 122, 16, 34, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:60, cy:164, r:9, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.4}));
+}
+function buildLongsword(svg){
+  svg.appendChild(el("path", {d:"M60 4 L70 130 L60 138 L50 130 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("line", {x1:30, y1:140, x2:90, y2:140, stroke:"#8C97A6", "stroke-width":6}));
+  wGrip(52, 140, 16, 38, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:60, cy:186, r:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+}
+function buildSaber(svg){
+  svg.appendChild(el("path", {d:"M74 10 C80 50 76 90 60 118 L50 112 C64 84 68 48 58 14 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M40 118 Q30 128 40 140 Q48 132 56 126 L50 112 Z", fill:"url(#goldGrad)", stroke:"#5C4210", "stroke-width":1.6}));
+  wGrip(44, 132, 16, 30, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:52, cy:170, r:8, fill:"url(#goldGrad)", stroke:"#5C4210", "stroke-width":1.4}));
+}
+
+/* ---------- Catalogue (échantillon représentatif — pas les 65 objets) ---------- */
+// ---- Dessins du set complet (repris de 01_reference_inventaire/inventaire_complet.html) ----
+function aDecorateBarbarian(g){
+  for(let x=26; x<=94; x+=7) g.appendChild(el("path", {d:`M${x} 16 L${x+3.5} 26 L${x+7} 16 Z`, fill:"#4A331E"}));
+  g.appendChild(el("rect", {x:52, y:30, width:7, height:26, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  g.appendChild(el("rect", {x:61, y:30, width:7, height:26, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  g.appendChild(el("rect", {x:40, y:62, width:40, height:7, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  g.appendChild(el("rect", {x:40, y:80, width:40, height:7, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+}
+function aDecorateChainmail(g){
+  for(let row=0, y=30; y<128; y+=8, row++){
+    const offset = row%2===0 ? 0 : 5;
+    for(let x=28+offset; x<=92; x+=10) g.appendChild(el("circle", {cx:x, cy:y, r:3, fill:"none", stroke:"#7A828C", "stroke-width":1.2}));
+  }
+  g.appendChild(el("ellipse", {cx:60, cy:20, rx:16, ry:8, fill:"#8A929C"}));
+}
+function aDecorateDragon(g){
+  const colors = ["#8B2E22","#3B6B3E"]; let i=0;
+  for(let y=32; y<120; y+=13){
+    for(let x=32+(i%2===0?0:7); x<=88; x+=14){
+      g.appendChild(el("path", {d:`M${x} ${y} L${x+6} ${y+8} L${x} ${y+16} L${x-6} ${y+8} Z`, fill:colors[(Math.floor(x/14)+i)%2]}));
+    }
+    i++;
+  }
+  g.appendChild(el("line", {x1:30, y1:40, x2:90, y2:110, stroke:"#5A4022", "stroke-width":5}));
+  g.appendChild(el("line", {x1:90, y1:40, x2:30, y2:110, stroke:"#5A4022", "stroke-width":5}));
+  g.appendChild(el("circle", {cx:60, cy:75, r:4, fill:"#B8860B"}));
+}
+function aDecorateElven(g){
+  for(let row=0, y=38; y<115; y+=14, row++){
+    const offset = row%2===0 ? -6 : 6;
+    for(let x=38+offset; x<=82; x+=16){
+      g.appendChild(el("ellipse", {cx:x, cy:y, rx:7, ry:11, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8, transform:`rotate(${row%2===0?-20:20} ${x} ${y})`}));
+      g.appendChild(el("line", {x1:x, y1:y-8, x2:x, y2:y+8, stroke:"#2A4E2C", "stroke-width":0.6, transform:`rotate(${row%2===0?-20:20} ${x} ${y})`}));
+    }
+  }
+  g.appendChild(el("path", {d:VEST, fill:"none", stroke:"#B8860B", "stroke-width":1.6, transform:"scale(0.95) translate(3,4)"}));
+}
+function aDecorateMage(g){
+  g.appendChild(el("path", {d:"M60 40 L70 55 L60 90 L50 55 Z", fill:"#C9CDD6", stroke:"#3E4652", "stroke-width":1.4}));
+  g.appendChild(el("circle", {cx:60, cy:58, r:5, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.2}));
+  g.appendChild(el("circle", {cx:52, cy:66, r:2.4, fill:"#2255AA"}));
+  g.appendChild(el("circle", {cx:68, cy:66, r:2.4, fill:"#2255AA"}));
+  for(let x=36; x<=84; x+=8) g.appendChild(el("line", {x1:x, y1:118, x2:x, y2:122, stroke:"#C9CDD6", "stroke-width":1.2}));
+  g.appendChild(el("path", {d:"M30 24 Q36 16 46 20", fill:"none", stroke:"#8A929C", "stroke-width":2.4}));
+  g.appendChild(el("path", {d:"M90 24 Q84 16 74 20", fill:"none", stroke:"#8A929C", "stroke-width":2.4}));
+}
+function aDecorateObsidian(g){
+  g.appendChild(el("path", {d:"M50 22 L44 60 L52 85 L46 128", fill:"none", stroke:"#E0342A", "stroke-width":2}));
+  g.appendChild(el("path", {d:"M70 22 L76 60 L68 85 L74 128", fill:"none", stroke:"#E0342A", "stroke-width":2}));
+  [[38,50],[82,50],[40,95],[80,95]].forEach(p=>g.appendChild(el("circle", {cx:p[0], cy:p[1], r:1.6, fill:"#E0342A"})));
+  g.appendChild(el("path", {d:"M30 22 L22 14 L34 18 Z", fill:"#161616", stroke:"#E0342A", "stroke-width":1}));
+  g.appendChild(el("path", {d:"M90 22 L98 14 L86 18 Z", fill:"#161616", stroke:"#E0342A", "stroke-width":1}));
+}
+function aDecorateTemplar(g){
+  g.appendChild(el("rect", {x:55, y:36, width:10, height:70, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:34, y:62, width:52, height:10, fill:"#B5302A"}));
+  g.appendChild(el("path", {d:"M28 26 Q34 18 44 22", fill:"none", stroke:"#8A929C", "stroke-width":3}));
+  g.appendChild(el("path", {d:"M92 26 Q86 18 76 22", fill:"none", stroke:"#8A929C", "stroke-width":3}));
+}
+function bDecorateBarbarian(g){
+  for(let x=30; x<=90; x+=7) g.appendChild(el("path", {d:`M${x} 6 L${x+3.5} 16 L${x+7} 6 Z`, fill:"#4A331E"}));
+  [[44,20],[76,20],[40,44],[80,44],[48,66],[72,66]].forEach(p=>{
+    g.appendChild(el("rect", {x:p[0]-7, y:p[1], width:14, height:20, rx:4, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  });
+  [30,50,70].forEach(y=>g.appendChild(el("line", {x1:26, y1:y, x2:94, y2:y+14, stroke:"#5A4022", "stroke-width":3})));
+  for(let x=16; x<=104; x+=6) g.appendChild(el("path", {d:`M${x} 118 L${x+3} 128 L${x+6} 118 Z`, fill:"#4A331E"}));
+}
+function bDecorateChainmail(g){
+  for(let row=0, y=8; y<76; y+=8, row++){
+    const offset = row%2===0 ? 0 : 5;
+    for(let x=34+offset; x<=86; x+=10) g.appendChild(el("circle", {cx:x, cy:y, r:3, fill:"none", stroke:"#7A828C", "stroke-width":1.1}));
+  }
+  g.appendChild(el("path", {d:"M18 78 Q60 68 102 78 L99 106 Q90 122 60 122 Q30 122 21 106 Z", fill:"#8C6A3F"}));
+  [90,100].forEach(y=>{
+    g.appendChild(el("rect", {x:26, y:y-3, width:68, height:5, fill:"#5A4022"}));
+    g.appendChild(el("rect", {x:54, y:y-3.5, width:8, height:6, fill:"#8A929C", stroke:"#3A2A10", "stroke-width":0.5}));
+  });
+}
+function bDecorateDragon(g){
+  const colors = ["#8B2E22","#3B6B3E"]; let i=0;
+  for(let y=14; y<118; y+=13){
+    for(let x=30+(i%2===0?0:7); x<=90; x+=14) g.appendChild(el("path", {d:`M${x} ${y} L${x+6} ${y+8} L${x} ${y+16} L${x-6} ${y+8} Z`, fill:colors[(Math.floor(x/14)+i)%2]}));
+    i++;
+  }
+  [16,80].forEach(y=>g.appendChild(el("rect", {x:26, y, width:68, height:9, fill:"#B8860B", stroke:"#5C4210", "stroke-width":1})));
+  g.appendChild(el("path", {d:"M16 108 Q60 100 104 108 L100 120 Q60 128 20 120 Z", fill:"#B8860B", stroke:"#5C4210", "stroke-width":1}));
+}
+function bDecorateElven(g){
+  for(let row=0, y=14; y<80; y+=13, row++){
+    const offset = row%2===0 ? -5 : 5;
+    for(let x=42+offset; x<=78; x+=14){
+      g.appendChild(el("ellipse", {cx:x, cy:y, rx:7, ry:10, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8}));
+    }
+  }
+  g.appendChild(el("path", {d:"M34 10 Q60 2 86 10", fill:"none", stroke:"#B8860B", "stroke-width":1.8}));
+  g.appendChild(el("path", {d:"M20 100 Q60 90 100 100", fill:"none", stroke:"#B8860B", "stroke-width":1.6}));
+  g.appendChild(el("path", {d:"M18 78 Q60 68 102 78 L99 106 Q90 122 60 122 Q30 122 21 106 Z", fill:"#AEB6BE", opacity:0.35}));
+}
+function bDecorateMage(g){
+  g.appendChild(el("path", {d:"M46 12 L74 12 L78 34 L60 44 L42 34 Z", fill:"#C9CDD6", stroke:"#3E4652", "stroke-width":1.2}));
+  g.appendChild(el("circle", {cx:60, cy:26, r:5, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1}));
+  [48,72].forEach(x=>g.appendChild(el("circle", {cx:x, cy:30, r:2.4, fill:"#2255AA"})));
+  g.appendChild(el("path", {d:"M38 50 Q60 58 82 50 M38 66 Q60 74 82 66", fill:"none", stroke:"#8A929C", "stroke-width":1.4}));
+  for(let x=24; x<=96; x+=8) g.appendChild(el("line", {x1:x, y1:112, x2:x, y2:116, stroke:"#C9CDD6", "stroke-width":1}));
+}
+function bDecorateObsidian(g){
+  g.appendChild(el("path", {d:"M45 14 L40 50 L48 78", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  g.appendChild(el("path", {d:"M75 14 L80 50 L72 78", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  [[42,26],[78,26],[44,60],[76,60]].forEach(p=>g.appendChild(el("circle", {cx:p[0], cy:p[1], r:1.6, fill:"#E0342A"})));
+  g.appendChild(el("path", {d:"M24 100 Q60 92 96 100", fill:"none", stroke:"#E0342A", "stroke-width":1.6}));
+}
+function bDecorateTemplar(g){
+  g.appendChild(el("rect", {x:55, y:16, width:10, height:32, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:44, y:27, width:32, height:10, fill:"#B5302A"}));
+  [30,50,70,90].forEach(y=>g.appendChild(el("line", {x1:32, y1:y, x2:88, y2:y, stroke:"#8A929C", "stroke-width":1})));
+}
+function buildAxe(svg){
+  svg.appendChild(el("rect", {x:54, y:70, width:12, height:110, rx:4, fill:"#8C6A3F", stroke:"#2B2118", "stroke-width":1.6}));
+  for(let y=100; y<=170; y+=16){
+    svg.appendChild(el("line", {x1:50, y1:y, x2:70, y2:y+10, stroke:"#5A4022", "stroke-width":2.5}));
+    svg.appendChild(el("line", {x1:70, y1:y, x2:50, y2:y+10, stroke:"#5A4022", "stroke-width":2.5}));
+  }
+  svg.appendChild(el("path", {d:"M60 30 C30 30 14 44 8 62 C22 58 36 60 48 66 L60 76 L72 66 C84 60 98 58 112 62 C106 44 90 30 60 30 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.8}));
+  svg.appendChild(el("rect", {x:48, y:46, width:24, height:26, rx:3, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+  svg.appendChild(el("path", {d:"M52 50 L68 68 M68 50 L52 68", stroke:"#3E4652", "stroke-width":1.6}));
+  [[20,50],[100,50]].forEach(p=>svg.appendChild(el("circle", {cx:p[0], cy:p[1], r:1.6, fill:"#3E4652"})));
+}
+function buildFlail(svg){
+  svg.appendChild(el("rect", {x:52, y:100, width:16, height:90, rx:4, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  wGrip(52, 118, 16, 60, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("rect", {x:52, y:98, width:16, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.2}));
+  [70,80,90].forEach(y=>{
+    svg.appendChild(el("ellipse", {cx:60, cy:y, rx:5, ry:6, fill:"none", stroke:"#5C6570", "stroke-width":3}));
+  });
+  svg.appendChild(el("circle", {cx:60, cy:38, r:22, fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.8}));
+  for(let i=0;i<8;i++){
+    const a = (Math.PI*2*i)/8;
+    const x1 = 60+18*Math.cos(a), y1 = 38+18*Math.sin(a);
+    const x2 = 60+30*Math.cos(a), y2 = 38+30*Math.sin(a);
+    svg.appendChild(el("path", {d:`M${x1-3} ${y1} L${x2} ${y2} L${x1+3} ${y1} Z`, fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1}));
+  }
+  svg.appendChild(el("circle", {cx:60, cy:38, r:5, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1}));
+}
+function buildHalberd(svg){
+  svg.appendChild(el("rect", {x:55, y:78, width:10, height:122, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  for(let y=84; y<=194; y+=16) svg.appendChild(el("line", {x1:56, y1:y, x2:64, y2:y+8, stroke:"#8C7350", "stroke-width":0.8, opacity:0.6}));
+  svg.appendChild(el("path", {d:"M60 6 L70 40 L60 48 L50 40 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M52 44 C34 44 24 52 20 62 C30 60 40 62 50 66 L60 60 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("path", {d:"M68 44 C86 44 96 52 100 62 C90 60 80 62 70 66 L60 60 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("rect", {x:50, y:56, width:20, height:16, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.3}));
+}
+function buildJester(svg){
+  svg.appendChild(el("path", {d:"M40 60 C40 36 48 22 60 22 C72 22 80 36 80 60 L80 108 L40 108 Z", fill:"#D9A62E"}));
+  svg.appendChild(el("path", {d:"M40 60 C30 66 22 78 18 96 L34 88 L40 60 Z", fill:"#3B6B3E"}));
+  svg.appendChild(el("path", {d:"M80 60 C90 66 98 78 102 96 L86 88 L80 60 Z", fill:"#B5302A"}));
+  svg.appendChild(el("circle", {cx:19, cy:98, r:5, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+  svg.appendChild(el("circle", {cx:101, cy:98, r:5, fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+  svg.appendChild(el("path", {d:"M40 60 C30 66 22 78 18 96", fill:"none", stroke:"#2B2118", "stroke-width":2}));
+  svg.appendChild(el("path", {d:"M80 60 C90 66 98 78 102 96", fill:"none", stroke:"#2B2118", "stroke-width":2}));
+  svg.appendChild(outline("M40 60 C40 36 48 22 60 22 C72 22 80 36 80 60 L80 108 L40 108 Z"));
+  svg.appendChild(el("path", {d:"M32 82 Q60 72 88 82 L88 108 L32 108 Z", fill:"#D9A62E", stroke:"#2B2118", "stroke-width":2.2}));
+  svg.appendChild(el("path", {d:"M52 86 L60 78 L68 86 L60 108 Z", fill:"#F3D98A", stroke:"#8C6A18", "stroke-width":1.2}));
+  [[46,50],[54,44],[66,44],[74,50]].forEach(p=>{
+    svg.appendChild(el("line", {x1:p[0]-2, y1:p[1]-2, x2:p[0]+2, y2:p[1]+2, stroke:"#161616", "stroke-width":1}));
+    svg.appendChild(el("line", {x1:p[0]-2, y1:p[1]+2, x2:p[0]+2, y2:p[1]-2, stroke:"#161616", "stroke-width":1}));
+  });
+}
+function buildLance(svg){
+  svg.appendChild(el("rect", {x:55, y:70, width:10, height:130, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  for(let y=76; y<=192; y+=14) svg.appendChild(el("line", {x1:56, y1:y, x2:64, y2:y+8, stroke:"#8C7350", "stroke-width":0.8, opacity:0.6}));
+  svg.appendChild(el("path", {d:"M48 100 L72 100 L68 108 L52 108 Z", fill:"#5A4022", stroke:"#2B2118", "stroke-width":1.2}));
+  svg.appendChild(el("circle", {cx:60, cy:196, r:6, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.2}));
+  svg.appendChild(el("path", {d:"M60 6 L72 62 L64 70 L60 62 L56 70 L48 62 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("rect", {x:52, y:62, width:16, height:14, fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.3}));
+}
+function buildPigface(svg){
+  svg.appendChild(el("path", {d:"M36 58 C36 30 46 14 60 14 C74 14 84 30 84 58 L84 92 C84 92 76 98 60 98 C44 98 36 92 36 92 Z", fill:"url(#darkSteelGrad)"}));
+  svg.appendChild(outline("M36 58 C36 30 46 14 60 14 C74 14 84 30 84 58 L84 92 C84 92 76 98 60 98 C44 98 36 92 36 92 Z"));
+  svg.appendChild(el("rect", {x:42, y:52, width:36, height:7, fill:"#161616"}));
+  svg.appendChild(el("line", {x1:60, y1:16, x2:60, y2:66, stroke:"#3E4652", "stroke-width":1.4}));
+  [24,36,48].forEach(y=>{[42,60,78].forEach(x=>svg.appendChild(el("circle", {cx:x, cy:y, r:1.3, fill:"#3E4652"})));});
+  svg.appendChild(el("path", {d:"M48 66 L48 92 Q60 106 72 92 L72 66 Z", fill:"url(#darkSteelGrad)", stroke:"#2B2118", "stroke-width":2}));
+  svg.appendChild(el("ellipse", {cx:52, cy:96, rx:3, ry:4, fill:"#161616"}));
+  svg.appendChild(el("ellipse", {cx:68, cy:96, rx:3, ry:4, fill:"#161616"}));
+  [72,80,88].forEach(y=>svg.appendChild(el("line", {x1:48, y1:y, x2:72, y2:y, stroke:"#3E4652", "stroke-width":1})));
+}
+function buildShortsword(svg){
+  svg.appendChild(el("path", {d:"M60 20 L74 108 L60 118 L46 108 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("line", {x1:60, y1:28, x2:60, y2:108, stroke:"#EAEDF2", "stroke-width":1.4, opacity:0.7}));
+  svg.appendChild(el("path", {d:"M36 118 L84 118 L78 130 L42 130 Z", fill:"#8C97A6", stroke:"#3E4652", "stroke-width":1.4}));
+  wGrip(50, 130, 20, 34, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("circle", {cx:60, cy:172, r:11, fill:"#8C6A3F", stroke:"#5A4022", "stroke-width":1.6}));
+}
+function buildStraw(svg){
+  svg.appendChild(el("path", {d:"M32 66 C32 36 44 18 60 18 C76 18 88 36 88 66 L88 78 L32 78 Z", fill:"#D9C27E"}));
+  svg.appendChild(el("path", {d:"M28 78 Q24 100 32 118 L44 112 L40 78 Z", fill:"#D9C27E"}));
+  svg.appendChild(el("path", {d:"M92 78 Q96 100 88 118 L76 112 L80 78 Z", fill:"#D9C27E"}));
+  for(let y=28; y<=70; y+=8) svg.appendChild(el("line", {x1:32, y1:y, x2:88, y2:y, stroke:"#A88B4A", "stroke-width":1}));
+  for(let x=36; x<=84; x+=8) svg.appendChild(el("line", {x1:x, y1:20, x2:x, y2:76, stroke:"#A88B4A", "stroke-width":1, opacity:0.5}));
+  svg.appendChild(el("rect", {x:30, y:70, width:60, height:8, fill:"#C9AF63", stroke:"#8C7340", "stroke-width":1}));
+  svg.appendChild(el("path", {d:"M52 72 L68 76 M68 72 L52 76", stroke:"#8C7340", "stroke-width":1.4}));
+  svg.appendChild(el("path", {d:"M36 96 Q60 108 84 96", fill:"none", stroke:"#5A4022", "stroke-width":3}));
+  svg.appendChild(el("rect", {x:52, y:98, width:16, height:7, fill:"#5A4022", stroke:"#2B2118", "stroke-width":1}));
+  svg.appendChild(outline("M32 66 C32 36 44 18 60 18 C76 18 88 36 88 66 L88 78 L32 78 Z"));
+  svg.appendChild(outline("M28 78 Q24 100 32 118 L44 112 L40 78 Z"));
+  svg.appendChild(outline("M92 78 Q96 100 88 118 L76 112 L80 78 Z"));
+}
+function buildTwoHandedSword(svg){
+  svg.appendChild(el("path", {d:"M60 4 L70 120 L60 130 L50 120 Z", fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.6}));
+  svg.appendChild(el("line", {x1:60, y1:12, x2:60, y2:120, stroke:"#EAEDF2", "stroke-width":1.4, opacity:0.7}));
+  svg.appendChild(el("path", {d:"M60 128 C48 128 42 122 38 132 C46 132 52 138 58 134 Z", fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1.4}));
+  svg.appendChild(el("path", {d:"M60 128 C72 128 78 122 82 132 C74 132 68 138 62 134 Z", fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1.4}));
+  svg.appendChild(el("rect", {x:44, y:128, width:32, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+  wGrip(50, 136, 20, 48, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("ellipse", {cx:60, cy:190, rx:10, ry:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.4}));
+}
+function buildVoodoo(svg){
+  [[30,30,-35],[24,42,-20],[90,30,35],[96,42,20]].forEach(f=>{
+    svg.appendChild(el("path", {d:"M60 40 L60 8 L64 20 Z", fill:"#6B4A2E", stroke:"#3A2A18", "stroke-width":1, transform:`rotate(${f[2]} 60 40) translate(${f[0]-60} 0)`}));
+  });
+  svg.appendChild(el("path", {d:"M40 42 C40 24 48 16 60 16 C72 16 80 24 80 42 L78 78 L60 100 L42 78 Z", fill:"#A67C4E"}));
+  svg.appendChild(outline("M40 42 C40 24 48 16 60 16 C72 16 80 24 80 42 L78 78 L60 100 L42 78 Z"));
+  svg.appendChild(el("path", {d:"M52 40 L52 74", stroke:"#8B2E22", "stroke-width":2}));
+  svg.appendChild(el("path", {d:"M68 40 L68 74", stroke:"#8B2E22", "stroke-width":2}));
+  svg.appendChild(el("ellipse", {cx:52, cy:56, rx:6, ry:9, fill:"#161616"}));
+  svg.appendChild(el("ellipse", {cx:68, cy:56, rx:6, ry:9, fill:"#161616"}));
+  for(let x=48; x<=72; x+=4) svg.appendChild(el("path", {d:`M${x} 78 L${x+2} 92 L${x+4} 78 Z`, fill:"#EDE6D6", stroke:"#8C7350", "stroke-width":0.6}));
+}
+function buildWarhammer(svg){
+  svg.appendChild(el("rect", {x:52, y:78, width:16, height:110, rx:4, fill:"#A88B5C", stroke:"#2B2118", "stroke-width":1.4}));
+  wGrip(52, 100, 16, 60, "#8C6A3F").forEach(p=>svg.appendChild(p));
+  svg.appendChild(el("rect", {x:52, y:76, width:16, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.2}));
+  svg.appendChild(el("rect", {x:52, y:180, width:16, height:8, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1.2}));
+  svg.appendChild(el("rect", {x:26, y:26, width:68, height:48, rx:8, fill:"url(#steelGrad)", stroke:"#2B2118", "stroke-width":1.8}));
+  [34,60,86].forEach(x=>{[36,50].forEach(y=>svg.appendChild(el("circle", {cx:x, cy:y, r:1.6, fill:"#3E4652"})));});
+  [40,60,80].forEach(x=>svg.appendChild(el("circle", {cx:x, cy:50, r:4, fill:"#5C6570", stroke:"#2B2118", "stroke-width":1})));
+  svg.appendChild(el("path", {d:"M56 26 L60 8 L64 26 Z", fill:"#8C97A6", stroke:"#2B2118", "stroke-width":1.4}));
+}
+function buildWizard(svg){
+  svg.appendChild(el("path", {d:"M60 6 L88 84 Q60 96 32 84 Z", fill:"url(#nightGrad)"}));
+  svg.appendChild(el("path", {d:"M60 6 L60 90", stroke:"#D9A62E", "stroke-width":3}));
+  [[45,60,5],[50,42,4],[42,34,3.5],[70,58,5],[68,40,4],[75,32,3.5],[55,72,4],[65,74,4]].forEach(s=>{
+    svg.appendChild(el("path", {d:starPath(s[0],s[1],s[2]), fill:"#D9A62E"}));
+  });
+  svg.appendChild(el("path", {d:"M60 4 L63 10 L60 16 L57 10 Z", fill:"#D9A62E"}));
+  svg.appendChild(el("path", {d:"M32 84 Q60 100 88 84 L92 96 Q60 112 28 96 Z", fill:"url(#goldGrad2)", stroke:"#5C4210", "stroke-width":2}));
+  svg.appendChild(el("path", {d:"M52 90 L60 82 L68 90 L60 104 Z", fill:"#161B33", stroke:"#D9A62E", "stroke-width":1.2}));
+  svg.appendChild(el("circle", {cx:60, cy:92, r:3, fill:"#D9A62E"}));
+  svg.appendChild(outline("M60 6 L88 84 Q60 96 32 84 Z"));
+}
+function gDecorateBarbarian(g){
+  [28,45,62,79].forEach(x=>{
+    g.appendChild(el("rect", {x:x+1, y:16, width:8, height:24, rx:3, fill:"#E8DCC0", stroke:"#8A7350", "stroke-width":1}));
+  });
+  [70,82,94].forEach(y=>g.appendChild(el("rect", {x:20, y, width:80, height:5, fill:"#5A4022"})));
+  for(let x=18; x<=102; x+=6) g.appendChild(el("path", {d:`M${x} 118 L${x+3} 128 L${x+6} 118 Z`, fill:"#4A331E"}));
+}
+function gDecorateChainmail(g){
+  for(let row=0, y=8; y<100; y+=7, row++){
+    const offset = row%2===0 ? 0 : 4;
+    for(let x=22+offset; x<=98; x+=9) g.appendChild(el("circle", {cx:x, cy:y, r:2.6, fill:"none", stroke:"#7A828C", "stroke-width":1}));
+  }
+  g.appendChild(el("ellipse", {cx:60, cy:78, rx:16, ry:14, fill:"#8C6A3F"}));
+  [98,106,114].forEach(y=>{
+    g.appendChild(el("rect", {x:20, y:y-3, width:80, height:5, fill:"#8C6A3F"}));
+    g.appendChild(el("rect", {x:56, y:y-3.5, width:8, height:6, fill:"#8A929C", stroke:"#3A2A10", "stroke-width":0.5}));
+  });
+}
+function gDecorateDragon(g){
+  const colors = ["#8B2E22","#3B6B3E"]; let i=0;
+  for(let y=10; y<100; y+=11){
+    for(let x=26+(i%2===0?0:6); x<=90; x+=12){
+      g.appendChild(el("path", {d:`M${x} ${y} L${x+5} ${y+6} L${x} ${y+12} L${x-5} ${y+6} Z`, fill:colors[(Math.floor(x/12)+i)%2]}));
+    }
+    i++;
+  }
+  g.appendChild(el("line", {x1:20, y1:60, x2:100, y2:100, stroke:"#5A4022", "stroke-width":4}));
+  g.appendChild(el("line", {x1:100, y1:60, x2:20, y2:100, stroke:"#5A4022", "stroke-width":4}));
+}
+function gDecorateElven(g){
+  [[33,20],[50,16],[67,16],[84,22]].forEach(p=>{
+    g.appendChild(el("ellipse", {cx:p[0], cy:p[1], rx:6, ry:10, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8}));
+  });
+  [[45,58],[60,52],[75,58]].forEach(p=>{
+    g.appendChild(el("ellipse", {cx:p[0], cy:p[1], rx:7, ry:11, fill:"#3B6B3E", stroke:"#2A4E2C", "stroke-width":0.8}));
+  });
+  g.appendChild(el("path", {d:"M20 98 Q60 90 100 98", fill:"none", stroke:"#B8860B", "stroke-width":1.6}));
+  g.appendChild(el("path", {d:"M20 110 Q60 118 100 110", fill:"none", stroke:"#B8860B", "stroke-width":1.6}));
+}
+function gDecorateMage(g){
+  [[33,20],[50,16],[67,16],[84,22]].forEach(p=>{
+    g.appendChild(el("path", {d:`M${p[0]} ${p[1]-6} L${p[0]+5} ${p[1]} L${p[0]} ${p[1]+6} L${p[0]-5} ${p[1]} Z`, fill:"#C9CDD6", stroke:"#3E4652", "stroke-width":1}));
+  });
+  g.appendChild(el("circle", {cx:60, cy:76, r:7, fill:"#2255AA", stroke:"#0E2C55", "stroke-width":1.2}));
+  g.appendChild(el("circle", {cx:56, cy:72, r:2, fill:"#9CC3EE"}));
+  for(let x=24; x<=96; x+=8) g.appendChild(el("line", {x1:x, y1:98, x2:x, y2:102, stroke:"#C9CDD6", "stroke-width":1}));
+}
+function gDecorateObsidian(g){
+  g.appendChild(el("path", {d:"M60 55 L52 75 L64 90 L56 108", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  [[32,16],[49,12],[66,12],[83,18]].forEach(p=>g.appendChild(el("path", {d:`M${p[0]} ${p[1]} L${p[0]+5} ${p[1]-8} L${p[0]+10} ${p[1]} Z`, fill:"#161616", stroke:"#E0342A", "stroke-width":0.8})));
+  g.appendChild(el("circle", {cx:44, cy:78, r:1.6, fill:"#E0342A"}));
+  g.appendChild(el("circle", {cx:76, cy:78, r:1.6, fill:"#E0342A"}));
+}
+function gDecorateTemplar(g){
+  g.appendChild(el("rect", {x:38, y:58, width:44, height:36, fill:"#E8E8EC", stroke:"#8A929C", "stroke-width":1.4}));
+  g.appendChild(el("rect", {x:55, y:62, width:10, height:28, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:44, y:71, width:32, height:10, fill:"#B5302A"}));
+  [26,42].forEach(y=>{[28,45,62,79].forEach(x=>g.appendChild(el("line", {x1:x, y1:y, x2:x+10, y2:y, stroke:"#8A929C", "stroke-width":1})));});
+}
+function hDecorateChainmail(g){
+  for(let row=0, y=22; y<115; y+=8, row++){
+    const offset = row%2===0 ? 0 : 5;
+    for(let x=20+offset; x<=100; x+=10) g.appendChild(el("circle", {cx:x, cy:y, r:3, fill:"none", stroke:"#7A828C", "stroke-width":1.1}));
+  }
+  g.appendChild(el("path", {d:"M48 70 Q60 62 72 70 L68 110 Q60 116 52 110 Z", fill:CELL_BG}));
+  for(let x=24; x<=96; x+=8) g.appendChild(el("circle", {cx:x, cy:114, r:1.6, fill:"none", stroke:"#7A828C", "stroke-width":1}));
+}
+function hDecorateObsidian(g){
+  for(let x=26; x<=94; x+=10) g.appendChild(el("path", {d:`M${x-4} 16 L${x} 4 L${x+4} 16 Z`, fill:"#161616", stroke:"#E0342A", "stroke-width":1}));
+  g.appendChild(el("path", {d:"M45 30 L40 66 L47 90", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  g.appendChild(el("path", {d:"M75 30 L80 66 L73 90", fill:"none", stroke:"#E0342A", "stroke-width":1.8}));
+  g.appendChild(el("ellipse", {cx:47, cy:72, rx:7, ry:4, fill:"#E0342A"}));
+  g.appendChild(el("ellipse", {cx:73, cy:72, rx:7, ry:4, fill:"#E0342A"}));
+}
+function lionShape(cx, cy, scale, color){
+  return el("path", {
+    d:`M${cx} ${cy-20*scale} Q${cx+10*scale} ${cy-24*scale} ${cx+8*scale} ${cy-14*scale} Q${cx+16*scale} ${cy-8*scale} ${cx+10*scale} ${cy} Q${cx+14*scale} ${cy+10*scale} ${cx+6*scale} ${cy+16*scale} L${cx-2*scale} ${cy+8*scale} Q${cx-10*scale} ${cy+14*scale} ${cx-14*scale} ${cy+6*scale} Q${cx-8*scale} ${cy} ${cx-10*scale} ${cy-10*scale} Q${cx-4*scale} ${cy-18*scale} ${cx} ${cy-20*scale} Z`,
+    fill:color
+  });
+}
+function outline(d){ return el("path", {d, fill:"none", stroke:"#2B2118", "stroke-width":2.2}); }
+function starPath(cx,cy,r){
+  const pts=[]; for(let i=0;i<5;i++){ const a1=(Math.PI*2*i)/5 - Math.PI/2; pts.push([cx+r*Math.cos(a1), cy+r*Math.sin(a1)]); const a2=a1+Math.PI/5; pts.push([cx+r*0.4*Math.cos(a2), cy+r*0.4*Math.sin(a2)]); }
+  return "M"+pts.map(p=>p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" L")+" Z";
+}
+function sDecorateDragonScale(g){
+  const colors = ["#3B6B3E","#2A4E2C"];
+  let i=0;
+  for(let y=24; y<136; y+=12){
+    for(let x=12+(i%2===0?0:7); x<=108; x+=14){
+      g.appendChild(el("path", {d:`M${x} ${y} L${x+6} ${y+7} L${x} ${y+14} L${x-6} ${y+7} Z`, fill:colors[(Math.floor(x/14)+i)%2]}));
+    }
+    i++;
+  }
+  g.appendChild(el("circle", {cx:60, cy:80, r:52, fill:"none", stroke:"#D9A62E", "stroke-width":7}));
+  g.appendChild(el("path", {d:"M52 76 L60 68 L68 76 L64 86 L56 86 Z", fill:"#D9A62E", stroke:"#5C4210", "stroke-width":1}));
+}
+function sDecorateTemplarCross(g){
+  g.appendChild(el("rect", {x:52, y:30, width:16, height:80, fill:"#B5302A"}));
+  g.appendChild(el("rect", {x:24, y:60, width:72, height:16, fill:"#B5302A"}));
+  g.appendChild(el("path", {d:KITE, fill:"none", stroke:"#C9CDD6", "stroke-width":5, transform:"scale(0.94) translate(4,5)"}));
+}
+
+const CATALOG = {
+  helmet: {
+    label:"Casque",
+    items:[
+      {id:"h_straw", name:"Casque de paille", price:30, stat:"+4 PV", hp:4, draw:buildStraw},
+      {id:"h_leather", name:"Casque de cuir", price:60, stat:"+8 PV", hp:8, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-leather","#8C6A3F"); hDecorateLeather(g);}},
+      {id:"h_chainmail", name:"Coiffe de mailles", price:96, stat:"+13 PV", hp:13, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-chainmail","#9AA0A8"); hDecorateChainmail(g);}},
+      {id:"h_jester", name:"Heaume du bouffon", price:114, stat:"+15 PV", hp:15, draw:buildJester},
+      {id:"h_steel", name:"Heaume d'acier", price:135, stat:"+18 PV", hp:18, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-steel","url(#steelGrad)"); hDecorateSteel(g);}},
+      {id:"h_pigface", name:"Groin d'acier", price:165, stat:"+22 PV", hp:22, draw:buildPigface},
+      {id:"h_voodoo", name:"Masque tribal", price:195, stat:"+26 PV", hp:26, draw:buildVoodoo},
+      {id:"h_obsidian", name:"Heaume d'obsidienne", price:240, stat:"+31 PV", hp:31, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-obsidian","#161616"); hDecorateObsidian(g);}},
+      {id:"h_wizard", name:"Chapeau d'astromancien", price:300, stat:"+35 PV", hp:35, draw:buildWizard},
+      {id:"h_royal", name:"Heaume royal", price:360, stat:"+40 PV", hp:40, draw:(svg)=>{const g=buildHelmBase(svg,"pd-h-royal","url(#goldGrad)"); hDecorateRoyal(g);}},
+    ]
+  },
+  armor: {
+    label:"Armure",
+    items:[
+      {id:"a_leather", name:"Plastron de cuir", price:75, stat:"+15 PV", hp:15, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-leather","#8C6A3F"); aDecorateLeather(g);}},
+      {id:"a_chainmail", name:"Cotte de mailles", price:120, stat:"+20 PV", hp:20, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-chainmail","#9AA0A8"); aDecorateChainmail(g);}},
+      {id:"a_steel", name:"Armure d'acier", price:180, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-steel","url(#steelGrad)"); aDecorateSteel(g);}},
+      {id:"a_barbarian", name:"Armure barbare", price:216, stat:"+35 PV", hp:35, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-barbarian","#6B4A2E"); aDecorateBarbarian(g);}},
+      {id:"a_templar", name:"Armure templière", price:255, stat:"+45 PV", hp:45, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-templar","#E8E8EC"); aDecorateTemplar(g);}},
+      {id:"a_elven", name:"Armure elfique", price:294, stat:"+55 PV", hp:55, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-elven","#AEB6BE"); aDecorateElven(g);}},
+      {id:"a_dragon", name:"Armure d'écailles", price:336, stat:"+68 PV", hp:68, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-dragon","#5C4530"); aDecorateDragon(g);}},
+      {id:"a_obsidian", name:"Armure d'obsidienne", price:375, stat:"+78 PV", hp:78, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-obsidian","#161616"); aDecorateObsidian(g);}},
+      {id:"a_mage", name:"Armure runique", price:414, stat:"+88 PV", hp:88, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-mage","#1B2A4A"); aDecorateMage(g);}},
+      {id:"a_royal", name:"Armure royale", price:450, stat:"+100 PV", hp:100, draw:(svg)=>{const g=buildArmorBase(svg,"pd-a-royal","url(#goldGrad)"); aDecorateRoyal(g);}},
+    ]
+  },
+  gloves: {
+    label:"Gants",
+    items:[
+      {id:"g_leather", name:"Gants de cuir", price:45, stat:"+2 dégâts", dmgBonus:2, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-leather","#8C6A3F"); gDecorateLeather(g);}},
+      {id:"g_chainmail", name:"Gants de mailles", price:75, stat:"+3 dégâts", dmgBonus:3, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-chainmail","#9AA0A8"); gDecorateChainmail(g);}},
+      {id:"g_steel", name:"Gants d'acier", price:105, stat:"+4 dégâts", dmgBonus:4, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-steel","url(#steelGrad)"); gDecorateSteel(g);}},
+      {id:"g_barbarian", name:"Gants barbares", price:126, stat:"+5 dégâts", dmgBonus:5, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-barbarian","#6B4A2E"); gDecorateBarbarian(g);}},
+      {id:"g_templar", name:"Gants templiers", price:150, stat:"+5 dégâts", dmgBonus:5, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-templar","#E8E8EC"); gDecorateTemplar(g);}},
+      {id:"g_elven", name:"Gants elfiques", price:174, stat:"+6 dégâts", dmgBonus:6, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-elven","#AEB6BE"); gDecorateElven(g);}},
+      {id:"g_dragon", name:"Gants d'écailles", price:198, stat:"+6 dégâts", dmgBonus:6, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-dragon","#5C4530"); gDecorateDragon(g);}},
+      {id:"g_obsidian", name:"Gants d'obsidienne", price:222, stat:"+7 dégâts", dmgBonus:7, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-obsidian","#161616"); gDecorateObsidian(g);}},
+      {id:"g_mage", name:"Gants runiques", price:246, stat:"+7 dégâts", dmgBonus:7, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-mage","#1B2A4A"); gDecorateMage(g);}},
+      {id:"g_royal", name:"Gants royaux", price:270, stat:"+8 dégâts", dmgBonus:8, draw:(svg)=>{const g=buildGloveBase(svg,"pd-g-royal","url(#goldGrad)"); gDecorateRoyal(g);}},
+    ]
+  },
+  boots: {
+    label:"Bottes",
+    items:[
+      {id:"b_leather", name:"Bottes de cuir", price:45, stat:"+15 PV · 5 combats", hp:15, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-leather","#8C6A3F"); bDecorateLeather(g);}},
+      {id:"b_chainmail", name:"Bottes de mailles", price:84, stat:"+20 PV · 6 combats", hp:20, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-chainmail","#9AA0A8"); bDecorateChainmail(g);}},
+      {id:"b_steel", name:"Bottes d'acier", price:120, stat:"+25 PV · 8 combats", hp:25, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-steel","url(#steelGrad)"); bDecorateSteel(g);}},
+      {id:"b_barbarian", name:"Bottes barbares", price:144, stat:"+30 PV · 8 combats", hp:30, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-barbarian","#6B4A2E"); bDecorateBarbarian(g);}},
+      {id:"b_templar", name:"Bottes templières", price:168, stat:"+35 PV · 9 combats", hp:35, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-templar","#E8E8EC"); bDecorateTemplar(g);}},
+      {id:"b_elven", name:"Bottes elfiques", price:192, stat:"+40 PV · 10 combats", hp:40, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-elven","#AEB6BE"); bDecorateElven(g);}},
+      {id:"b_dragon", name:"Bottes d'écailles", price:219, stat:"+45 PV · 10 combats", hp:45, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-dragon","#5C4530"); bDecorateDragon(g);}},
+      {id:"b_obsidian", name:"Bottes d'obsidienne", price:246, stat:"+50 PV · 11 combats", hp:50, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-obsidian","#161616"); bDecorateObsidian(g);}},
+      {id:"b_mage", name:"Bottes runiques", price:273, stat:"+55 PV · 11 combats", hp:55, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-mage","#1B2A4A"); bDecorateMage(g);}},
+      {id:"b_royal", name:"Bottes royales", price:300, stat:"+60 PV · 12 combats", hp:60, draw:(svg)=>{const g=buildBootBase(svg,"pd-b-royal","url(#goldGrad)"); bDecorateRoyal(g);}},
+    ]
+  },
+  weapon: {
+    label:"Arme",
+    items:[
+      {id:"w_dague", name:"Dague", price:54, stat:"8 dégâts", dmg:8, draw:buildDagger},
+      {id:"w_2mains", name:"Épée à deux mains", price:81, stat:"12 dégâts", dmg:12, draw:buildTwoHandedSword},
+      {id:"w_hallebarde", name:"Hallebarde", price:84, stat:"10 dégâts", dmg:10, draw:buildHalberd},
+      {id:"w_courte", name:"Épée courte", price:105, stat:"15 dégâts", dmg:15, draw:buildShortsword},
+      {id:"w_epee", name:"Épée longue", price:150, stat:"20 dégâts", dmg:20, draw:buildLongsword},
+      {id:"w_lance", name:"Lance", price:150, stat:"24 dégâts", dmg:24, draw:buildLance},
+      {id:"w_sabre", name:"Sabre", price:156, stat:"22 dégâts", dmg:22, draw:buildSaber},
+      {id:"w_fleau", name:"Fléau d'armes", price:174, stat:"20 dégâts", dmg:20, draw:buildFlail},
+      {id:"w_hache", name:"Hache de bataille", price:219, stat:"30 dégâts", dmg:30, draw:buildAxe},
+      {id:"w_marteau", name:"Marteau de guerre", price:234, stat:"26 dégâts", dmg:26, draw:buildWarhammer},
+    ]
+  },
+  shield: {
+    label:"Bouclier",
+    items:[
+      {id:"s_rond", name:"Bouclier rond", price:75, stat:"+25 PV", hp:25, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-rond","#A88B5C",true); sDecorateWood(g);}},
+      {id:"s_acier", name:"Écu d'acier", price:138, stat:"+45 PV", hp:45, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-acier","url(#steelGrad)",false); sDecorateSteelLion(g);}},
+      {id:"s_templier", name:"Bouclier templier", price:192, stat:"+65 PV", hp:65, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-templier","#E8E8EC",false); sDecorateTemplarCross(g);}},
+      {id:"s_ecailles", name:"Bouclier d'écailles", price:264, stat:"+90 PV", hp:90, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-ecailles","#3B6B3E",true); sDecorateDragonScale(g);}},
+      {id:"s_royal", name:"Bouclier royal", price:345, stat:"+120 PV", hp:120, draw:(svg)=>{const g=buildShieldBase(svg,"pd-s-royal","url(#goldGrad)",false); sDecorateRoyal(g);}},
+    ]
+  },
+};
+const SLOTS = ["helmet","armor","gloves","boots","weapon","shield"];
+const BASE_HP = 10;   // PV de départ, avant équipement (comme dans l'arène)
+const RANK_MULT = [1, 2, 4, 8, 12, 20];   // niveau 1 à 6 : × sur l'attaque et les PV
+function computeStats(){
+  let hp = BASE_HP, dmg = 0;
+  SLOTS.forEach(slot=>{
+    const id = state.equipped[slot];
+    if(!id) return;
+    const found = findItem(id);
+    if(!found) return;
+    const it = found.it;
+    if(typeof it.hp === 'number') hp += it.hp;
+    if(typeof it.dmgBonus === 'number') dmg += it.dmgBonus;
+    if(typeof it.dmg === 'number') dmg += it.dmg;
+  });
+  // le niveau (rang de mage) multiplie les PV et l'attaque
+  const mult = RANK_MULT[Math.min((state && state.niveau) || 0, RANK_MULT.length - 1)];
+  return {hp: Math.round(hp * mult), dmg: Math.round(dmg * mult)};
+}
+
+/* ---------- État ---------- */
+// state.gold / state.inventory / state.equipped / state.portraitImage ne sont
+// plus qu'un MIROIR en mémoire du "coffre" partagé (voir passerelle-core.js),
+// qui est lui l'unique source de vérité pour l'or et l'équipement — la même
+// que celle utilisée par le Grimoire. Rien n'est chargé tant que la
+// passerelle n'a pas confirmé l'identité de l'élève (voir onPasserelleReady).
+let state = null;
+let identiteEleve = null; // { slug, nom } — fourni par la passerelle
+let busy = false; // verrou global anti-clic-frénétique
+const RESALE_RATE = 1.0; // remboursement à 100% — les prix en cascade tiennent déjà compte de la revente
+
+async function saveState(){
+  if(!identiteEleve || !state) return;
+  try{
+    const coffre = window.Passerelle.coffre || window.PasserelleCore.coffreParDefaut(identiteEleve.nom);
+    coffre.nom = identiteEleve.nom;
+    coffre.or = state.gold;
+    coffre.equipement = {
+      inventory: state.inventory,
+      equipped: state.equipped,
+      portraitImage: state.portraitImage
+    };
+    window.Passerelle.coffre = coffre;
+    await window.PasserelleCore.sauvegarderCoffre(identiteEleve.slug, coffre);
+  }catch(e){ console.error('Sauvegarde impossible', e); }
+}
+
+// Relit le coffre depuis le stockage partagé (source de vérité) et met à
+// jour l'affichage local — utilisé quand on revient du Grimoire, où l'or a
+// pu changer indépendamment de cette page (fiche de personnage).
+async function resynchroniserApresModule(){
+  if(!identiteEleve || !state) return;
+  const resultat = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
+  window.Passerelle.coffre = resultat.donnees;
+  state.gold = resultat.donnees.or;
+  state.inventory = resultat.donnees.equipement.inventory;
+  state.equipped = resultat.donnees.equipement.equipped;
+  state.portraitImage = resultat.donnees.equipement.portraitImage;
+  state.niveau = resultat.donnees.niveauLecture || 0;
+  state.xp = resultat.donnees.xp || 0;
+  state.genre = resultat.donnees.genre || null;
+  const rangTitreEl = document.getElementById('rangTitre');
+  if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[resultat.donnees.niveauLecture || 0] || NIVEAUX_LECTURE[0];
+  render();
+}
+
+// Appelé une seule fois par la passerelle, une fois l'identité confirmée et
+// le coffre chargé (avec restauration automatique si nécessaire).
+const NIVEAUX_LECTURE = ["Apprenti", "Novice", "Invocateur", "Magicien", "Sorcier", "Archimage"];
+
+window.onPasserelleReady = function(identite, coffre){
+  identiteEleve = identite;
+  state = {
+    gold: coffre.or, // 0 pour un nouvel élève — tout l'or se gagne, aucun cadeau de départ
+    inventory: coffre.equipement.inventory,
+    equipped: coffre.equipement.equipped,
+    portraitImage: coffre.equipement.portraitImage,
+    niveau: coffre.niveauLecture || 0,   // rang de mage (0 = Apprenti … 5 = Archimage)
+    xp: coffre.xp || 0,                  // expérience, écrite par les Parchemins de lecture
+    genre: coffre.genre || null          // 'fille' | 'garcon' : portrait et compagnon
+  };
+  const rangTitreEl = document.getElementById('rangTitre');
+  if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[coffre.niveauLecture || 0] || NIVEAUX_LECTURE[0];
+  render();
+};
+function bumpGold(){
+  const elGold = document.getElementById('goldAmount');
+  elGold.classList.remove('bump'); void elGold.offsetWidth; elGold.classList.add('bump');
+}
+function findItem(id){
+  for(const slot of SLOTS){ const it = CATALOG[slot].items.find(i=>i.id===id); if(it) return {slot, it}; }
+  return null;
+}
+function withLock(action){
+  if(busy) return;
+  busy = true;
+  action();
+  render();
+  const minDelay = new Promise(r=>setTimeout(r, 300)); // verrou garanti d'au moins 300ms, peu importe la vitesse du réseau
+  Promise.all([saveState(), minDelay]).finally(()=>{ busy = false; render(); });
+}
+function buy(id){
+  const found = findItem(id); if(!found) return;
+  const {slot, it} = found;
+  if(busy || state.gold < it.price || state.inventory.includes(id)) return;
+  withLock(()=>{
+    state.gold -= it.price; state.inventory.push(id); state.equipped[slot] = id;
+    bumpGold();
+  });
+}
+function equip(id){
+  const found = findItem(id); if(!found || busy) return;
+  withLock(()=>{ state.equipped[found.slot] = id; });
+}
+function sell(id){
+  const found = findItem(id); if(!found || busy) return;
+  const {slot, it} = found;
+  if(!state.inventory.includes(id)) return;
+  withLock(()=>{
+    const refund = Math.floor(it.price * RESALE_RATE);
+    state.gold += refund;
+    state.inventory = state.inventory.filter(x=>x!==id);
+    if(state.equipped[slot] === id) delete state.equipped[slot];
+    bumpGold();
+  });
+}
+
+let activeTab = "helmet";
+function renderTabs(){
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  SLOTS.forEach(slot=>{
+    const btn = document.createElement('div');
+    btn.className = 'tab' + (slot===activeTab ? ' active' : '');
+    btn.textContent = CATALOG[slot].label;
+    btn.onclick = ()=>{ activeTab = slot; render(); };
+    tabs.appendChild(btn);
+  });
+}
+function renderStoreList(){
+  const list = document.getElementById('storeList');
+  list.innerHTML = '';
+  CATALOG[activeTab].items.forEach(it=>{
+    const owned = state.inventory.includes(it.id);
+    const isEquipped = state.equipped[activeTab] === it.id;
+    const row = document.createElement('div'); row.className = 'item-row';
+    const iconWrap = document.createElement('div');
+    const svg = el("svg", {viewBox: activeTab==="weapon" ? "0 0 120 200" : (activeTab==="shield" ? "0 0 120 155" : "0 0 120 130")});
+    it.draw(svg); iconWrap.appendChild(svg);
+    const info = document.createElement('div'); info.className = 'item-info';
+    info.innerHTML = `<span class="item-name">${it.name}</span><span class="item-stat">${it.stat}</span>`;
+    const price = document.createElement('div'); price.className = 'item-price';
+    price.textContent = owned ? 'Possédé' : it.price + ' or';
+    const action = document.createElement('div'); action.className = 'action-group';
+    if(!owned){
+      const btn = document.createElement('button');
+      btn.textContent = 'Acheter';
+      btn.disabled = busy || state.gold < it.price;
+      btn.onclick = ()=>buy(it.id);
+      action.appendChild(btn);
+    } else {
+      const btn = document.createElement('button');
+      if(isEquipped){ btn.textContent = 'Équipé'; btn.classList.add('equipped'); btn.disabled = true; }
+      else { btn.textContent = 'Équiper'; btn.disabled = busy; btn.onclick = ()=>equip(it.id); }
+      action.appendChild(btn);
+      const sellBtn = document.createElement('button');
+      sellBtn.textContent = 'Vendre (' + Math.floor(it.price*RESALE_RATE) + ' or)';
+      sellBtn.className = 'sell-btn';
+      sellBtn.disabled = busy;
+      sellBtn.onclick = ()=>sell(it.id);
+      action.appendChild(sellBtn);
+    }
+    row.appendChild(iconWrap); row.appendChild(info); row.appendChild(price); row.appendChild(action);
+    list.appendChild(row);
+  });
+}
+let wasBusy = false;
+function renderDoll(){
+  document.getElementById('goldAmount').textContent = state.gold;
+  SLOTS.forEach(slot=>{
+    const slotEl = document.querySelector(`.slot[data-slot="${slot}"]`);
+    const existingSvg = slotEl.querySelector('svg'); if(existingSvg) existingSvg.remove();
+    const equippedId = state.equipped[slot];
+    if(equippedId){
+      slotEl.classList.remove('empty');
+      const found = findItem(equippedId);
+      const svg = el("svg", {viewBox: slot==="weapon" ? "0 0 120 200" : (slot==="shield" ? "0 0 120 155" : "0 0 120 130")});
+      found.it.draw(svg);
+      slotEl.insertBefore(svg, slotEl.firstChild);
+    } else {
+      slotEl.classList.add('empty');
+    }
+  });
+  // portrait
+  const portrait = document.getElementById('portrait');
+  const placeholder = document.getElementById('portraitPlaceholder');
+  const imagePortrait = cheminPortrait(state.genre, state.niveau);
+  portrait.title = NIVEAUX_LECTURE[state.niveau || 0] || '';
+  if(imagePortrait){
+    portrait.style.backgroundImage = `url(${imagePortrait})`;
+    placeholder.style.display = 'none';
+  } else {
+    portrait.style.backgroundImage = 'none';
+    placeholder.style.display = 'block';
+  }
+  // stats HP / DMG
+  const stats = computeStats();
+  const hpBadge = document.getElementById('hpBadge');
+  const dmgBadge = document.getElementById('dmgBadge');
+  hpBadge.textContent = stats.hp + '/' + stats.hp;
+  dmgBadge.textContent = 'DMG: ' + stats.dmg;
+  hpBadge.classList.toggle('frozen', busy);
+  dmgBadge.classList.toggle('frozen', busy);
+  // gel de l'écran pendant le verrou global
+  document.getElementById('freezeOverlay').classList.toggle('active', busy);
+  if(wasBusy && !busy){
+    [hpBadge, dmgBadge].forEach(b=>{ b.classList.remove('reveal'); void b.offsetWidth; b.classList.add('reveal'); });
+  }
+  wasBusy = busy;
+  renderXp();
+}
+
+/* ---------- Expérience (XP) : ligne sous les PV / DMG, et fenêtre du détail des niveaux ---------- */
+function renderXp(){
+  if(!state) return;
+  // Seuils des rangs : xp-core.js (Novice 1 000 · Invocateur 2 500 · Magicien 5 000 · Sorcier 10 000 ; Archimage pas par l'XP)
+  const xp = state.xp || 0, prochain = window.XpCore.prochainSeuil(xp), base = window.XpCore.seuilActuel(xp);
+  document.getElementById('xpTexte').textContent = prochain === null ? ('XP : ' + xp + ' · rang max par l\'XP') : ('XP : ' + xp + ' / ' + prochain);
+  document.getElementById('xpRemplissage').style.width = (prochain === null ? 100 : (xp - base) / (prochain - base) * 100) + '%';
+}
+function ouvrirXpModal(){
+  const niveau = (state && state.niveau) || 0;
+  document.getElementById('xpNiveaux').innerHTML = NIVEAUX_LECTURE.map((nom, i) =>
+    '<li class="' + (i === niveau ? 'actuel' : '') + '"><span><b>Niveau ' + (i + 1) + '</b> — ' + nom + '</span><span>' +
+    (i === 0 ? 'point de départ' : (window.XpCore.SEUILS[i] !== undefined ? window.XpCore.SEUILS[i].toLocaleString('fr-CA') + ' XP · ' : 'rang spécial · ') + 'attaque et PV × ' + RANK_MULT[i]) + '</span></li>').join('');
+  document.getElementById('xpModal').classList.add('open');
+}
+function fermerXpModal(){ document.getElementById('xpModal').classList.remove('open'); }
+document.getElementById('xpRow').addEventListener('click', ouvrirXpModal);
+document.getElementById('xpFermer').addEventListener('click', fermerXpModal);
+document.getElementById('xpModal').addEventListener('click', (e) => { if(e.target.id === 'xpModal') fermerXpModal(); });
+document.addEventListener('keydown', (e) => { if(e.key === 'Escape') fermerXpModal(); });
+
+function render(){ renderDoll(); renderTabs(); renderStoreList(); majCompagnon(); }
+
+document.querySelectorAll('.slot').forEach(slotEl=>{
+  slotEl.addEventListener('click', ()=>{
+    activeTab = slotEl.dataset.slot; render();
+    document.querySelector('.store').scrollIntoView({behavior:'smooth'});
+  });
+});
+/* Portrait : l'élève ne choisit plus son image. Elle dépend de son genre (choisi à la
+   couverture) et de son rang de mage (écrit par les Parchemins de lecture) :
+   personnages/<rang>-<genre>.webp. Le compagnon (compagnon-core.js) suit les mêmes règles. */
+const RANGS_IMAGES = ['apprenti', 'novice', 'invocateur', 'magicien', 'sorcier', 'archimage'];
+function cheminPortrait(genre, niveau){
+  if(genre !== 'fille' && genre !== 'garcon') return null;
+  const rang = RANGS_IMAGES[Math.max(0, Math.min(RANGS_IMAGES.length - 1, niveau || 0))];
+  return 'personnages/' + rang + '-' + genre + '.webp';
+}
+function majCompagnon(){
+  if(window.Compagnon && state) window.Compagnon.maj({ genre: state.genre, niveau: state.niveau });
+}
+
+// Construit l'URL d'un module (Grimoire, Bestiaire, Parchemins) en y
+// reportant l'identité de l'élève, pour qu'il n'ait jamais à se réidentifier.
+function urlAvecIdentite(fichier){
+  if(!identiteEleve) return fichier;
+  const params = new URLSearchParams();
+  params.set('eleve', identiteEleve.slug);
+  params.set('nom', identiteEleve.nom);
+  if(typeof state !== 'undefined' && state && state.genre) params.set('genre', state.genre);   // « magicien » ou « magicienne » (dragon du Grimoire scellé)
+  return fichier + '?' + params.toString();
+}
+
+// Le grimoire ne se charge qu'au premier clic — jamais chargé d'avance.
+// Il s'ouvre en plein écran, par-dessus la fiche de personnage, qui reste intacte en dessous.
+// Les "Exercices supplémentaires" vivent dans le même fichier (grimoire-des-mathematiques.html) —
+// on y ajoute juste un indicateur d'URL pour qu'il démarre directement sur cette vue.
+let grimoireLoaded = false;
+let dernierModeGrimoire = null; // 'normal' | 'supp' — pour savoir s'il faut recharger en changeant de bouton
+function ouvrirGrimoire(mode){
+  if(!grimoireLoaded || dernierModeGrimoire !== mode){
+    let url = urlAvecIdentite('grimoire-des-mathematiques.html');
+    if(mode === 'supp') url += '&vue=supp';
+    document.getElementById('grimoireFrame').src = url;
+    grimoireLoaded = true;
+    dernierModeGrimoire = mode;
+  }
+  document.getElementById('grimoireModal').classList.add('open');
+  if(window.Compagnon) window.Compagnon.maj({ grimoireOuvert: true });   // outils du compagnon : Grimoire seulement
+}
+document.getElementById('grimoireToggle').addEventListener('click', () => ouvrirGrimoire('normal'));
+// Exercices supplémentaires : bouton désactivé tant que les feuilles n'existent pas (attribut « disabled » dans le HTML).
+// Pour le réactiver plus tard : retirer « disabled » du bouton et la classe « grimoire-toggle-inactif ».
+document.getElementById('exercicesSuppToggle').addEventListener('click', () => ouvrirGrimoire('supp'));
+document.getElementById('grimoireCloseBtn').addEventListener('click', () => {
+  document.getElementById('grimoireModal').classList.remove('open');
+  if(window.Compagnon) window.Compagnon.maj({ grimoireOuvert: false });
+  resynchroniserApresModule(); // l'or gagné dans le Grimoire doit apparaître ici sans recharger la page
+});
+
+// Même mécanisme pour les Parchemins de Lecture (manuel de français).
+let parcheminsLoaded = false;
+document.getElementById('parcheminsToggle').addEventListener('click', () => {
+  if(!parcheminsLoaded){
+    document.getElementById('parcheminsFrame').src = urlAvecIdentite('parchemins-lecture.html');
+    parcheminsLoaded = true;
+  }
+  document.getElementById('parcheminsModal').classList.add('open');
+});
+document.getElementById('parcheminsCloseBtn').addEventListener('click', () => {
+  document.getElementById('parcheminsModal').classList.remove('open');
+  resynchroniserApresModule();   // XP et rang gagnés dans les Parchemins
+});
+
+// Le Livre d'Histoire (chargé seulement au premier clic, comme les autres livres).
+let histoireLoaded = false;
+document.getElementById('histoireToggle').addEventListener('click', () => {
+  if(!histoireLoaded){
+    document.getElementById('histoireFrame').src = urlAvecIdentite('livre-histoire.html');
+    histoireLoaded = true;
+  }
+  document.getElementById('histoireModal').classList.add('open');
+});
+document.getElementById('histoireCloseBtn').addEventListener('click', () => {
+  // Une lecture est en cours (minuterie du compagnon) : le compagnon demande à l'élève de rester.
+  const f = document.getElementById('histoireFrame');
+  let garde = null;
+  try{ garde = f && f.contentWindow && f.contentWindow.GardeLecture; }catch(e){ garde = null; }   // ouvert depuis un dossier : Chrome interdit de regarder dans le livre
+  const fermer = () => { document.getElementById('histoireModal').classList.remove('open'); resynchroniserApresModule(); };
+  if(garde && garde.enCours()) garde.demanderSortie(fermer); else fermer();
+});
+
+// Chapitre bonus : le portail de Cassiopée (la bande dessinée viendra plus tard).
+let cassiopeeLoaded = false;
+document.getElementById('cassiopeeToggle').addEventListener('click', () => {
+  if(!cassiopeeLoaded){
+    document.getElementById('cassiopeeFrame').src = urlAvecIdentite('cassiopee.html');
+    cassiopeeLoaded = true;
+  }
+  document.getElementById('cassiopeeModal').classList.add('open');
+});
+document.getElementById('cassiopeeCloseBtn').addEventListener('click', () => {
+  document.getElementById('cassiopeeModal').classList.remove('open');
+});
+
+/* ================= LOGIQUE DE LA PASSERELLE (écran d'entrée) ================= */
+(function(){
+  const overlay = document.getElementById('passerelleOverlay');
+  const ecranInvalide = document.getElementById('passerelleEcranInvalide');
+  const ecranChoix = document.getElementById('passerelleEcranChoix');
+  const ecranCouverture = document.getElementById('passerelleEcranCouverture');
+  const imgCouverture = document.getElementById('passerelleImage');
+  const voile = document.getElementById('passerelleVoile');
+  const flash = document.getElementById('passerelleFlash');
+  const texteStatut = document.getElementById('passerelleStatut');
+
+  const CHEMINS_IMAGES = {
+    garcon: 'couverture_assets/couverture_garcon.webp',
+    fille: 'couverture_assets/couverture_fille.webp'
+  };
+
+  window.Passerelle = { identite: null, coffre: null };
+
+  function masquerOverlay(){
+    overlay.classList.add('masquee');
+  }
+
+  function afficherCouverture(genre){
+    ecranChoix.style.display = 'none';
+    ecranCouverture.style.display = 'flex';
+    imgCouverture.src = CHEMINS_IMAGES[genre];
+  }
+
+  function finaliser(){
+    masquerOverlay();
+    if(typeof window.onPasserelleReady === 'function'){
+      window.onPasserelleReady(window.Passerelle.identite, window.Passerelle.coffre);
+    }
+  }
+
+  async function demarrer(){
+    const identite = window.PasserelleCore.lireIdentiteUrl();
+    if(!identite){
+      ecranInvalide.style.display = 'block';
+      return;
+    }
+    window.Passerelle.identite = identite;
+
+    const resultat = await window.PasserelleCore.chargerCoffre(identite.slug, identite.nom);
+    window.Passerelle.coffre = resultat.donnees;
+
+    if(!resultat.donnees.genre){
+      // Première visite : l'élève choisit son grimoire, une fois pour toutes.
+      ecranChoix.style.display = 'flex';
+      document.querySelectorAll('.passerelleCarte').forEach(carte => {
+        carte.addEventListener('click', async () => {
+          const genre = carte.getAttribute('data-genre');
+          window.Passerelle.coffre.genre = genre;
+          await window.PasserelleCore.sauvegarderCoffre(identite.slug, window.Passerelle.coffre);
+          afficherCouverture(genre);
+          texteStatut.textContent = "Le grimoire s'ouvre...";
+          flash.classList.add('actif');
+          voile.style.display = 'none';
+          setTimeout(finaliser, 900);
+        });
+      }, { once:true });
+      return;
+    }
+
+    // Visite normale : on affiche la couverture personnelle pendant la validation.
+    afficherCouverture(resultat.donnees.genre);
+    texteStatut.textContent = resultat.restaure
+      ? "Un ancien sortilège restaure ton grimoire..."
+      : "Le sceau reconnaît ta présence...";
+    setTimeout(() => {
+      voile.style.display = 'none';
+      flash.classList.add('actif');
+      texteStatut.textContent = "Le grimoire s'ouvre...";
+      setTimeout(finaliser, 700);
+    }, 1100);
+  }
+
+  demarrer();
+})();
+</script>
+</body>
+</html>
