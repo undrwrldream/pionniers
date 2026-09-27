@@ -10,6 +10,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=EB+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <script src="stockage-classe.js"></script>
 <script src="passerelle-core.js"></script>
+<script src="xp-core.js"></script>
+<script src="ouvertures-core.js"></script>
 <script src="types-de-reponse.js"></script>
 <script src="aide-core.js"></script>
 <script src="rapports-core.js"></script>
@@ -486,7 +488,7 @@
 .parchemin-conteneur{
   position:relative; width:min(90vw, calc(97vh * 1.1807), 1568px); margin:0 auto;
   aspect-ratio: 1568 / 1328;
-  background: url('livre_assets/parchemin_scroll.jpg') center / contain no-repeat;
+  background: url('livre_assets/parchemin_scroll_fondu.webp') center / contain no-repeat;
 }
 .parchemin-conteneur > #app{
   position:absolute; left:12%; right:11%; top:27%; bottom:10%;
@@ -509,7 +511,7 @@
 .evoc-conteneur{
   position:relative; width:min(92vw, calc(84vh * 1.5), 1920px); margin:0 auto;
   aspect-ratio: 1920 / 1280;
-  background: url('livre_assets/vocabulaire_scroll.png') center / contain no-repeat;
+  background: url('livre_assets/vocabulaire_scroll.webp') center / contain no-repeat;
 }
 .evoc-contenu{
   position:absolute; left:8%; right:7%; top:27%; bottom:15%;
@@ -569,7 +571,7 @@
 .vocab-panel.open{ display:flex; }
 .vocab-panel-header{
   flex:0 0 auto; height:62px; cursor:grab; user-select:none; touch-action:none;
-  background:url('livre_assets/vocabulaire_bandeau.png') center 62% / cover no-repeat;
+  background:url('livre_assets/vocabulaire_bandeau.webp') center 62% / cover no-repeat;
   background-color:#3a1712;
 }
 .vocab-panel-header:active{ cursor:grabbing; }
@@ -621,12 +623,15 @@
 .xp-barre i{ display:block; height:100%; background:linear-gradient(90deg,var(--gold-dark),var(--gold-bright)); border-radius:99px; }
 .xp-gain{ margin:10px auto 0; text-align:center; font-family:'Cinzel Decorative', serif; font-size:0.95rem; color:var(--gold-dark); font-weight:700; }
 
-/* pages de section : la sortie reste toujours visible (barre collée en haut) et répétée en bas */
-.evoc-barre, .conj-barre{
-  position:sticky; top:0; z-index:5; padding:3px 0 6px; margin:0 0 6px;
-  background:linear-gradient(180deg, rgba(232,216,178,0.97) 80%, rgba(232,216,178,0));
+/* Les liens « ← Retour » ne prennent plus de place dans le parchemin : ils flottent dans le coin
+   de l'écran, sous le bouton « ✕ Fiche de personnage », toujours visibles même en défilant. */
+.evoc-barre, .conj-barre{ display:contents; }
+.back-link, .evoc-barre .back-link, .conj-barre .back-link{
+  position:fixed; top:40px; left:8px; z-index:60; margin:0;
+  font-family:'Cinzel', serif; font-size:12px; color:#f3dfa6; border:1px solid #c9a24a; border-bottom:1px solid #c9a24a;
+  background:rgba(27,21,15,0.82); border-radius:6px; padding:4px 10px; box-shadow:0 2px 8px rgba(0,0,0,.35);
 }
-.evoc-barre .back-link, .conj-barre .back-link{ margin-bottom:0; display:inline-block; }
+.back-link:hover{ color:#fff; background:rgba(60,40,15,0.95); }
 .retour-bas{
   display:block; margin:16px auto 4px; cursor:pointer;
   font-family:'Cinzel Decorative', serif; font-size:13px; color:var(--gold-dark);
@@ -670,6 +675,156 @@
 .conj-q.incorrecte .reponse-mot{ border-color:#a33; background:#fbe6e6; }
 .conj-fin{ text-align:center; margin-top:12px; color:var(--green); font-weight:600; }
 @media (max-width:720px){ .conj-refs, .conj-groupes{ grid-template-columns:1fr; } }
+
+/* ---- La créature conjurée (chapitre 2) ----
+   Grande image hors du parchemin, comme si l'élève l'avait vraiment fait apparaître.
+   Image : chapitre2_conjugaison/conjurations/<slug>.webp (fond transparent). Sans image, rien ne s'affiche.
+   Écran large (≥ 1200 px) : le parchemin se range à gauche, la créature occupe la droite pendant tout l'exercice.
+   Écran étroit : la créature apparaît en grand quelques secondes, puis s'efface pour libérer l'exercice.
+   Décorative seulement : elle ne bloque jamais les clics. */
+.conjuration{ position:fixed; z-index:40; pointer-events:none; display:none;
+  top:3vh; bottom:2vh; right:1vw; width:calc(97vw - min(62vw, calc(97vh * 1.1807), 1568px));
+  align-items:flex-end; justify-content:center; }
+.conjuration.visible{ display:flex; }
+.conjuration img{ position:relative; z-index:2; max-width:100%; max-height:100%; object-fit:contain;
+  transform-origin:50% 85%; animation:conjApparait 1.6s cubic-bezier(.2,.9,.3,1.15) both, conjFlotte 5s ease-in-out 1.6s infinite; }
+/* halo et cercle magique au sol */
+.conjuration .conj-halo{ position:absolute; z-index:1; left:5%; right:5%; bottom:0; height:22%;
+  background:radial-gradient(ellipse at 50% 70%, rgba(170,120,255,0.55), rgba(120,70,220,0.25) 40%, transparent 70%);
+  animation:conjHalo 1.6s ease-out both; }
+.conjuration .conj-aura{ position:absolute; z-index:0; inset:8% 0 5% 0;
+  background:radial-gradient(ellipse at 50% 55%, rgba(255,230,160,0.35), transparent 65%);
+  animation:conjAura 1.2s ease-out both; }
+@keyframes conjApparait{
+  0%  { opacity:0; transform:scale(.35) translateY(12%); filter:brightness(4) saturate(0); }
+  45% { opacity:1; filter:brightness(2.2) saturate(.4); }
+  100%{ opacity:1; transform:scale(1) translateY(0); filter:none; } }
+@keyframes conjFlotte{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-1.2%); } }
+@keyframes conjHalo{ 0%{ opacity:0; transform:scaleX(.1); } 30%{ opacity:1; } 100%{ opacity:1; transform:scaleX(1); } }
+@keyframes conjAura{ 0%{ opacity:0; } 35%{ opacity:1; } 100%{ opacity:.6; } }
+@media (min-width:1200px){
+  body.conjuration-ouverte .wrap{ max-width:none; width:100%; margin:0; }
+  body.conjuration-ouverte .parchemin-conteneur{ width:min(62vw, calc(97vh * 1.1807), 1568px); margin-left:1vw; margin-right:auto; }
+}
+@media (max-width:1199px){
+  .conjuration{ left:0; right:0; width:auto; top:5vh; bottom:5vh; }
+  .conjuration.visible{ animation:conjSEfface .8s ease-in 3.2s both; }
+}
+@keyframes conjSEfface{ to{ opacity:0; visibility:hidden; } }
+
+/* ---- Parchemins agrandis aux proportions d'un écran (septembre 2026) ----
+   Sur un écran plus large que haut (≥ 3:2, donc tous les portables), on utilise des versions élargies
+   des parchemins (1,8 : 1) : parchemin_scroll_large_fondu.webp (2390 × 1328) et vocabulaire_scroll_large.webp
+   (2304 × 1280). Elles ont été élargies en espaçant les lettres du titre et en répétant des bandes unies :
+   rien n'est étiré ni déformé. Le parchemin remplit ainsi presque tout l'écran au lieu du tiers central.
+   Quand la créature (Conjurations) ou la liste de vocabulaire occupent la droite, on revient au parchemin
+   d'origine, plus étroit, pour leur laisser la place. Sur un écran étroit ou vertical, rien ne change. */
+body{ padding:4px 6px; }
+footer.note{ position:fixed; left:0; right:0; bottom:0.8vh; margin:0; font-size:11px; z-index:5; pointer-events:none; }
+@media (min-aspect-ratio: 3/2){
+  .wrap{ max-width:none; }
+  .parchemin-conteneur:not(.sans-fond){
+    width:min(99vw, calc(98vh * 1.8)); aspect-ratio: 2390 / 1328;
+    background-image:url('livre_assets/parchemin_scroll_large_fondu.webp');
+  }
+  .parchemin-conteneur:not(.sans-fond) > #app{ left:7.9%; right:7.3%; }
+  body:not(.vocab-ouvert) .evoc-conteneur{
+    width:min(98vw, calc(97vh * 1.8)); aspect-ratio: 2304 / 1280;
+    background-image:url('livre_assets/vocabulaire_scroll_large.webp');
+  }
+  body:not(.vocab-ouvert) .evoc-contenu{ left:6.7%; right:5.9%; }
+}
+@media (min-aspect-ratio: 3/2) and (min-width:1200px){
+  body.conjuration-ouverte .parchemin-conteneur:not(.sans-fond){
+    width:min(62vw, calc(97vh * 1.1807), 1568px); aspect-ratio: 1568 / 1328;
+    background-image:url('livre_assets/parchemin_scroll_fondu.webp');
+  }
+  body.conjuration-ouverte .parchemin-conteneur:not(.sans-fond) > #app{ left:12%; right:11%; }
+}
+@media (prefers-reduced-motion:reduce){ .conjuration img, .conjuration .conj-halo, .conjuration .conj-aura{ animation:none; } }
+
+/* =====================================================================
+   CADRAGE ET SCÈNE (27 septembre 2026)
+   1. Le texte reste DANS la zone claire du parchemin : sous la bannière,
+      au-dessus du rouleau du bas, à l'intérieur des étoiles des coins
+      (zones mesurées sur chaque image, mêmes marges que le Livre d'Histoire).
+   2. Fond sombre autour du parchemin (comme le Livre d'Histoire) : plus de
+      rectangle noir sur fond beige.
+   3. La scène magique : la boule de cristal se pose à GAUCHE, le compagnon
+      parle à DROITE (lecture-magique.js, dans la fiche). La fiche envoie la
+      place qu'ils prennent (--rg, --rd) et le parchemin — ou, aux
+      Conjurations, le parchemin ET la créature — se tassent entre les deux,
+      en douceur. Rien ne se chevauche. S'il ne reste plus assez de place pour
+      la créature, elle s'efface le temps que la boule ou le compagnon repartent.
+   ===================================================================== */
+:root{
+  --rg:0px; --rd:0px; --hd:0px;                          /* place prise à gauche (boule), à droite et en hauteur (compagnon) */
+  --libre:calc(100vw - var(--rg) - var(--rd));           /* largeur laissée aux parchemins */
+  --pc:min(62vw, calc(97vh * 1.1807), 1568px);           /* Conjurations : largeur du parchemin (calculée en JS) */
+  --cc:calc(97vw - var(--pc));                           /* Conjurations : largeur de la créature (calculée en JS) */
+  --vp:clamp(420px, calc(100vw - var(--rg) - 640px), 560px);  /* largeur de la liste de vocabulaire ouverte à droite */
+  --glisse:.6s cubic-bezier(.3,.85,.25,1);
+}
+html{ background:#140a05; }
+body{
+  background:#140a05;
+  padding-left:calc(6px + var(--rg)); padding-right:calc(6px + var(--rd));
+  transition:padding var(--glisse);
+}
+footer.note{ color:#b89a6a; opacity:.8; }
+.parchemin-conteneur, .evoc-conteneur{ transition:width var(--glisse), margin var(--glisse); }
+
+/* Parchemin « PARCHEMINS » d'origine (1568 × 1328) : zone claire mesurée */
+.parchemin-conteneur{ width:min(calc(var(--libre) - 12px), calc(97vh * 1.1807), 1568px); }
+.parchemin-conteneur > #app{ left:14.5%; right:14.5%; top:31%; bottom:17%; }
+/* Liste de vocabulaire : parchemin « VOCABULAIRE » d'origine (1920 × 1280) */
+.evoc-conteneur{ width:min(calc(var(--libre) - 12px), calc(84vh * 1.5), 1920px); }
+.evoc-contenu{ left:11%; right:11%; top:27.5%; bottom:19.5%; }
+
+@media (min-aspect-ratio: 3/2){
+  /* Parchemin élargi (2390 × 1328) : bannière jusqu'à 28 %, rouleau dès 85,5 %, étoiles jusqu'à 12,3 % des bords */
+  .parchemin-conteneur:not(.sans-fond){ width:min(calc(var(--libre) - 12px), calc(98vh * 1.8)); }
+  .parchemin-conteneur:not(.sans-fond) > #app{ left:12.4%; right:12.4%; top:30%; bottom:17%; }
+  /* Vocabulaire élargi (2304 × 1280) */
+  body:not(.vocab-ouvert) .evoc-conteneur{ width:min(calc(var(--libre) - 12px), calc(97vh * 1.8)); }
+  body:not(.vocab-ouvert) .evoc-contenu{ left:10.5%; right:10.5%; top:27.5%; bottom:19%; }
+}
+
+/* Liste de vocabulaire ouverte à droite : le parchemin garde la gauche. Quand le compagnon monte sur scène
+   (en bas à droite), la liste se raccourcit au-dessus de lui au lieu de rétrécir le texte ; les mots se resserrent. */
+@media (min-width:1200px){
+  body.vocab-ouvert{ padding-right:6px; }
+  body.vocab-ouvert .evoc-conteneur{ width:min(calc(100vw - var(--rg) - var(--vp) - 72px), calc(84vh * 1.5), 1920px); margin-left:20px; margin-right:auto; }
+  .vocab-panel{ width:min(94vw, var(--vp)); height:min(88vh, 600px, calc(100vh - var(--hd) - 30px)); }
+}
+.vocab-panel.glisse{ transition:left var(--glisse), width var(--glisse), height var(--glisse); }
+
+/* Conjurations : [boule] [parchemin] [créature] [compagnon] */
+@media (min-width:1200px){
+  body.conjuration-ouverte .parchemin-conteneur,
+  body.conjuration-ouverte .parchemin-conteneur:not(.sans-fond){
+    width:var(--pc); aspect-ratio:1568 / 1328; margin-left:1vw; margin-right:auto;
+    background-image:url('livre_assets/parchemin_scroll_fondu.webp');
+  }
+  body.conjuration-ouverte .parchemin-conteneur > #app,
+  body.conjuration-ouverte .parchemin-conteneur:not(.sans-fond) > #app{ left:14.5%; right:14.5%; top:31%; bottom:17%; }
+  .conjuration{ right:calc(1vw + var(--rd)); width:var(--cc); transition:right var(--glisse), width var(--glisse); }
+}
+.conjuration img, .conjuration .conj-halo, .conjuration .conj-aura{ transition:scale .5s ease, visibility .5s; }
+.conjuration.retiree img, .conjuration.retiree .conj-halo, .conjuration.retiree .conj-aura{ scale:.2; visibility:hidden; }
+/* ---- Conjurations : la créature apparaît EN PLEIN CENTRE de l'écran (27 sept. 2026) ----
+   Sur tous les écrans : elle surgit en grand au centre, par-dessus un voile sombre, environ 3 secondes,
+   puis s'efface. Le parchemin garde sa pleine taille (il n'est plus poussé à gauche). Elle ne bloque
+   jamais les clics. Changer de série ne la refait pas apparaître ; rouvrir le thème, oui. */
+.conjuration, .conjuration.visible{ left:0 !important; right:0 !important; width:auto !important; top:4vh; bottom:3vh; z-index:300;
+  justify-content:center; align-items:flex-end; }
+.conjuration.visible{ animation:conjSEfface .9s ease-in 3.4s both; }
+.conjuration::before{ content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(ellipse at 50% 60%, rgba(60,20,90,.35), rgba(8,4,2,.72) 70%); animation:conjVoile .6s ease-out both; }
+@keyframes conjVoile{ from{ opacity:0; } to{ opacity:1; } }
+.conjuration img{ max-height:100%; max-width:min(90vw, 900px); }
+.conjuration .conj-halo{ left:25%; right:25%; }
+
 </style>
 </head>
 <body>
@@ -677,6 +832,8 @@
   <div class="parchemin-conteneur" id="parcheminConteneur"><div id="app"></div></div>
   <footer class="note">Une fois remis, un texte attend la correction de l'enseignant avant d'être marqué réussi.</footer>
 </div>
+
+<div class="conjuration" id="conjuration" aria-hidden="true"><div class="conj-aura"></div><div class="conj-halo"></div></div>
 
 <div class="teacher-panel" id="teacherPanel">
   <div class="teacher-box">
@@ -743,6 +900,7 @@ const DATA = [
       { kind: "promotion", title: "Épreuve de promotion", paireIndex: 1 }
     ] },
   {
+    id: "lecture3",   // id pour les ouvertures par élève (ouvertures-core.js)
     title: "Chapitre 3",
     texts: [
       {
@@ -868,6 +1026,7 @@ const DATA = [
     ]
   },
   {
+    id: "lecture4",   // id pour les ouvertures par élève (ouvertures-core.js)
     title: "Chapitre 4",
     texts: [
       {
@@ -999,6 +1158,7 @@ const DATA = [
     ]
   },
   {
+    id: "lecture5",   // id pour les ouvertures par élève (ouvertures-core.js)
     title: "Chapitre 5",
     texts: [
       {
@@ -1164,6 +1324,7 @@ const DATA = [
     ]
   },
   {
+    id: "interdit",   // id pour les ouvertures par élève (ouvertures-core.js)
     title: "Chapitre Interdit",
     special: true,
     externalFile: "recueil-de-nouvelles.html",
@@ -1415,6 +1576,19 @@ const identiteEleve = window.PasserelleCore ? window.PasserelleCore.lireIdentite
 let evocProgression = {}; // { [sectionId]: { meilleurScore, derniereTentative } } — rechargé au besoin
 let evocReponsesSaisies = {}; // état des réponses en cours pour la section ouverte
 let invocationsToutesTerminees = false; // recalculé avant chaque rendu qui en a besoin
+
+/* Ouvertures en plus des règles du livre (voir ouvertures-core.js) :
+   • atelier : tout est ouvert (chapitres, sections, épreuves de promotion) tant que l'atelier n'est pas sur « verrous réels » ;
+   • par élève : chapitres cochés par l'enseignant dans le Registre du Maître (clé lecture_chapitres_<identifiant>). */
+let toutOuvertAtelier = false;
+let chapitresLectureEleve = [];
+async function chargerOuverturesLecture(){
+  if(!window.Ouvertures) return;
+  [toutOuvertAtelier, chapitresLectureEleve] = await Promise.all([
+    window.Ouvertures.atelierToutOuvert(),
+    window.Ouvertures.chapitresEleve('lecture', identiteEleve && identiteEleve.slug)
+  ]);
+}
 
 // Formule une consigne claire pour chaque type d'exercice de vocabulaire,
 // plutôt que d'afficher le seul mot-indice sans contexte.
@@ -1697,6 +1871,8 @@ function itemDone(ci, ti, t){
 
 function chapterUnlocked(ci){
   if(window.__toutDebarre) return true;    // panneau enseignant : « Débarrer tous les chapitres »
+  if(toutOuvertAtelier) return true;       // atelier : tout est ouvert
+  if(DATA[ci] && DATA[ci].id && chapitresLectureEleve.includes(DATA[ci].id)) return true;   // ouvert à cet élève par l'enseignant
   if(ci === 0 || ci === 1) return true;    // le chapitre 2 (Conjurations) est ouvert d'emblée
   const prev = DATA[ci - 1];
   if(!prev) return false;
@@ -1717,12 +1893,17 @@ function chapitreTermine(ci){
 function nbChapitresTermines(){ let n = 0; while(chapitreTermine(n)) n++; return n; }
 
 /* ---------------- Expérience (XP) — chapitres 1 et 2 ----------------
-   • 100 XP par section terminée (une seule fois : corrigée au moins une fois, peu importe le score) ;
+   • Invocations (chapitre 1) : 100 XP par section terminée (une seule fois : corrigée au moins une fois, peu importe le score) ;
+   • Conjurations (chapitre 2) : 200 XP par section terminée ;
    • 200 XP par exercice de l'épreuve de promotion réussi (10/15 ou plus ; 2 exercices par chapitre) ;
-   • les XP des deux chapitres s'additionnent : tous les 1000 XP, un rang de mage de plus.
+   • les XP des deux chapitres s'additionnent, avec celles du Livre d'Histoire (coffre.xpHistoire) :
+     rangs selon xp-core.js — Novice 1 000, Invocateur 2 500, Magicien 5 000, Sorcier 10 000 (Archimage : pas par l'XP).
    Rien n'est stocké à part : les XP se calculent à partir des progressions déjà enregistrées (sections, thèmes, promotions).
    Les chapitres suivants (3 et +) gardent leur règle d'avant : un rang de plus par chapitre terminé. */
-const XP_PAR_SECTION = 100, XP_PAR_EXERCICE_BOSS = 200, XP_PAR_RANG = 1000;
+const XP_PAR_SECTION = 100, XP_PAR_CONJURATION = 200, XP_PAR_EXERCICE_BOSS = 200;
+const xpParSection = ci => ci === 1 ? XP_PAR_CONJURATION : XP_PAR_SECTION;
+let xpHistoireConnu = 0;   // XP du Livre d'Histoire (lues dans le coffre) : comptées pour le rang
+let niveauCoffreConnu = 0; // rang déjà inscrit dans le coffre : il ne redescend jamais
 let evocNbTerminees = 0;   // nombre de sections d'Invocations terminées (mis à jour par calculerInvocationsTerminees)
 
 function xpBossChapitre(ci){
@@ -1735,22 +1916,25 @@ function nbSectionsChapitre(ci){ return ci === 0 ? EVOCATIONS_DATA.length : them
 function xpChapitre(ci){
   if(ci !== 0 && ci !== 1) return 0;
   const sections = ci === 0 ? evocNbTerminees : themesConjugaison().filter(t => conjThemeDone(t.themeId)).length;
-  return sections * XP_PAR_SECTION + xpBossChapitre(ci);
+  return sections * xpParSection(ci) + xpBossChapitre(ci);
 }
-function xpMaxChapitre(ci){ return nbSectionsChapitre(ci) * XP_PAR_SECTION + 2 * XP_PAR_EXERCICE_BOSS; }
+function xpMaxChapitre(ci){ return nbSectionsChapitre(ci) * xpParSection(ci) + 2 * XP_PAR_EXERCICE_BOSS; }
 function xpTotal(){ return xpChapitre(0) + xpChapitre(1); }
 function xpTotalMax(){ return xpMaxChapitre(0) + xpMaxChapitre(1); }
-function niveauEleve(){
-  let n = Math.floor(xpTotal() / XP_PAR_RANG);
+function bonusChapitresSuivants(){
+  let n = 0;
   if(chapitreTermine(0) && chapitreTermine(1)){ let ci = 2; while(chapitreTermine(ci)){ n++; ci++; } }
-  return Math.min(n, LEVELS.length - 1);
+  return n;
+}
+function niveauEleve(){
+  return Math.max(niveauCoffreConnu, Math.min(window.XpCore.rangDepuisXp(xpTotal() + xpHistoireConnu) + bonusChapitresSuivants(), LEVELS.length - 1));
 }
 function afficherGainXP(zoneId, gain){
   const zone = document.getElementById(zoneId);
   if(!zone) return;
   const div = document.createElement("div");
   div.className = "xp-gain";
-  div.textContent = "✨ +" + gain + " XP  ·  " + xpTotal() + " XP au total";
+  div.textContent = "✨ +" + gain + " XP  ·  " + (xpTotal() + xpHistoireConnu) + " XP au total";
   zone.appendChild(div);
 }
 
@@ -1822,20 +2006,51 @@ function render(){
   else if(view.mode === "promotion-results") renderPromotionResults();
   else if(view.mode === "conj-liste") renderConjurationsListe();
   else if(view.mode === "conj-section") renderConjSection();
+  majConjuration();
   renderTeacherList();
+}
+
+/* ---------------- La créature conjurée (chapitre 2) ----------------
+   À l'ouverture d'un thème, sa créature apparaît en grand à côté du parchemin (voir .conjuration dans le CSS).
+   L'image n'est chargée qu'à ce moment-là. Changer de série ne la refait pas apparaître.
+   Image absente (ex. thème pas encore illustré) : rien ne s'affiche et le parchemin reste centré. */
+let conjurationActuelle = null;
+function majConjuration(){
+  const boite = document.getElementById("conjuration");
+  if(!boite) return;
+  const t = view.mode === "conj-section" ? DATA[1].texts.find(x => x.themeId === view.themeId) : null;
+  const slug = t ? t.slug : null;
+  if(slug === conjurationActuelle) return;
+  conjurationActuelle = slug;
+  const ancienne = boite.querySelector("img");
+  if(ancienne) ancienne.remove();
+  boite.classList.remove("visible");
+  document.body.classList.remove("conjuration-ouverte");
+  if(!slug) return;
+  const img = new Image();
+  img.alt = "";
+  img.draggable = false;
+  img.onload = () => {
+    if(conjurationActuelle !== slug) return;
+    boite.appendChild(img);
+    void boite.offsetWidth;            // relance l'animation d'apparition
+    boite.classList.add("visible");   // apparition au centre de l'écran, puis elle s'efface (voir CSS)
+  };
+  img.src = "chapitre2_conjugaison/conjurations/" + slug + ".webp";
 }
 
 /* ---------------- Table of contents ---------------- */
 async function renderTOC(){
   const invocationsFaites = await calculerInvocationsTerminees();
-  const xp = xpTotal(), xpMax = xpTotalMax(), niveau = niveauEleve();
-  const reste = XP_PAR_RANG - (xp % XP_PAR_RANG);
-  const texteSuivant = xp >= xpMax ? "Tous les XP des chapitres 1 et 2 sont gagnés !" : `Prochain rang dans <b>${reste} XP</b>`;
+  await lireXpHistoire();
+  const xpLivre = xpTotal(), xp = xpLivre + xpHistoireConnu, niveau = niveauEleve();
+  const prochain = window.XpCore.prochainSeuil(xp), base = window.XpCore.seuilActuel(xp);
+  const texteSuivant = prochain === null ? "Plus haut rang atteint par l'expérience !" : `Prochain rang dans <b>${prochain - xp} XP</b>`;
   let html = `<div class="xp-bandeau">
-      <div class="xp-ligne"><span>✨ <b>${xp} XP</b></span><span>Rang : <b>${LEVELS[niveau]}</b></span><span>${texteSuivant}</span></div>
-      <div class="xp-barre"><i style="width:${xp >= xpMax ? 100 : (xp % XP_PAR_RANG) / XP_PAR_RANG * 100}%"></i></div>
+      <div class="xp-ligne"><span>✨ <b>${xp} XP</b>${xpHistoireConnu ? ` <small>(dont ${xpHistoireConnu} du Livre d'Histoire)</small>` : ''}</span><span>Rang : <b>${LEVELS[niveau]}</b></span><span>${texteSuivant}</span></div>
+      <div class="xp-barre"><i style="width:${prochain === null ? 100 : (xp - base) / (prochain - base) * 100}%"></i></div>
     </div>
-    <p style="text-align:center;color:var(--ink-soft);margin-bottom:16px;">Chaque section terminée rapporte de l'expérience (XP) : 1000 XP = un rang de mage de plus.</p>`;
+    <p style="text-align:center;color:var(--ink-soft);margin-bottom:16px;">Chaque section terminée rapporte de l'expérience (XP). Rangs : Novice 1 000 · Invocateur 2 500 · Magicien 5 000 · Sorcier 10 000 XP.</p>`;
   DATA.forEach((ch, ci) => {
     const level = LEVELS[ci] || "?";
     if(ch.isInvocations){
@@ -1936,7 +2151,7 @@ async function renderEvocationsListe(){
   for(const [k, section] of EVOCATIONS_DATA.entries()){
     const prog = toutesProgs[k];
     const terminee = prog.meilleurScore != null;
-    const debloquee = precedenteTerminee;
+    const debloquee = toutOuvertAtelier || precedenteTerminee;
     const scoreTxt = terminee ? `Meilleur score : ${prog.meilleurScore}/20` : (debloquee ? "Pas encore fait" : "Termine la section précédente");
     html += `<div class="evoc-liste-item${debloquee ? "" : " locked"}" ${debloquee ? `data-id="${section.id}"` : ""}>
       <span class="evoc-liste-num">${debloquee ? section.id : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</span>
@@ -1948,7 +2163,7 @@ async function renderEvocationsListe(){
   // Épreuve de promotion — le « boss final » du chapitre, débarré une fois
   // les 10 sections terminées. Même mécanique que dans les autres chapitres.
   const bossTexte = DATA[0].texts[0];
-  const bossDebloque = precedenteTerminee;
+  const bossDebloque = toutOuvertAtelier || precedenteTerminee;
   const bossFait = bossDebloque && itemDone(0, 0, bossTexte);
   let bossNb = 0;
   if(bossDebloque){
@@ -2008,7 +2223,26 @@ async function renderEvocationsSection(){
   document.getElementById("evocRetourBas").addEventListener("click", quitterSection);
   afficherVocabPanel(section);
   document.getElementById("evocSubmitBtn").addEventListener("click", () => corrigerEvocations(section));
+  // Loupe magique (lecture-magique.js) : on retient la dernière question où l'élève a écrit.
+  document.getElementById("evocExosWrap").addEventListener("focusin", e => {
+    const q = e.target.closest && e.target.closest(".evoc-question");
+    if(q) evocQuestionCourante = parseInt(q.id.replace("evocQ-", ""), 10);
+  });
+  evocQuestionCourante = null;
 }
+/* Pour la loupe magique de lecture-magique.js : les mots que l'élève cherche dans la liste de vocabulaire.
+   { courant: réponse de la question en cours (ou null), tous: réponses des questions pas encore réussies } */
+let evocQuestionCourante = null;
+window.MotsCherchesVocab = function(){
+  if(!view || view.mode !== "evoc-section") return null;
+  const section = EVOCATIONS_DATA.find(s => s.id === view.id);
+  if(!section) return null;
+  const pasReussie = i => { const r = document.getElementById("evocQ-" + i); return !(r && r.classList.contains("correcte")); };
+  const tous = section.exercices.map((ex, i) => pasReussie(i) ? ex.reponse : null).filter(Boolean);
+  const i = evocQuestionCourante;
+  const courant = (i !== null && section.exercices[i] && pasReussie(i)) ? section.exercices[i].reponse : null;
+  return { courant, tous };
+};
 
 function corrigerEvocations(section){
   const typeDef = window.TypesDeReponse.obtenir('mot');
@@ -2080,17 +2314,7 @@ function ouvrirVocabPanel(){
   panel.classList.add("open");
   document.body.classList.add("vocab-ouvert");
   document.getElementById("vocabToggle").classList.remove("visible");
-  if(vocabPanelPos){
-    panel.style.left = vocabPanelPos.left + "px";
-    panel.style.top = vocabPanelPos.top + "px";
-    panel.style.right = "auto";
-  } else if(!panel.style.left){
-    // Position par défaut : coin supérieur droit.
-    const marge = 18;
-    panel.style.top = marge + "px";
-    panel.style.left = (window.innerWidth - panel.offsetWidth - marge) + "px";
-  }
-  clampVocabPanelPosition();
+  placerVocabPanel();
   ajusterListeVocab();
 }
 
@@ -2148,6 +2372,22 @@ document.addEventListener("keydown", (e) => {
   if(e.key === "Escape" && document.getElementById("vocabPanel").classList.contains("open")) masquerVocabPanel();
 });
 
+// Position de la liste : coin supérieur droit (à gauche du compagnon s'il est là), ou l'endroit où l'élève l'a glissée.
+let vocabPanelDeplace = false;
+function placerVocabPanel(){
+  const panel = document.getElementById("vocabPanel");
+  if(!panel.classList.contains("open")) return;
+  if(vocabPanelDeplace && vocabPanelPos){
+    panel.style.left = vocabPanelPos.left + "px";
+    panel.style.top = vocabPanelPos.top + "px";
+  } else {
+    const marge = 18;
+    panel.style.top = marge + "px";
+    panel.style.left = (window.innerWidth - panel.offsetWidth - marge) + "px";
+  }
+  panel.style.right = "auto";
+  clampVocabPanelPosition();
+}
 function clampVocabPanelPosition(){
   const panel = document.getElementById("vocabPanel");
   const marge = 6;
@@ -2181,12 +2421,54 @@ function clampVocabPanelPosition(){
     panel.style.left = (e.clientX - decalX) + "px";
     panel.style.top = (e.clientY - decalY) + "px";
     panel.style.right = "auto";
+    vocabPanelDeplace = true;
   });
   function relacher(){ if(entrain){ entrain = false; clampVocabPanelPosition(); } }
   poignee.addEventListener("pointerup", relacher);
   poignee.addEventListener("pointercancel", relacher);
-  window.addEventListener("resize", () => { if(document.getElementById("vocabPanel").classList.contains("open")){ clampVocabPanelPosition(); ajusterListeVocab(); } });
+  window.addEventListener("resize", () => { if(document.getElementById("vocabPanel").classList.contains("open")){ placerVocabPanel(); ajusterListeVocab(); } });
 })();
+
+
+/* ---------------- La scène magique (voir « CADRAGE ET SCÈNE » dans le CSS) ----------------
+   La fiche (lecture-magique.js) envoie { type:"scene-magique", gauche, droite } : la place prise par la boule
+   de cristal (à gauche) et par le compagnon (à droite). On tasse le parchemin entre les deux. */
+let sceneReserve = { gauche: 0, droite: 0 };
+function cadrerScene(){
+  const W = window.innerWidth, H = window.innerHeight, rg = sceneReserve.gauche, rd = sceneReserve.droite;
+  const racine = document.documentElement.style;
+  racine.setProperty("--rg", rg + "px");
+  racine.setProperty("--rd", rd + "px");
+  racine.setProperty("--hd", (sceneReserve.haut || 0) + "px");
+  // Conjurations : le parchemin garde sa taille idéale si la créature a au moins 200 px ; sinon il cède
+  // jusqu'à 20 % de sa largeur pour la garder visible ; s'il reste moins de 150 px, la créature s'efface
+  // (le parchemin, c'est le travail de l'élève : il reste toujours lisible).
+  const libre = W - rg - rd - 12 - 0.03 * W;
+  const ideal = Math.min(0.64 * 0.97 * W, 0.97 * H * 1.1807, 1568);
+  let pc = ideal, cc = libre - ideal;
+  if(cc < 200){ pc = Math.max(0.8 * ideal, libre - 200); cc = libre - pc; }
+  if(cc < 150){ pc = Math.min(libre, 0.97 * H * 1.1807, 1568); cc = 0; }
+  racine.setProperty("--pc", Math.round(pc) + "px");
+  racine.setProperty("--cc", Math.round(Math.max(0, cc)) + "px");
+  const boite = document.getElementById("conjuration");
+  if(boite) boite.classList.toggle("retiree", cc === 0);
+  // La liste de vocabulaire ouverte se raccourcit pour laisser la place au compagnon (en bas à droite).
+  const panel = document.getElementById("vocabPanel");
+  if(panel && panel.classList.contains("open") && W >= 1200){
+    panel.classList.add("glisse");
+    requestAnimationFrame(() => { placerVocabPanel(); });
+    clearTimeout(cadrerScene.t);
+    cadrerScene.t = setTimeout(() => { panel.classList.remove("glisse"); ajusterListeVocab(); }, 650);
+  }
+}
+window.addEventListener("message", e => {
+  const d = e.data;
+  if(!d || d.type !== "scene-magique") return;
+  sceneReserve = { gauche: Math.max(0, d.gauche | 0), droite: Math.max(0, d.droite | 0), haut: Math.max(0, d.hautDroite | 0) };
+  cadrerScene();
+});
+window.addEventListener("resize", cadrerScene);
+cadrerScene();
 
 /* ---------------- Chapter view (list of texts) ---------------- */
 function renderChapterView(){
@@ -2210,7 +2492,7 @@ function renderChapterView(){
       return;
     }
     if(t.kind === "promotion"){
-      const debloque = chapter.texts.every((autre, ai) => ai === ti || itemDone(ci, ai, autre));
+      const debloque = toutOuvertAtelier || chapter.texts.every((autre, ai) => ai === ti || itemDone(ci, ai, autre));
       const st = debloque ? ensurePromotionState(ci, ti) : null;
       const fait = debloque && itemDone(ci, ti, t);
       const nbReussis = debloque ? (st.sousExercices[0].statut === "reussi" ? 1 : 0) + (st.sousExercices[1].statut === "reussi" ? 1 : 0) : 0;
@@ -2268,7 +2550,7 @@ function renderPromotionHub(){
   paire.forEach((topicIdx, subIdx) => {
     const topic = HOMOPHONES_TOPICS[topicIdx];
     const sousSt = st.sousExercices[subIdx];
-    const dispo = subIdx === 0 || st.sousExercices[0].statut === "reussi";
+    const dispo = toutOuvertAtelier || subIdx === 0 || st.sousExercices[0].statut === "reussi";
     const fait = sousSt.statut === "reussi";
     const label = fait ? "Réussi ✓" : dispo ? "À faire" : "Termine l'exercice précédent";
     html += `<div class="text-row ${!dispo ? "locked" : fait ? "promo-done" : ""}" ${dispo ? `data-sub="${subIdx}"` : ""}>
@@ -2371,7 +2653,7 @@ function renderPromotionResults(){
   });
 
   const bannerExtra = passed
-    ? `<div class="pass-msg">Bravo, 10/15 ou plus !</div>${view.xp ? `<div class="xp-gain">✨ +${view.xp} XP  ·  ${xpTotal()} XP au total</div>` : ""}`
+    ? `<div class="pass-msg">Bravo, 10/15 ou plus !</div>${view.xp ? `<div class="xp-gain">✨ +${view.xp} XP  ·  ${xpTotal() + xpHistoireConnu} XP au total</div>` : ""}`
     : `<div class="retry-msg">Il te faut au moins 10/15. Tu dois recommencer cet exercice depuis le début.</div>`;
 
   app.innerHTML = `<div class="card">
@@ -2392,24 +2674,32 @@ function renderPromotionResults(){
   });
 }
 
+// XP du Livre d'Histoire, lues dans le coffre (pour le bandeau et le rang).
+async function lireXpHistoire(){
+  if(!identiteEleve || !window.PasserelleCore) return;
+  try{ const r = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom); xpHistoireConnu = r.donnees.xpHistoire || 0; niveauCoffreConnu = r.donnees.niveauLecture || 0; }catch(e){}
+}
+
 /* Accorde le rang suivant (une seule fois) et affiche la célébration plein écran.
    Le rang = nombre de chapitres terminés d'affilée depuis le chapitre 1. */
 async function promouvoirRang(ci){
   if(!identiteEleve || !window.PasserelleCore) return;
   await calculerInvocationsTerminees();
   await chargerToutesConj();
-  const nouveau = niveauEleve();
-  const nextLevel = LEVELS[nouveau];
   const xp = xpTotal();
-  let genre = null, monte = false;
+  let genre = null, monte = false, nextLevel = null;
   try{
     const resultat = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
     const coffre = resultat.donnees;
     genre = coffre.genre;
-    let change = false;
-    // Les XP et le rang sont écrits dans le coffre : c'est de là que la fiche de personnage les lit.
-    if((coffre.xp || 0) !== xp){ coffre.xp = xp; change = true; }
-    if(nextLevel && nouveau > (coffre.niveauLecture || 0)){ coffre.niveauLecture = nouveau; monte = true; change = true; }
+    // Les XP (part des Parchemins) et le rang sont écrits dans le coffre : c'est de là que la fiche les lit.
+    // Le total additionne le Livre d'Histoire ; le rang suit les seuils de xp-core.js.
+    const avantXp = coffre.xpParchemins, avantTotal = coffre.xp, avantNiveau = coffre.niveauLecture || 0;
+    const r = window.XpCore.appliquer(coffre, 'xpParchemins', xp, bonusChapitresSuivants());
+    xpHistoireConnu = coffre.xpHistoire || 0;
+    monte = r.monte;
+    nextLevel = LEVELS[r.niveau];
+    const change = avantXp !== coffre.xpParchemins || avantTotal !== coffre.xp || avantNiveau !== (coffre.niveauLecture || 0);
     if(change){
       coffre.nom = identiteEleve.nom;
       await window.PasserelleCore.sauvegarderCoffre(identiteEleve.slug, coffre);
@@ -2435,16 +2725,16 @@ document.getElementById("levelupConfirmBtn").addEventListener("click", () => {
    Les feuilles imprimables d'origine restent dans chapitre2_conjugaison/ ; leur contenu est dans conjugaison-data.js. */
 const SCEAU_HTML = '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">';
 
-// Vignette du thème : chapitre2_conjugaison/Mini/<slug>.webp (ex. chrono-bot.webp) ; sans image, l'emoji du thème reste.
+// Vignette du thème : chapitre2_conjugaison/mini/<slug>.webp (ex. chrono-bot.webp) ; sans image, l'emoji du thème reste.
 function miniOuEmoji(t){
-  return `<img class="conj-mini" src="chapitre2_conjugaison/Mini/${t.slug}.webp" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('${t.emoji}'))">`;
+  return `<img class="conj-mini" src="chapitre2_conjugaison/mini/${t.slug}.webp" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('${t.emoji}'))">`;
 }
 
 function renderConjurationsListe(){
   const ci = 1, ch = DATA[ci];
   let html = `<div class="back-link" id="backToTocFromConj">← Retour à la table des matières</div>
     <h2 class="conj-titre-liste">🔮 Conjurations</h2>
-    <p class="conj-intro">Conjugaison par thème — chaque section corrigée rapporte ${XP_PAR_SECTION} XP, puis affronte l'épreuve de promotion (${XP_PAR_EXERCICE_BOSS} XP par exercice réussi).</p>
+    <p class="conj-intro">Conjugaison par thème — chaque section corrigée rapporte ${XP_PAR_CONJURATION} XP, puis affronte l'épreuve de promotion (${XP_PAR_EXERCICE_BOSS} XP par exercice réussi).</p>
     <div id="conjListeItems">`;
   let precedenteTerminee = true;
   ch.texts.forEach(t => {
@@ -2457,7 +2747,7 @@ function renderConjurationsListe(){
       </div>`;
       return;
     }
-    const debloquee = precedenteTerminee;
+    const debloquee = toutOuvertAtelier || precedenteTerminee;
     const terminee = conjThemeDone(t.themeId);
     const p = conjProgression[t.themeId] || {};
     const scores = [1, 2].map(s => p[s] && p[s].meilleurScore).filter(x => x != null);
@@ -2472,7 +2762,7 @@ function renderConjurationsListe(){
   // Épreuve de promotion : le boss du chapitre, débarré une fois tous les thèmes terminés.
   const iBoss = ch.texts.findIndex(t => t.kind === "promotion");
   if(iBoss >= 0){
-    const bossDebloque = precedenteTerminee;
+    const bossDebloque = toutOuvertAtelier || precedenteTerminee;
     const bossFait = bossDebloque && itemDone(ci, iBoss, ch.texts[iBoss]);
     let bossNb = 0;
     if(bossDebloque){
@@ -2573,7 +2863,7 @@ function corrigerConj(){
     const zone = document.getElementById("conjMessage");
     if(zone && !avant && conjThemeDone(themeId)){
       zone.innerHTML = `<p class="conj-fin">✅ Section terminée ! Tu peux passer à la suivante.</p>`;
-      afficherGainXP("conjMessage", XP_PAR_SECTION);
+      afficherGainXP("conjMessage", XP_PAR_CONJURATION);
     }
     await promouvoirRang();
   })();
@@ -2843,11 +3133,13 @@ if(openParam !== null && !isNaN(parseInt(openParam, 10)) && DATA[0] && DATA[0].t
 
 app.innerHTML = '<p style="text-align:center;color:var(--ink-soft);">Chargement…</p>';
 (async () => {
-  try{ await Promise.all([chargerPromotions(), chargerToutesConj(), calculerInvocationsTerminees()]); }
+  try{ await Promise.all([chargerPromotions(), chargerToutesConj(), calculerInvocationsTerminees(), chargerOuverturesLecture()]); }
   catch(e){ /* on affiche quand même la table des matières */ }
   render();
   promouvoirRang();   // met à jour les XP (et le rang) du coffre d'après les progressions déjà enregistrées
 })();
 </script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="lecture-magique.js" data-agent></script>
 </body>
 </html>

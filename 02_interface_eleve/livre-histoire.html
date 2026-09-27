@@ -6,6 +6,9 @@
 <script src="garde-classe.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Livre d'Histoire</title>
+<script src="stockage-classe.js"></script>
+<script src="passerelle-core.js"></script>
+<script src="xp-core.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
@@ -35,7 +38,7 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
   position:relative; flex:none;
   width:min(90vw, calc(97vh * 1.1807), 1568px);
   aspect-ratio:1568 / 1328;
-  background:url('livre_assets/parchemin_scroll.jpg') center / contain no-repeat;
+  background:url('livre_assets/parchemin_scroll_fondu.webp') center / contain no-repeat;
   container-type:inline-size;
 }
 #app{
@@ -100,6 +103,17 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
 .chemin b{ color:var(--vin); font-weight:700; }
 .agrandir{ margin-left:auto; }
 .fig img{ cursor:zoom-in; }
+/* ── Page avec vidéo : bouton ▶ par-dessus l'image, vidéo muette en plein écran, un clic à chaque fois ── */
+.fig{ position:relative; }
+.fig-play{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:max(7cqw,56px); height:max(7cqw,56px);
+  border-radius:50%; border:.3cqw solid var(--gold); background:rgba(43,26,12,.72); color:var(--parchemin); cursor:pointer;
+  font-size:max(3cqw,24px); line-height:1; padding-left:.5cqw; box-shadow:0 .4cqw 1.4cqw rgba(0,0,0,.55); transition:transform .15s, background .15s; }
+.fig-play:hover{ transform:translate(-50%,-50%) scale(1.08); background:rgba(107,29,29,.85); }
+.fig-play:focus-visible{ outline:2px solid var(--gold); outline-offset:3px; }
+.video-plein{ position:fixed; inset:0; z-index:70; display:flex; align-items:center; justify-content:center; background:#000; animation:fondu .2s ease-out; }
+.video-plein video{ max-width:100vw; max-height:100vh; width:100%; height:100%; object-fit:contain; }
+.video-plein .zoom-x{ position:absolute; top:1.6vh; right:1.6vw; width:42px; height:42px; border-radius:50%; cursor:pointer;
+  border:1px solid var(--gold); background:rgba(0,0,0,.55); color:var(--parchemin); font-size:20px; }
 
 /* ── Lecteur ── */
 .page{ flex:1; min-height:0; display:grid; gap:2.6cqw; align-items:center; padding:1.3cqw 1cqw .8cqw; animation:apparait .28s ease-out; }
@@ -184,7 +198,26 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
 .echecs-btn span{ font-family:'Cinzel Decorative','EB Garamond',serif; font-weight:700; letter-spacing:.03em;
   font-size:max(1.55cqw,13px); color:#2b1a0c; }
 
-/* ── Jeu d'échecs (superposition plein écran) ── */
+/* ── Bouton bleu « Cherche et trouve » (en tête de chaque chapitre) ── */
+.cherche-btn{
+  all:unset; box-sizing:border-box; cursor:pointer; align-self:center;
+  display:flex; align-items:center; gap:1cqw;
+  margin:.2cqw auto 1.3cqw; padding:.55cqw 1.9cqw .55cqw 1.1cqw;
+  border-radius:999px; border:2px solid #1d4f86;
+  background:linear-gradient(160deg, #9fd3ff, #2f7fd1);
+  box-shadow:0 .3cqw .8cqw -.3cqw rgba(12,26,43,.55);
+  transition:transform .15s, box-shadow .15s;
+}
+.cherche-btn:hover,.cherche-btn:focus-visible{ transform:translateY(-.15cqw); box-shadow:0 .5cqw 1.1cqw -.4cqw rgba(12,26,43,.65); }
+.cherche-btn:focus-visible{ outline:2px solid var(--vin); outline-offset:2px; }
+.cherche-btn svg{ width:3cqw; height:3cqw; flex:none; filter:drop-shadow(0 .15cqw .2cqw rgba(0,0,0,.4)); }
+.cherche-btn span{ font-family:'Cinzel Decorative','EB Garamond',serif; font-weight:700; letter-spacing:.03em;
+  font-size:max(1.55cqw,13px); color:#fff; text-shadow:0 1px 2px rgba(10,30,60,.6); }
+.vide{ text-align:center; font-style:italic; color:var(--ink-soft); font-size:max(1.8cqw,13px); margin-top:2cqw; }
+/* vignette détourée (fond transparent) : l'image entière, sans cadre */
+.entree .vignette.detouree{ object-fit:contain; border:none; border-radius:0; transform:scale(1.3); filter:drop-shadow(0 .2cqw .3cqw rgba(43,26,12,.45)); }
+
+/* ── Jeu d'échecs et documents (superposition plein écran) ── */
 .echecs-modal{ position:fixed; inset:0; z-index:80; display:none; flex-direction:column; background:#140a05; }
 .echecs-modal.open{ display:flex; }
 .echecs-modal-bar{ flex:none; display:flex; justify-content:flex-end; padding:10px 16px;
@@ -203,7 +236,7 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
   .fig{ height:auto; }
   .fig img{ max-height:none; }
   .titre-livre{ font-size:max(3.3cqw,13px); }
-  .sous-titre,.chemin,.retour,.compteur,.legende,.pastille,.btn,.entree .meta,.echecs-btn span{ font-size:max(1.3cqw,8.5px); }
+  .sous-titre,.chemin,.retour,.compteur,.legende,.pastille,.btn,.entree .meta,.echecs-btn span,.cherche-btn span{ font-size:max(1.3cqw,8.5px); }
   .texte p{ font-size:max(1.9cqw,10.5px); }
   .page--texte .texte p{ font-size:max(1.95cqw,10.5px); }
   .entree .nom{ font-size:max(2.1cqw,11px); }
@@ -245,9 +278,50 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
 .jeu-items li::before{ content:""; width:7px; height:7px; border-radius:50%; background:rgba(243,229,196,.35); flex:none; }
 .jeu-items li.trouve{ text-decoration:line-through; color:rgba(243,229,196,.45); }
 .jeu-items li.trouve::before{ background:var(--gold-clair); }
+.jeu-items.nombreux{ flex:1; display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:3px 16px; counter-reset:obj; }
+.jeu-items.nombreux li{ font-size:clamp(12.5px,1.6vh,16px); line-height:1.2; }
+.jeu-items.nombreux li::before{ counter-increment:obj; content:counter(obj); width:auto; height:auto; min-width:1.5em; border-radius:0;
+  background:none; color:rgba(243,229,196,.55); font-weight:700; font-size:.85em; text-align:right; }
+.jeu-items.nombreux li.trouve::before{ background:none; color:var(--gold-clair); }
+/* ── Compagnon de lecture (minuterie de 5 min) et XP ── */
+.lect-compagnon{ position:fixed; right:10px; bottom:8px; z-index:95; display:flex; flex-direction:column; align-items:flex-end; gap:6px; pointer-events:none;
+  opacity:0; transform:translateY(24px); transition:opacity .35s, transform .35s cubic-bezier(.2,1.3,.4,1); font-family:'EB Garamond', Georgia, serif; }
+.lect-compagnon.visible{ opacity:1; transform:none; }
+.lect-compagnon img{ height:min(150px, 20vh); width:auto; filter:drop-shadow(0 6px 10px rgba(0,0,0,.5)); order:2; }
+.lect-bulle{ pointer-events:auto; order:1; margin-bottom:0; width:226px; padding:10px 13px; background:#f4e9cf; color:#2b1d0e;
+  border:2px solid #8b6914; border-radius:14px; font-size:16px; line-height:1.3; box-shadow:0 6px 16px rgba(0,0,0,.45); position:relative; }
+.lect-bulle::after{ content:""; position:absolute; right:40px; bottom:-10px; border:8px solid transparent; border-top-color:#8b6914; border-bottom:0; }
+.lect-nom{ display:block; font-family:'Cinzel Decorative', Georgia, serif; font-size:11px; font-weight:700; letter-spacing:1px; color:#7a1f1f; margin-bottom:2px; }
+.lect-temps{ display:flex; align-items:center; gap:8px; margin:4px 0 2px; font-weight:700; }
+.lect-temps .sablier{ font-size:20px; }
+.lect-temps .chiffres{ font-size:22px; font-variant-numeric:tabular-nums; color:#6b1717; }
+.lect-barre{ height:6px; border-radius:99px; background:rgba(0,0,0,.12); overflow:hidden; margin:4px 0; }
+.lect-barre i{ display:block; height:100%; background:linear-gradient(90deg, #e2c06a, #b8892b); transition:width .9s linear; }
+.lect-vues{ font-size:14px; color:#5b4126; }
+.lect-choix{ display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+.lect-choix button{ font:700 15px 'EB Garamond', Georgia, serif; text-align:left; cursor:pointer; padding:6px 10px; border-radius:9px; border:2px solid #8b6914; background:#fffaf0; color:#2b1d0e; }
+.lect-choix button.reste{ background:#6b1717; color:#fff; border-color:#6b1717; }
+.xp-pastille{ flex:none; font:700 12px 'EB Garamond', Georgia, serif; padding:2px 8px; border-radius:999px; background:rgba(184,137,43,.18); color:#6b4a10; border:1px solid #b8892b; white-space:nowrap; margin-left:6px; }
+.xp-pastille.gagne{ background:#2f5d3a; color:#fff; border-color:#2f5d3a; }
+.xp-toast{ position:fixed; left:50%; top:14%; transform:translate(-50%, -10px); z-index:96; opacity:0; pointer-events:none; transition:opacity .3s, transform .3s;
+  background:linear-gradient(180deg, #2b1a0c, #140a05); color:#fde68a; border:2px solid #e2c06a; border-radius:14px; padding:10px 20px; text-align:center;
+  font:700 20px 'Cinzel Decorative', Georgia, serif; box-shadow:0 8px 24px rgba(0,0,0,.6), 0 0 24px rgba(226,192,106,.35); }
+.xp-toast small{ display:block; font:600 15px 'EB Garamond', Georgia, serif; color:#f3e5c4; margin-top:2px; }
+.xp-toast.visible{ opacity:1; transform:translate(-50%, 0); }
+/* ── La scène magique (27 sept. 2026) ──
+   La fiche envoie la place prise par la boule de cristal (gauche) et par le compagnon (droite) :
+   le livre se tasse entre les deux, en douceur. Quand le compagnon de la fiche monte sur scène
+   (menu), le compagnon de lecture d'ici lui cède la place : c'est le même compagnon. */
+:root{ --rg:0px; --rd:0px; }
+body{ padding-left:var(--rg); padding-right:var(--rd); transition:padding .6s cubic-bezier(.3,.85,.25,1); }
+.parchemin-conteneur{ width:min(calc(90vw - var(--rg) - var(--rd)), calc(97vh * 1.1807), 1568px); transition:width .6s cubic-bezier(.3,.85,.25,1); }
+body.compagnon-menu .lect-compagnon.visible{ opacity:0; transform:translateX(30px); pointer-events:none; }
+body.compagnon-menu .lect-compagnon.visible .lect-bulle{ pointer-events:none; }
 </style>
 </head>
 <body>
+<div class="lect-compagnon" id="lectCompagnon" aria-live="polite"><img id="lectImage" alt=""><div class="lect-bulle"><span class="lect-nom" id="lectNom"></span><div id="lectContenu"></div></div></div>
+<div class="xp-toast" id="xpToast"></div>
 
 <div class="parchemin-conteneur" id="parcheminConteneur">
   <div id="app"></div>
@@ -260,6 +334,13 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
   <iframe id="echecsFrame" class="echecs-modal-frame" title="Échec-et-Math"></iframe>
 </div>
 
+<div class="echecs-modal" id="docModal">
+  <div class="echecs-modal-bar">
+    <button class="echecs-modal-close" id="docCloseBtn">✕ Retour au Livre d'Histoire</button>
+  </div>
+  <iframe id="docFrame" class="echecs-modal-frame" title="Document"></iframe>
+</div>
+
 <script>
 /* ═══════════════════════════════════════════════════════════════
    LIVRE D'HISTOIRE — données
@@ -267,13 +348,20 @@ body{ display:flex; align-items:center; justify-content:center; overflow:hidden;
    Pour ajouter un élément : ajouter un objet dans « enfants » du niveau voulu.
      • un nœud avec « enfants » s'ouvre en liste;
      • un nœud avec « pages » s'ouvre en diaporama/lecteur;
-     • un nœud avec type:"cherche" s'ouvre en exercice Cherche et trouve.
+     • un nœud avec type:"cherche" s'ouvre en exercice Cherche et trouve;
+     • un nœud avec type:"document" ouvre un fichier HTML (src) en plein écran.
+   Chapitres : « jeux » = liste des jeux du bouton bleu « Cherche et trouve »
+   (mêmes nœuds que ci-dessus, par ex. type:"cherche"); liste vide = « bientôt ».
+   Vignette en .png détouré (fond transparent) : affichée entière, sans cadre.
    mise (pages) : "cote" (image à gauche, texte à droite)
                   "portrait" (image verticale + texte)
                   "texte" (texte seul, centré)
                   "solo" (image seule + légende)
+   video (pages, facultatif) : VID+"fichier.mp4" → bouton ▶ sur l'image; la vidéo
+                  (toujours SANS SON) joue en plein écran puis disparaît.
    ═══════════════════════════════════════════════════════════════ */
 const IMG  = 'livre_histoire/';
+const VID  = 'livre_videos/';        // vidéos muettes des pages (bouton ▶)
 const MINI = IMG + 'mini/';            // petites vignettes pour les listes
 
 const VILLAGES = {
@@ -302,22 +390,6 @@ const VILLAGES = {
               alt:"Illustration de Çatalhöyük : des maisons collées, sans portes, dans lesquelles on entre par le toit avec une échelle",
               legende:"Çatalhöyük" }
       ]
-    },
-    {
-      id: "cherche", titre: "Cherche et trouve", sous: "Les premières villes", genre: "Exercice",
-      vignette: "cherche_01_mallaha.jpg", type: "cherche",
-      /* zones : position (en % de la largeur / de la hauteur de l'image) de chaque objet à trouver; tolérance 7 % */
-      defis: [
-        { id: "mallaha", titre: "1. Mallaha", vignette: "cherche_01_mallaha.jpg", img: IMG + "cherche_01_mallaha.webp",
-          items: ["un petit chien blanc caché dans les buissons", "un gros os blanc par terre", "un papillon orange dans le ciel", "une petite tortue près de l'eau"],
-          zones: [{x:42,y:88},{x:32,y:80},{x:64,y:26},{x:15,y:58}] },
-        { id: "mureybet", titre: "2. Mureybet", vignette: "cherche_02_mureybet.jpg", img: IMG + "cherche_02_mureybet.webp",
-          items: ["une jarre bleue cachée", "une chèvre blanche dans un panier", "un poisson orange dans l'eau", "deux gros épis de blé"],
-          zones: [{x:44,y:77},{x:18,y:55},{x:87,y:93},{x:11,y:86}] },
-        { id: "catalhoyuk", titre: "3. Çatalhöyük", vignette: "cherche_03_catalhoyuk.jpg", img: IMG + "cherche_03_catalhoyuk.webp",
-          items: ["un chat orange qui dort", "une échelle cassée", "un petit taureau rouge", "un bol rempli de graines"],
-          zones: [{x:71,y:58},{x:49,y:78},{x:15,y:60},{x:12,y:11}] }
-      ]
     }
   ]
 };
@@ -325,7 +397,7 @@ const VILLAGES = {
 const GILGAMESH = {
   id: "gilgamesh", titre: "Gilgamesh, le roi immortel", vignette: "gilgamesh.jpg",
   pages: [
-            { mise:"cote", image: IMG+"gilgamesh_01_uruk.jpg",
+            { mise:"cote", image: IMG+"gilgamesh_01_uruk.jpg", video: VID+"gilgamesh_01_uruk.mp4",
               alt:"Gilgamesh, roi d'Uruk, devant les remparts et la ziggourat",
               texte:"Il y a très longtemps, en Mésopotamie, entre le Tigre et l'Euphrate, régnait à Uruk un roi nommé Gilgamesh. Il était si puissant que personne n'osait le défier." },
             { mise:"cote", image: IMG+"gilgamesh_02_enkidu.jpg",
@@ -368,13 +440,238 @@ const EGYPTE = {
   ]
 };
 
+/* Jeux du bouton bleu « Cherche et trouve » de Préhistoire.
+   zones : position (en % de la largeur / de la hauteur de l'image) de chaque objet à trouver; tolérance 7 %.
+   Une zone peut être une liste de positions quand l'objet apparaît plusieurs fois (n'importe laquelle compte). */
+const CHERCHE_PREMIERES_VILLES = {
+  id: "premieres-villes", titre: "Les premières villes", genre: "Exercice",
+  vignette: "cherche_01_mallaha.jpg", type: "cherche",
+  defis: [
+    { id: "mallaha", titre: "1. Mallaha", vignette: "cherche_01_mallaha.jpg", img: IMG + "cherche_01_mallaha.webp",
+      items: ["un petit chien blanc caché dans les buissons", "un gros os blanc par terre", "un papillon orange dans le ciel", "une petite tortue près de l'eau"],
+      zones: [{x:43,y:87.5}, {x:32.5,y:72.5}, {x:64.5,y:15.5},
+              [{x:93.8,y:94.5},{x:87.5,y:30.5},{x:95.5,y:33}]] },
+    { id: "mureybet", titre: "2. Mureybet", vignette: "cherche_02_mureybet.jpg", img: IMG + "cherche_02_mureybet.webp",
+      items: ["une jarre bleue cachée", "une chèvre blanche dans un panier", "un poisson orange dans l'eau", "deux gros épis de blé"],
+      zones: [[{x:39,y:81},{x:45,y:73},{x:31.5,y:79}], {x:18,y:51}, {x:86,y:90}, {x:13,y:81}] },
+    { id: "catalhoyuk", titre: "3. Çatalhöyük", vignette: "cherche_03_catalhoyuk.jpg", img: IMG + "cherche_03_catalhoyuk.webp",
+      items: ["un chat orange qui dort", "une échelle cassée", "un petit taureau rouge", "un bol rempli de graines"],
+      zones: [{x:69.5,y:62}, {x:48,y:77}, {x:9.5,y:70.5},
+              [{x:13.5,y:24.5},{x:40,y:57.8},{x:93.3,y:91}]] }
+  ]
+};
+
+/* Jeux du bouton bleu « Cherche et trouve » d'Antiquité : 20 objets par scène.
+   r = rayon de la zone de clic, en % de la largeur de l'image (zones mesurées sur chaque image). */
+const CHERCHE_EGYPTE = {
+  id: "egypte-ancienne", titre: "L'Égypte ancienne", genre: "Exercice",
+  vignette: "egypte_cherche_01_marche.jpg", type: "cherche",
+  defis: [
+    { id: "marche", titre: "1. Le marché au bord du Nil", vignette: "egypte_cherche_01_marche.jpg", img: IMG + "egypte_cherche_01_marche.webp",
+      items: [
+        "un chacal doré sur le toit d'un temple",
+        "des ouvriers qui tirent un gros bloc de pierre",
+        "le scribe dans son atelier",
+        "une croix ankh (la clé de vie)",
+        "une harpe",
+        "une petite pyramide à degrés",
+        "l'œil d'Horus sur un drapeau",
+        "la taverne qui vend de la bière de blé",
+        "une momie qui se promène au marché",
+        "un chat qui dort sur le toit de la taverne",
+        "un soldat avec un bouclier doré",
+        "une paire de sandales",
+        "le comptoir de la myrrhe",
+        "un pharaon avec des lunettes de soleil",
+        "un char doré",
+        "un ibis, l'oiseau sacré au long bec",
+        "une souris",
+        "une personne vêtue d'une peau de léopard",
+        "une petite pyramide au milieu du marché",
+        "un enfant qui court après un chat orange" ],
+      zones: [
+        {x:9.5,y:11,r:3.5},
+        {x:26,y:41,r:5},
+        {x:4,y:37,r:3.5},
+        [{x:73,y:27,r:3},{x:84,y:27,r:3},{x:56,y:61,r:2.5}],
+        [{x:89,y:40,r:3},{x:98,y:43,r:2.5},{x:57,y:33,r:2.5}],
+        {x:94,y:21,r:3.5},
+        {x:83,y:40,r:2.5},
+        {x:10,y:74,r:5},
+        {x:23,y:77,r:3.5},
+        {x:6,y:68,r:3.5},
+        {x:13,y:62,r:3.5},
+        {x:19,y:96,r:2.5},
+        {x:37.5,y:75.5,r:3.5},
+        {x:77,y:81,r:3.5},
+        {x:88,y:69,r:4},
+        [{x:86,y:86,r:3},{x:93,y:78,r:3}],
+        [{x:23,y:94,r:2.5},{x:66,y:92,r:2.5},{x:82,y:82,r:2.5}],
+        {x:55,y:84,r:3.5},
+        {x:61,y:34,r:2.5},
+        {x:33,y:80,r:3.5} ] },
+    { id: "sphinx", titre: "2. La fête au pied du Sphinx", vignette: "egypte_cherche_02_sphinx.jpg", img: IMG + "egypte_cherche_02_sphinx.webp",
+      items: [
+        "la statue d'un faucon (le dieu Horus)",
+        "un singe sur les rochers",
+        "un serpent enroulé autour d'un palmier",
+        "le seul bateau à voile",
+        "un grand oiseau qui vole",
+        "un singe sur un toit",
+        "le Sphinx",
+        "une harpe",
+        "une danseuse en robe bleue",
+        "un touriste avec un chandail « EGYPT »",
+        "un photographe avec sa caméra",
+        "un roi avec une couronne dorée",
+        "un scribe qui écrit à son bureau",
+        "un pont de pierre",
+        "un crocodile",
+        "un gros serpent vert enroulé",
+        "un chameau couché",
+        "un chameau debout",
+        "une souris dans un panier",
+        "un chat blanc et roux" ],
+      zones: [
+        {x:12,y:32,r:5},
+        {x:4,y:12,r:3},
+        {x:3.5,y:38,r:3},
+        {x:43.5,y:46,r:2.5},
+        [{x:63,y:4,r:3},{x:68,y:3.5,r:2.5}],
+        [{x:93,y:11,r:2.5},{x:97,y:16,r:2.5}],
+        {x:23,y:62,r:6},
+        {x:7,y:69,r:3},
+        [{x:13,y:80,r:3},{x:6,y:79,r:3}],
+        {x:42,y:83,r:3},
+        [{x:24,y:82,r:3},{x:38,y:88,r:3}],
+        {x:37,y:76,r:3},
+        [{x:5,y:90,r:3.5},{x:16,y:94,r:3}],
+        {x:62,y:60,r:5},
+        [{x:56,y:82,r:3},{x:60,y:95,r:3},{x:62,y:87,r:3},{x:91,y:95,r:3},{x:95,y:74,r:2.5}],
+        [{x:90,y:77,r:3},{x:67,y:92,r:3}],
+        {x:95,y:68,r:3},
+        {x:93,y:57,r:3.5},
+        {x:25,y:96,r:2.5},
+        {x:2,y:74,r:2.5} ] },
+    { id: "sous-les-sables", titre: "3. Sous les sables", vignette: "egypte_cherche_03_sous_les_sables.jpg", img: IMG + "egypte_cherche_03_sous_les_sables.webp",
+      items: [
+        "une montgolfière",
+        "un petit temple à colonnes",
+        "un âne qui porte des paniers",
+        "un sarcophage debout dans le sable",
+        "une fleur de lotus rose",
+        "un sac marqué « ÉPICES »",
+        "un feu de camp",
+        "un crocodile sur le sable",
+        "un mouton blanc",
+        "un scorpion rouge",
+        "une statue dorée d'Anubis",
+        "un coffre rempli de pièces d'or",
+        "un scarabée géant qui pousse une boule",
+        "un explorateur qui lit une carte",
+        "une araignée",
+        "une momie qui tient une torche",
+        "un pharaon assis sur son trône",
+        "une chute d'eau",
+        "un piège à piques",
+        "un radeau sur la rivière souterraine" ],
+      zones: [
+        {x:93,y:8,r:3.5},
+        {x:81,y:12,r:3.5},
+        {x:62,y:36,r:3},
+        {x:76,y:37,r:2.5},
+        [{x:92.6,y:33,r:2.5},{x:98,y:35.7,r:2},{x:93,y:36,r:2}],
+        [{x:7,y:40,r:2.5},{x:13,y:41,r:2.5},{x:17,y:41,r:2.5}],
+        {x:22,y:37,r:3},
+        [{x:36,y:41,r:3.5},{x:85,y:41,r:3.5}],
+        {x:38,y:32,r:3},
+        [{x:25,y:41,r:2},{x:47,y:41,r:2}],
+        {x:12,y:52,r:3},
+        {x:7,y:70,r:3.5},
+        {x:15,y:78,r:3.5},
+        {x:12,y:86,r:3.5},
+        {x:37.5,y:94.5,r:2},
+        {x:46,y:67,r:3},
+        {x:88,y:72,r:3.5},
+        {x:96,y:85,r:3},
+        {x:54,y:95,r:3},
+        {x:86,y:93,r:3.5} ] },
+    { id: "tunnels", titre: "4. Les tunnels du trésor", vignette: "egypte_cherche_04_tunnels.jpg", img: IMG + "egypte_cherche_04_tunnels.webp",
+      items: [
+        "un chat noir royal",
+        "un masque d'or de pharaon",
+        "une momie qui promène un chien",
+        "un squelette avec un chapeau",
+        "un explorateur perdu",
+        "un coffre au trésor",
+        "un singe",
+        "une chauve-souris suspendue",
+        "un crocodile avec un chapeau",
+        "une montgolfière",
+        "un serpent vert",
+        "la statue d'Anubis",
+        "un bateau à voile sur le Nil",
+        "un bateau fantôme",
+        "un sarcophage bleu lumineux",
+        "un sarcophage ouvert",
+        "une carte au trésor",
+        "un chameau",
+        "un hibou pharaon",
+        "un petit alien caché" ],
+      zones: [
+        {x:5,y:36,r:3.5},
+        {x:11,y:62,r:4.5},
+        [{x:40.5,y:66,r:4},{x:45,y:78,r:3}],
+        {x:54,y:74,r:4},
+        {x:65.5,y:90,r:4},
+        [{x:63,y:69,r:4},{x:4,y:74,r:3}],
+        [{x:71,y:19,r:3},{x:4.5,y:62,r:3}],
+        {x:37,y:57,r:3.5},
+        {x:61,y:42,r:4.5},
+        {x:89,y:9,r:3.5},
+        {x:52.5,y:61,r:3},
+        {x:25,y:62,r:3.5},
+        {x:45,y:37,r:3},
+        {x:82,y:84,r:5},
+        {x:81,y:63,r:4.5},
+        {x:20,y:86,r:5},
+        {x:7,y:87,r:4},
+        {x:80,y:30,r:4},
+        {x:96.5,y:60,r:3.5},
+        {x:97.5,y:92,r:2.5} ] }
+  ]
+};
+
+const DOCS = IMG + 'toutankhamon/';   // documents HTML autonomes (ouverts en plein écran)
+
+const LEGENDE_TOUTANKHAMON = {
+  id: "legende-toutankhamon", titre: "La légende de Toutankhamon", vignette: "toutankhamon_legende.png",
+  enfants: [
+    { id: "livret", titre: "La Malédiction de Toutankhamon", meta: "Récit illustré · 8 pages",
+      vignette: "toutankhamon_legende_livret.jpg", type: "document", src: DOCS + "legende-livret.html", lecture: "pages" },
+    { id: "questionnaire", titre: "Questionnaire — La Malédiction de Toutankhamon", meta: "Questionnaire · 8 questions",
+      vignette: "toutankhamon_legende_questionnaire.jpg", type: "document", src: DOCS + "legende-questionnaire.html", questionnaire: { sur: 8, min: 6 } }
+  ]
+};
+
+const FOUILLES_TOUTANKHAMON = {
+  id: "fouilles-toutankhamon", titre: "Fouilles archéologiques : Toutankhamon", vignette: "toutankhamon_fouilles.png",
+  enfants: [
+    { id: "coupure", titre: "Extraordinaire découverte dans la Vallée des Rois", meta: "Coupure de journal · Le Petit Journal",
+      vignette: "toutankhamon_fouilles_coupure.jpg", type: "document", src: DOCS + "fouilles-coupure.html", lecture: "defiler" },
+    { id: "questionnaire", titre: "Questionnaire — La vraie découverte de Toutankhamon", meta: "Questionnaire · 8 questions",
+      vignette: "toutankhamon_fouilles_questionnaire.jpg", type: "document", src: DOCS + "fouilles-questionnaire.html", questionnaire: { sur: 8, min: 6 } }
+  ]
+};
+
 const LIVRE = {
   titre: "Histoire",
   enfants: [
-    { id: "prehistoire", titre: "Préhistoire", enfants: [ VILLAGES, GILGAMESH ] },
-    { id: "antiquite",   titre: "Antiquité",   enfants: [ EGYPTE ] }
+    { id: "prehistoire", titre: "Préhistoire", enfants: [ VILLAGES, GILGAMESH ], jeux: [ CHERCHE_PREMIERES_VILLES ] },
+    { id: "antiquite",   titre: "Antiquité",   enfants: [ EGYPTE, LEGENDE_TOUTANKHAMON, FOUILLES_TOUTANKHAMON ], jeux: [ CHERCHE_EGYPTE ] }
   ]
 };
+const JEUX_ID = 'cherche-et-trouve';   // adresse du bouton bleu : #/antiquite/cherche-et-trouve
 const TOLERANCE = 7;   // en % (distance entre le clic et l'objet à trouver)
 
 /* ═══════════════════════════════════════════════════════════════
@@ -383,7 +680,8 @@ const TOLERANCE = 7;   // en % (distance entre le clic et l'objet à trouver)
               #/prehistoire                       chapitre (liste de sections)
               #/prehistoire/villages              section (liste de sous-sections)
               #/prehistoire/villages/diaporama/3  sous-section, image 3
-              #/prehistoire/villages/cherche      exercice
+              #/prehistoire/cherche-et-trouve                      jeux du bouton bleu
+              #/prehistoire/cherche-et-trouve/premieres-villes     exercice Cherche et trouve
               #/prehistoire/gilgamesh/3           section, page 3
               #/antiquite/egypte/2                section, image 2
    ═══════════════════════════════════════════════════════════════ */
@@ -398,8 +696,11 @@ function ornement(){ return '<div class="ornement" aria-hidden="true">✦</div>'
 /* état de l'exercice (en mémoire seulement : repart à zéro si on recharge la page) */
 const etat = {};
 const trouves = d => etat[d.id] || (etat[d.id] = []);
+const posTrouvees = {};                                     // d.id → { index objet : position cliquée }
+const positionsDe = zn => Array.isArray(zn) ? zn : [zn];
 
 function metaDe(c, profondeurEnfant){
+  if(c.meta) return c.meta;
   if(c.enfants) return plur(c.enfants.length, profondeurEnfant === 1 ? 'section' : 'sous-section', profondeurEnfant === 1 ? 'sections' : 'sous-sections');
   const g = c.genre ? c.genre + ' · ' : '';
   if(c.type === 'cherche') return g + plur(c.defis.length, 'scène', 'scènes');
@@ -426,16 +727,25 @@ function vueListe(chemin){
         <img src="${esc(MINI + 'echecs-cheval.png')}" alt="">
         <span>Échec-et-Math</span>
       </button>` : ''}
+      ${depth === 1 && node.jeux ? `<button class="cherche-btn" data-go="${base}/${JEUX_ID}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.2" fill="rgba(255,255,255,.25)" stroke="#fff" stroke-width="2.4"/><path d="M14.6 14.6 L21 21" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+        <span>Cherche et trouve</span>
+      </button>` : ''}
       ${ornement()}
+      ${node.enfants.length === 0 ? '<p class="vide">Les jeux de recherche arrivent bientôt !</p>' : ''}
       <ul class="liste">
         ${node.enfants.map((c,i) => {
           const lead = depth === 0 ? `<span class="num">${romain(i+1)}</span>`
-                     : c.vignette ? `<img class="vignette" src="${esc(MINI + c.vignette)}" alt="">` : '';
+                     : c.vignette ? `<img class="vignette${/\.png$/i.test(c.vignette) ? ' detouree' : ''}" src="${esc(MINI + c.vignette)}" alt="">` : '';
           const pref = depth === 1 ? `Section ${i+1} — ` : '';
-          return `<li><button class="entree" data-go="${enfant(c)}">
+          const action = c.type === 'document' ? `data-doc="${esc(c.src)}" data-titre="${esc(c.titre)}" data-cle="${esc(node.id + '/' + c.id)}"` : `data-go="${enfant(c)}"`;
+          const xpCle = c.lecture ? 'lecture:' + node.id + '/' + c.id : c.questionnaire ? 'quiz:' + node.id + '/' + c.id : c.pages ? 'lecture:' + hashDe(chemin.concat([c])) : null;
+          const pastille = xpCle ? pastilleXp(xpCle, c.questionnaire ? XP_QUESTIONNAIRE : XP_LECTURE) : '';
+          return `<li><button class="entree" ${action}>
             ${lead}
             <span class="corps"><span class="nom">${pref}${esc(c.titre)}</span>
               <span class="meta">${esc(metaDe(c, depth+1))}</span></span>
+            ${pastille}
             <span class="fleche" aria-hidden="true">›</span>
           </button></li>`; }).join('')}
       </ul>
@@ -451,19 +761,20 @@ function vueCherche(chemin){
       <p class="sous-titre">${esc(node.sous || '')}</p>
       ${ornement()}
       <ul class="liste">
-        ${node.defis.map(d => { const f = trouves(d).length, fini = f === 4;
+        ${node.defis.map(d => { const f = trouves(d).length, t = d.items.length, fini = f === t;
           return `<li><button class="entree" data-jeu="${d.id}">
             <img class="vignette" src="${esc(MINI + d.vignette)}" alt="">
             <span class="corps"><span class="nom">${esc(d.titre)}</span>
-              <span class="meta">${fini ? 'Bravo ! Tout est trouvé' : 'Trouve 4 choses cachées dans l\'image'}</span></span>
-            <span class="pastille-etat ${fini ? 'ok' : ''}">${fini ? '✓ ' : ''}${f}/4</span>
+              <span class="meta">${fini ? 'Bravo ! Tout est trouvé' : `Trouve ${t} choses cachées dans l'image`}</span></span>
+            <span class="pastille-etat ${fini ? 'ok' : ''}">${fini ? '✓ ' : ''}${f}/${t}</span>${pastilleXp('cherche:' + d.id, XP_CHERCHE)}
           </button></li>`; }).join('')}
       </ul>
     </div>`;
 }
 
 function contenuPage(pg){
-  const fig = pg.image ? `<div class="fig"><img src="${esc(pg.image)}" alt="${esc(pg.alt||'')}"></div>` : '';
+  const play = pg.video ? `<button class="fig-play" data-video="${esc(pg.video)}" aria-label="Voir la vidéo">▶</button>` : '';
+  const fig = pg.image ? `<div class="fig"><img src="${esc(pg.image)}" alt="${esc(pg.alt||'')}">${play}</div>` : '';
   switch(pg.mise){
     case 'texte':
       return `<div class="page page--texte"><div class="texte"><span class="fleuron" aria-hidden="true">✦</span><p>${esc(pg.texte)}</p></div></div>`;
@@ -527,21 +838,52 @@ function ouvrirZoom(){
   majZoom();
 }
 
+/* ── Vidéo muette en plein écran : joue une fois puis disparaît (l'élève reclique ▶ pour la revoir) ── */
+let videoEl = null;
+function fermerVideo(){ if(videoEl){ const v = videoEl.querySelector('video'); if(v){ v.pause(); v.removeAttribute('src'); v.load(); } videoEl.remove(); videoEl = null; } }
+function ouvrirVideo(src){
+  fermerVideo(); fermerZoom();
+  videoEl = document.createElement('div'); videoEl.className = 'video-plein';
+  videoEl.innerHTML = `<video muted playsinline autoplay preload="auto" disablepictureinpicture></video>
+    <button class="zoom-x" aria-label="Fermer">✕</button>`;
+  const v = videoEl.querySelector('video');
+  v.muted = true; v.volume = 0;              // jamais de son en classe, même si un fichier en contenait
+  v.addEventListener('volumechange', () => { if(!v.muted) v.muted = true; });
+  v.addEventListener('ended', fermerVideo);
+  v.addEventListener('error', fermerVideo);
+  v.src = src;
+  document.body.appendChild(videoEl);
+  const pr = v.play(); if(pr && pr.catch) pr.catch(() => {});
+}
+
 /* ── Exercice Cherche et trouve (plein écran) ── */
-let jeuEl = null, jeuNode = null, jeuId = null;
-function fermerJeu(rafraichir){ if(jeuEl){ jeuEl.remove(); jeuEl = null; jeuNode = null; jeuId = null; if(rafraichir) rendu(); } }
+let jeuEl = null, jeuNode = null, jeuId = null, pauseJeu = 0;
+// Plein écran : c'est toute la FICHE qui passe en plein écran (et non le jeu seul), pour que le compagnon, la boule
+// et la loupe restent là par-dessus. Le livre le demande à la fiche par message ; ouvert seul, il le fait lui-même.
+function pleinEcran(oui){
+  if(window.parent !== window){ try{ window.parent.postMessage({ type: 'lm-plein-ecran', actif: !!oui, lmAgent: true }, '*'); }catch(e){} return; }
+  try{
+    if(oui && !document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+    if(!oui && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }catch(e){}
+}
+function fermerJeu(rafraichir){ if(jeuEl){ pleinEcran(false); jeuEl.remove(); jeuEl = null; jeuNode = null; jeuId = null; if(rafraichir) rendu(); } }
 function ouvrirJeu(node, id){
   fermerZoom(); jeuNode = node; jeuId = id;
-  if(!jeuEl){ jeuEl = document.createElement('div'); jeuEl.className = 'jeu'; document.body.appendChild(jeuEl); }
+  if(!jeuEl){
+    jeuEl = document.createElement('div'); jeuEl.className = 'jeu'; document.body.appendChild(jeuEl);
+    // vrai plein écran (le clic de l'élève l'autorise); sans effet si le navigateur le refuse
+    pleinEcran(true);
+  }
   rendreJeu();
 }
 function rendreJeu(nouveau){
   const defis = jeuNode.defis, i = defis.findIndex(d => d.id === jeuId), d = defis[i];
-  const f = trouves(d), fini = f.length === 4;
+  const f = trouves(d), t = d.items.length, fini = f.length === t;
   jeuEl.innerHTML = `
     <div class="jeu-haut">
       <div class="jeu-titre">${esc(d.titre)}</div>
-      <span class="jeu-compteur ${fini?'ok':''}">${f.length}/4</span>${fini ? '<span class="jeu-bravo">Bravo 4/4 !</span>' : ''}
+      <span class="jeu-compteur ${fini?'ok':''}">${f.length}/${t}</span>${fini ? `<span class="jeu-bravo">Bravo ${t}/${t} !</span>` : ''}
       <div class="jeu-espace"></div>
       <button class="jeu-btn" data-jeu-nav="-1" ${i===0?'disabled':''}>‹ Précédent</button>
       <button class="jeu-btn" data-jeu-nav="1" ${i===defis.length-1?'disabled':''}>Suivant ›</button>
@@ -549,40 +891,52 @@ function rendreJeu(nouveau){
     </div>
     <div class="jeu-plateau">
       <div class="jeu-zone" id="jeuZone">
-        <img src="${esc(d.img)}" alt="${esc(d.titre)}" draggable="false" onload="ajusterJeu()">
-        ${f.map(k => `<div class="cercle ${k===nouveau?'nouveau':''}" style="left:${d.zones[k].x}%;top:${d.zones[k].y}%"></div>`).join('')}
+        <img src="${esc(d.img)}" alt="${esc(d.titre)}" draggable="false" onload="this.parentNode.dataset.ratio = this.naturalWidth / this.naturalHeight; ajusterJeu()">
+        ${f.map(k => { const p = (posTrouvees[d.id] || {})[k] || positionsDe(d.zones[k])[0];
+          const taille = p.r ? `;--d:max(26px,${p.r*2}cqw)` : '';
+          return `<div class="cercle ${k===nouveau?'nouveau':''}" style="left:${p.x}%;top:${p.y}%${taille}"></div>`; }).join('')}
       </div>
     </div>
     <div class="jeu-bas">
       <span class="jeu-consigne">Clique sur l'image pour trouver :</span>
-      <ul class="jeu-items">${d.items.map((t,k) => `<li class="${f.includes(k)?'trouve':''}">${esc(t)}</li>`).join('')}</ul>
+      <ul class="jeu-items ${t > 6 ? 'nombreux' : ''}">${d.items.map((x,k) => `<li class="${f.includes(k)?'trouve':''}">${esc(x)}</li>`).join('')}</ul>
     </div>`;
   ajusterJeu();
 }
 function ajusterJeu(){
   if(!jeuEl) return;
   const pl = jeuEl.querySelector('.jeu-plateau'), z = jeuEl.querySelector('#jeuZone'); if(!pl || !z) return;
-  const r = 1920 / 1280;
+  const r = parseFloat(z.dataset.ratio) || 1.5;
   const W = pl.clientWidth - 20, H = pl.clientHeight - 20;
   const w = Math.max(200, Math.min(W, H * r));
   z.style.width = w + 'px'; z.style.height = (w / r) + 'px';
   z.style.setProperty('--d', Math.max(40, w * 0.075) + 'px');
+  z.style.containerType = 'inline-size';                 // cqw = % de la largeur de l'image (taille des cercles)
 }
 function clicJeu(e){
   const z = jeuEl.querySelector('#jeuZone'), d = jeuNode.defis.find(x => x.id === jeuId), f = trouves(d);
-  if(f.length >= 4) return;
+  if(f.length >= d.items.length || Date.now() < pauseJeu) return;
   const r = z.getBoundingClientRect();
   const x = (e.clientX - r.left) / r.width * 100, y = (e.clientY - r.top) / r.height * 100;
-  let meilleur = -1, dist = Infinity;
-  d.zones.forEach((zn, k) => { if(f.includes(k)) return; const dd = Math.hypot(zn.x - x, zn.y - y); if(dd < dist){ dist = dd; meilleur = k; } });
-  if(meilleur !== -1 && dist <= TOLERANCE){ f.push(meilleur); rendreJeu(meilleur); }
-  else { z.classList.add('secoue'); setTimeout(() => z.classList.remove('secoue'), 300); }
+  let meilleur = -1, dist = Infinity, pos = null;
+  d.zones.forEach((zn, k) => { if(f.includes(k)) return;
+    positionsDe(zn).forEach(p => {
+      // zone avec rayon r : distance ronde en % de la largeur; sinon ancienne mesure (tolérance commune)
+      const dd = p.r ? Math.hypot(p.x - x, (p.y - y) * r.height / r.width) / p.r * TOLERANCE : Math.hypot(p.x - x, p.y - y);
+      if(dd < dist){ dist = dd; meilleur = k; pos = p; } }); });
+  if(meilleur !== -1 && dist <= TOLERANCE){
+    f.push(meilleur); (posTrouvees[d.id] || (posTrouvees[d.id] = {}))[meilleur] = pos; rendreJeu(meilleur);
+    sauverProgression();
+    if(f.length === d.items.length) donnerXp('cherche:' + d.id, XP_CHERCHE, 'Cherche et trouve — ' + d.titre.replace(/^\d+\.\s*/, '')); }
+  else { pauseJeu = Date.now() + 700;                     // clic raté : courte pause (décourage les clics au hasard)
+         z.classList.add('secoue'); setTimeout(() => z.classList.remove('secoue'), 300); }
 }
 function changerJeu(dir){
   const defis = jeuNode.defis, i = defis.findIndex(d => d.id === jeuId) + dir;
   if(i >= 0 && i < defis.length){ jeuId = defis[i].id; rendreJeu(); }
 }
 window.addEventListener('resize', ajusterJeu);
+document.addEventListener('fullscreenchange', ajusterJeu);
 
 /* ── Jeu d'échecs (Échec-et-Math) : superposition plein écran, chargée à la demande ── */
 function ouvrirEchecs(){
@@ -595,34 +949,265 @@ function fermerEchecs(){
 }
 document.getElementById('echecsCloseBtn').addEventListener('click', fermerEchecs);
 
+/* ═══════════════════════════════════════════════════════════════
+   EXPÉRIENCE (XP) DU LIVRE D'HISTOIRE
+     • Lecture (sous-section à pages, livret, coupure) : 100 XP, à deux conditions, sans échappatoire :
+         1) 5 minutes de lecture sans quitter (minuterie du compagnon) ;
+         2) l'histoire vue au complet (toutes les pages / le document lu jusqu'en bas).
+       Partir avant la fin (retour, autre section, fermer le livre, changer d'onglet) : tout recommence.
+       Le compagnon accompagne la lecture et demande à l'élève de rester s'il veut partir.
+     • Questionnaire : 100 XP à 6 / 8 ou plus (une seule fois ; il peut recommencer).
+     • Cherche et trouve : 50 XP par scène complétée.
+   Progression : clé « histoire_<élève> » ; l'XP totale du livre va dans le coffre (coffre.xpHistoire, voir xp-core.js).
+   Une lecture déjà récompensée se relit librement, sans minuterie.
+   ═══════════════════════════════════════════════════════════════ */
+const XP_LECTURE = 100, XP_QUESTIONNAIRE = 100, XP_CHERCHE = 50;
+const DUREE_LECTURE = 5 * 60;                     // secondes
+const identite = window.PasserelleCore ? window.PasserelleCore.lireIdentiteUrl() : null;
+let progression = { gains: {}, trouves: {}, positions: {} };   // gains : { 'lecture:…' : XP }
+const cleProgression = () => 'histoire_' + (identite ? identite.slug : 'atelier');
+async function chargerProgression(){
+  try{ const r = await window.storage.get(cleProgression(), true); if(r && r.value) progression = Object.assign(progression, JSON.parse(r.value)); }catch(e){}
+  Object.assign(etat, progression.trouves || {});
+  Object.assign(posTrouvees, progression.positions || {});
+}
+async function sauverProgression(){
+  progression.trouves = etat; progression.positions = posTrouvees;
+  try{ await window.storage.set(cleProgression(), JSON.stringify(progression), true); }catch(e){}
+}
+const xpGagne = cle => progression.gains[cle] || 0;
+function toastXp(html){ const t = document.getElementById('xpToast'); t.innerHTML = html; t.classList.add('visible'); clearTimeout(toastXp.m); toastXp.m = setTimeout(() => t.classList.remove('visible'), 3800); }
+// Donne l'XP une seule fois, et met à jour le coffre (total + rang).
+async function donnerXp(cle, xp, titre){
+  if(xpGagne(cle)) return false;
+  progression.gains[cle] = xp;
+  await sauverProgression();
+  const totalLivre = Object.values(progression.gains).reduce((a, b) => a + b, 0);
+  let monte = null;
+  if(identite && window.PasserelleCore && window.XpCore){
+    try{
+      const res = await window.PasserelleCore.chargerCoffre(identite.slug, identite.nom);
+      const r = window.XpCore.appliquer(res.donnees, 'xpHistoire', totalLivre);
+      await window.PasserelleCore.sauvegarderCoffre(identite.slug, res.donnees);
+      if(r.monte) monte = window.XpCore.NOMS[r.niveau];
+      if(res.donnees.genre) genreEleve = res.donnees.genre;
+    }catch(e){}
+  }
+  toastXp('✨ +' + xp + ' XP<small>' + esc(titre) + (monte ? ' — Tu es maintenant ' + esc(monte) + ' !' : '') + '</small>');
+  return true;
+}
+function pastilleXp(cle, xp){
+  const g = xpGagne(cle);
+  return `<span class="xp-pastille${g ? ' gagne' : ''}">${g ? '✓ ' + g + ' XP' : '✨ ' + xp + ' XP'}</span>`;
+}
+
+/* ── Le compagnon de lecture ── */
+let genreEleve = new URLSearchParams(location.search).get('genre');
+const COMPAGNONS_LECTURE = { fille: ['Bébé Bahamut', 'compagnons/dragon.webp'], garcon: ['Geri', 'compagnons/chien-loup.webp'] };
+const ENCOURAGEMENTS_LECTURE = [
+  "Je lis avec toi. Prends ton temps !", "Regarde bien les images : elles racontent aussi l'histoire.",
+  "Un vrai mage lit chaque mot.", "Imagine la scène dans ta tête…", "Tu avances bien, continue !",
+  "Relis une phrase si elle est difficile.", "Les grands mages sont aussi de grands lecteurs."
+];
+function compagnon(contenuHtml){
+  const c = COMPAGNONS_LECTURE[genreEleve] || COMPAGNONS_LECTURE.fille;
+  const img = document.getElementById('lectImage');
+  if(img.getAttribute('src') !== c[1]) img.setAttribute('src', c[1]);
+  document.getElementById('lectNom').textContent = c[0];
+  document.getElementById('lectContenu').innerHTML = contenuHtml;
+  document.getElementById('lectCompagnon').classList.add('visible');
+}
+function cacherCompagnon(){ document.getElementById('lectCompagnon').classList.remove('visible'); }
+
+/* ── La garde de lecture : minuterie + « vu au complet » ── */
+window.GardeLecture = (function(){
+  let actif = null;          // { cle, titre, restant, vues:Set, total, complet, prefixe, doc }
+  let minuterie = null, question = false, phrase = 0, tic = 0;
+  const mmss = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
+  function vuAuComplet(){ return actif && actif.total > 0 && actif.vues.size >= actif.total; }
+  function afficher(){
+    if(!actif || question) return;
+    const fini = actif.restant <= 0, vu = vuAuComplet();
+    const vues = actif.doc === 'defiler' ? (vu ? '✓ Lu jusqu\'en bas' : '📜 Lis jusqu\'en bas du document')
+      : (vu ? '✓ Toutes les pages vues' : '📖 Pages vues : ' + actif.vues.size + ' / ' + (actif.total || '?'));
+    compagnon((fini ? '<b>Le temps est écoulé !</b> Il te reste à tout voir pour gagner ton XP.' : esc(ENCOURAGEMENTS_LECTURE[phrase])) +
+      '<div class="lect-temps"><span class="sablier">⏳</span><span class="chiffres">' + mmss(Math.max(0, actif.restant)) + '</span></div>' +
+      '<div class="lect-barre"><i style="width:' + (100 * (DUREE_LECTURE - Math.max(0, actif.restant)) / DUREE_LECTURE) + '%"></i></div>' +
+      '<div class="lect-vues">' + vues + '</div>');
+  }
+  async function verifierFin(){
+    if(!actif || actif.restant > 0 || !vuAuComplet()) return;
+    const a = actif; arreter();
+    await donnerXp(a.cle, XP_LECTURE, a.titre);
+    compagnon('🎉 <b>Bravo, lecture terminée !</b><br>Tu as gagné <b>' + XP_LECTURE + ' XP</b>.');
+    setTimeout(() => { if(!actif) cacherCompagnon(); }, 5000);
+    if(courant) rendu(); else if(!document.getElementById('docModal').classList.contains('open')) rendu();
+  }
+  function arreter(){ clearInterval(minuterie); minuterie = null; actif = null; question = false; }
+  function commencer(o){
+    if(xpGagne(o.cle)) return;                         // déjà récompensée : lecture libre
+    if(actif && actif.cle === o.cle) return;
+    arreter();
+    actif = { cle: o.cle, titre: o.titre, restant: DUREE_LECTURE, vues: new Set(), total: o.total || 0, prefixe: o.prefixe || null, doc: o.doc || null };
+    phrase = Math.floor(Math.random() * ENCOURAGEMENTS_LECTURE.length); tic = 0;
+    minuterie = setInterval(() => {
+      if(!actif) return;
+      if(actif.restant > 0) actif.restant--;
+      if(++tic % 40 === 0) phrase = (phrase + 1) % ENCOURAGEMENTS_LECTURE.length;
+      if(actif.doc) inspecterDocument();
+      afficher(); verifierFin();
+    }, 1000);
+    afficher();
+  }
+  function vue(cle, n, total){ if(actif && actif.cle === cle){ actif.vues.add(n); if(total) actif.total = total; afficher(); verifierFin(); } }
+  function enCours(){ return !!actif; }
+  // L'élève veut partir : le compagnon lui demande de rester. S'il part, la lecture recommencera.
+  function demanderSortie(partir){
+    if(!actif){ partir(); return; }
+    question = true;
+    compagnon('<b>Attends !</b> Il te reste encore <b>' + (actif.restant > 0 ? mmss(actif.restant) + ' de lecture' : 'des pages à voir') + '</b>. ' +
+      'Si tu pars maintenant, tu devras <b>tout recommencer</b> pour gagner ton XP.' +
+      '<div class="lect-choix"><button type="button" class="reste" id="lectReste">📖 Je reste et je continue</button>' +
+      '<button type="button" id="lectPars">Je pars quand même</button></div>');
+    document.getElementById('lectReste').onclick = () => { question = false; afficher(); };
+    document.getElementById('lectPars').onclick = () => {
+      const a = actif; arreter(); cacherCompagnon(); partir();
+      // (ex. livre fermé depuis la fiche) : s'il est resté dans les pages abandonnées, retour à la liste — la lecture recommencera.
+      if(a && a.prefixe && courant && hashDe(courant.chemin) === a.prefixe){ location.hash = hashDe(courant.chemin.slice(0, -1)); dernierHash = null; route(); }
+      if(a && a.doc && document.getElementById('docModal').classList.contains('open')) fermerDoc();
+    };
+  }
+  // Quitter l'écran (autre onglet, autre fenêtre) : la lecture recommence.
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden && actif){
+      const o = { cle: actif.cle, titre: actif.titre, total: actif.total, prefixe: actif.prefixe, doc: actif.doc };
+      arreter();
+      commencer(o);
+      if(courant && !o.doc) vue(o.cle, courant.n, o.total);
+      question = true;
+      compagnon('😟 <b>Tu as quitté ta lecture…</b> Je t\'avais demandé de rester ! Ta lecture <b>recommence depuis le début</b>.' +
+        '<div class="lect-choix"><button type="button" class="reste" id="lectOk">D\'accord, je reste cette fois</button></div>');
+      document.getElementById('lectOk').onclick = () => { question = false; afficher(); };
+    }
+  });
+  // Documents (livret, coupure) : on regarde dedans où en est l'élève.
+  function inspecterDocument(){
+    const f = document.getElementById('docFrame');
+    let d; try{ d = f.contentDocument; }catch(e){ return; }
+    if(!d || !d.body) return;
+    if(actif.doc === 'pages'){
+      const m = (d.body.innerText || '').match(/—\s*(\d+)\s*\/\s*(\d+)\s*—/);
+      if(m){ actif.total = +m[2]; actif.vues.add(+m[1]); }
+    } else if(actif.doc === 'defiler'){
+      actif.total = 1;
+      const el = d.scrollingElement || d.documentElement, w = f.contentWindow;
+      if(el && w && el.scrollTop + w.innerHeight >= el.scrollHeight - 40) actif.vues.add(1);
+    }
+  }
+  return { commencer, vue, enCours, demanderSortie, arreter, dansLecture: h => !!(actif && actif.prefixe && (h === actif.prefixe || h.indexOf(actif.prefixe + '/') === 0)), actif: () => actif };
+})();
+
+/* ── Questionnaires : 100 XP à 6 / 8 ou plus ── */
+let quizActif = null, quizMinuterie = null;
+function surveillerQuestionnaire(cle, cfg, titre){
+  clearInterval(quizMinuterie); quizActif = { cle, cfg, titre };
+  quizMinuterie = setInterval(() => {
+    const f = document.getElementById('docFrame');
+    let d; try{ d = f.contentDocument; }catch(e){ return; }
+    if(!d || !d.body || xpGagne(cle)) return;
+    const t = d.body.innerText || '';
+    const m = t.match(new RegExp('(\\d+)\\s*\\/\\s*' + cfg.sur + '(?!\\d)'));
+    if(m && /score|bravo/i.test(t)){
+      const note = +m[1];
+      if(note >= cfg.min) donnerXp(cle, XP_QUESTIONNAIRE, titre + ' — ' + note + ' / ' + cfg.sur);
+      else if(quizActif && quizActif.dernier !== note){ quizActif.dernier = note; toastXp('📜 ' + note + ' / ' + cfg.sur + '<small>Il faut ' + cfg.min + ' / ' + cfg.sur + ' pour gagner ' + XP_QUESTIONNAIRE + ' XP. Relis et recommence !</small>'); }
+    }
+  }, 800);
+}
+
+/* ── Documents (récits, coupures, questionnaires) : superposition plein écran ── */
+function ouvrirDoc(src, titre, cle){
+  const frame = document.getElementById('docFrame');
+  frame.setAttribute('title', titre || 'Document');
+  frame.setAttribute('src', src);
+  document.getElementById('docModal').classList.add('open');
+  const item = cle ? itemDocument(cle) : null;
+  if(item && item.lecture) GardeLecture.commencer({ cle: 'lecture:' + cle, titre: item.titre, doc: item.lecture });
+  if(item && item.questionnaire) surveillerQuestionnaire('quiz:' + cle, item.questionnaire, item.titre);
+}
+// Retrouve un document par sa clé « section/document » (ex. legende-toutankhamon/livret).
+function itemDocument(cle){
+  const [sid, did] = cle.split('/');
+  const cherche = n => { if(!n || !n.enfants) return null; for(const c of n.enfants){ if(c.id === sid && c.enfants){ const d = c.enfants.find(x => x.id === did); if(d) return d; } const r = cherche(c); if(r) return r; } return null; };
+  return cherche(LIVRE);
+}
+function demanderFermerDoc(){ if(GardeLecture.enCours()) GardeLecture.demanderSortie(fermerDoc); else fermerDoc(); }
+function fermerDoc(){
+  clearInterval(quizMinuterie); quizActif = null;
+  GardeLecture.arreter(); cacherCompagnon();
+  document.getElementById('docModal').classList.remove('open');
+  document.getElementById('docFrame').setAttribute('src', 'about:blank');   // libère la mémoire (les livrets contiennent de grosses images)
+}
+document.getElementById('docCloseBtn').addEventListener('click', demanderFermerDoc);
+
 /* ── Navigation ── */
 let dernierHash = null;
-function aller(hash){ location.hash = hash; route(); }   // route() tout de suite : évite tout décalage si on appuie vite
+function aller(hash){
+  // Quitter une lecture en cours (hors de ses pages) : le compagnon demande de rester.
+  if(GardeLecture.enCours() && GardeLecture.actif().prefixe && !GardeLecture.dansLecture(hash)){
+    GardeLecture.demanderSortie(() => { location.hash = hash; route(); });
+    return;
+  }
+  location.hash = hash; route();
+}   // route() tout de suite : évite tout décalage si on appuie vite
 function route(){
+  fermerVideo();
   if(location.hash === dernierHash) return;                // déjà affiché (évite le double rendu avec hashchange)
+  // Bouton « précédent » du navigateur pendant une lecture : on revient et le compagnon demande de rester.
+  if(GardeLecture.enCours() && GardeLecture.actif().prefixe && !GardeLecture.dansLecture(location.hash)){
+    const voulu = location.hash;
+    history.replaceState(null, '', dernierHash);
+    GardeLecture.demanderSortie(() => { location.hash = voulu; route(); });
+    return;
+  }
   dernierHash = location.hash;
   fermerJeu(false);
   rendu();
   majZoom();                                                // ferme l'agrandissement si la nouvelle vue n'a pas d'image
 }
+function enfantDe(node, id){
+  const c = node.enfants && node.enfants.find(x => x.id === id);
+  if(c) return c;
+  if(node.jeux && id === JEUX_ID)
+    return node._jeux || (node._jeux = { id: JEUX_ID, titre: 'Cherche et trouve', sous: node.titre, enfants: node.jeux });
+  return null;
+}
 function rendu(){
   const segs = (location.hash || '#/').replace(/^#\/?/, '').split('/').filter(Boolean);
   let chemin = [LIVRE], i = 0;
   while(chemin[chemin.length-1].enfants && i < segs.length){
-    const c = chemin[chemin.length-1].enfants.find(x => x.id === segs[i]);
+    const c = enfantDe(chemin[chemin.length-1], segs[i]);
     if(!c) break;
     chemin.push(c); i++;
   }
   const node = chemin[chemin.length-1];
   courant = null;
+  if(GardeLecture.enCours() && GardeLecture.actif().prefixe && !GardeLecture.dansLecture(location.hash || '#/')){ GardeLecture.arreter(); cacherCompagnon(); }
   if(node.enfants){ vueListe(chemin); return; }
   if(node.type === 'cherche'){ vueCherche(chemin); return; }
   let n = parseInt(segs[i], 10); if(!(n >= 1)) n = 1; if(n > node.pages.length) n = node.pages.length;
   courant = {chemin, n};
   vueLecteur(chemin, n);
+  // Lecture à pages : minuterie de 5 min + toutes les pages vues.
+  const cleLecture = 'lecture:' + hashDe(chemin);
+  GardeLecture.commencer({ cle: cleLecture, titre: node.titre, total: node.pages.length, prefixe: hashDe(chemin) });
+  GardeLecture.vue(cleLecture, n, node.pages.length);
 }
 
 document.addEventListener('click', e => {
+  if(videoEl){ if(videoEl.contains(e.target)) fermerVideo(); return; }
+  const pv = e.target.closest('[data-video]');
+  if(pv){ ouvrirVideo(pv.dataset.video); return; }
   if(jeuEl){
     if(e.target.closest('#jeuZone')) clicJeu(e);
     else if(e.target.closest('.jeu-x')) fermerJeu(true);
@@ -635,6 +1220,8 @@ document.addEventListener('click', e => {
     else fermerZoom();
     return;
   }
+  const dc = e.target.closest('[data-doc]');
+  if(dc){ ouvrirDoc(dc.dataset.doc, dc.dataset.titre, dc.dataset.cle); return; }
   const j = e.target.closest('[data-jeu]');
   if(j){ const chemin = enCours(); ouvrirJeu(chemin[chemin.length-1], j.dataset.jeu); return; }
   if(e.target.closest('[data-zoom]') || e.target.closest('.fig img')){ ouvrirZoom(); return; }
@@ -645,11 +1232,16 @@ document.addEventListener('click', e => {
 function enCours(){   // chemin de la vue affichée (utile pour l'exercice)
   const segs = (location.hash || '#/').replace(/^#\/?/, '').split('/').filter(Boolean);
   let chemin = [LIVRE];
-  for(const s of segs){ const c = chemin[chemin.length-1].enfants && chemin[chemin.length-1].enfants.find(x => x.id === s); if(!c) break; chemin.push(c); }
+  for(const s of segs){ const c = enfantDe(chemin[chemin.length-1], s); if(!c) break; chemin.push(c); }
   return chemin;
 }
 window.addEventListener('hashchange', route);
 window.addEventListener('keydown', e => {
+  if(videoEl){ if(e.key === 'Escape') fermerVideo(); return; }
+  if(document.getElementById('docModal').classList.contains('open')){
+    if(e.key === 'Escape') demanderFermerDoc();
+    return;
+  }
   if(document.getElementById('echecsModal').classList.contains('open')){
     if(e.key === 'Escape') fermerEchecs();
     return;
@@ -667,7 +1259,40 @@ window.addEventListener('keydown', e => {
   else if(e.key === 'ArrowLeft' && n > 1) aller(`${base}/${n-1}`);
   else if(e.key === 'Escape') aller(hashDe(chemin.slice(0, -1)));
 });
-route();
+// Démarrage : la progression de l'élève (XP, objets trouvés) d'abord, puis l'affichage.
+(async function(){
+  await chargerProgression();
+  if(!genreEleve && identite && window.PasserelleCore){
+    try{ const r = await window.PasserelleCore.chargerCoffre(identite.slug, identite.nom); genreEleve = r.donnees.genre || null; }catch(e){}
+  }
+  dernierHash = null;
+  route();
+})();
+
+/* ── La scène magique : place prise par la boule (gauche) et le compagnon (droite), envoyée par la fiche ── */
+(function(){
+  window.addEventListener('message', e => {
+    const d = e.data;
+    if(!d || d.type !== 'scene-magique') return;
+    document.documentElement.style.setProperty('--rg', Math.max(0, d.gauche | 0) + 'px');
+    document.documentElement.style.setProperty('--rd', Math.max(0, d.droite | 0) + 'px');
+    document.body.classList.toggle('compagnon-menu', d.compagnon === 'menu');
+  });
+  // En retour : la hauteur qu'occupe le compagnon de lecture en bas à droite (le narrateur se pose au-dessus).
+  const lc = document.getElementById('lectCompagnon');
+  if(!lc) return;
+  let dernier = -1;
+  const signaler = () => {
+    const h = lc.classList.contains('visible') ? Math.round(window.innerHeight - lc.getBoundingClientRect().top) : 0;
+    if(h !== dernier){ dernier = h; const m = { type: 'scene-occupe', basDroite: h };
+      try{ if(window.parent !== window) window.parent.postMessage(m, '*'); window.postMessage(m, '*'); }catch(e){} }   // à soi aussi : livre ouvert seul (autonome)
+  };
+  new MutationObserver(() => setTimeout(signaler, 400)).observe(lc, { attributes: true, attributeFilter: ['class'], childList: true, subtree: true });
+  window.addEventListener('resize', signaler);
+  setInterval(signaler, 1500);
+})();
 </script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="lecture-magique.js" data-agent></script>
 </body>
 </html>

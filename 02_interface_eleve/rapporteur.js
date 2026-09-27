@@ -13,9 +13,16 @@
 
    Utilisation : <script src="rapporteur.js"></script> (ou ../rapporteur.js)
    Aucune dépendance. Ne touche à rien d'autre sur la page.
+
+   Mode manuel (utilisé par le compagnon, compagnon-core.js) :
+   <script src="rapporteur.js" data-manuel></script> n'installe rien tout seul.
+   window.RapporteurInstaller({ bouton:false, visible:false, zIndex:10000, barre:true })
+   crée un rapporteur caché, sans bouton 📐, avec une petite barre d'outils
+   (remettre droit, plus grand, plus petit, fermer). Ensuite :
+   Rapporteur.montrer(), Rapporteur.cacher(), Rapporteur.basculer().
    ===================================================================== */
 (function(){
-  if(window.Rapporteur) return;
+  if(window.RapporteurInstaller) return;
   const R = 172;                 // rayon en pixels (même taille que l'original)
 
   const css = `
@@ -39,27 +46,47 @@
   .rap-bouton:hover{ background:#1d4ed8; }
   .rap-menu{ position:fixed; right:16px; bottom:76px; z-index:9001; display:none; flex-direction:column; gap:6px; }
   .rap-menu.ouvert{ display:flex; }
+  .rap-barre{ position:absolute; left:50%; top:100%; display:flex; gap:4px; }
+  .rap-barre button{ font:700 13px/1 system-ui, sans-serif; width:30px; height:30px; border-radius:50%; border:2px solid #fff;
+    background:#2563eb; color:#fff; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,.3); padding:0; }
+  .rap-barre button[data-a="fermer"]{ background:#b91c1c; }
+  /* Verre étoilé des images fournies (bande graduée effacée) : rose pour les filles (rapporteur_fille.webp),
+     bleu pour les garçons (rapporteur_garcon.webp). Les graduations restent celles dessinées ici, justes au degré. */
+  .rap-cadre.verre .rap-corps{ background:none; overflow:hidden; border-color:rgba(224,242,254,.95); border-bottom-color:rgba(224,242,254,1);
+    box-shadow:0 2px 14px rgba(0,0,0,.18), 0 0 14px rgba(96,165,250,.5), inset 0 1px 0 rgba(255,255,255,.7); }
+  .rap-cadre.verre.fille .rap-corps{ border-color:rgba(255,220,245,.95); border-bottom-color:rgba(255,220,245,1);
+    box-shadow:0 2px 14px rgba(0,0,0,.18), 0 0 14px rgba(244,114,182,.5), inset 0 1px 0 rgba(255,255,255,.7); }
+  .rap-cadre.verre .rap-corps::before{ content:""; position:absolute; inset:0; background:var(--rap-img) center / 100% 100% no-repeat; opacity:.9; }
+  .rap-cadre.verre .rap-corps::after{ content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 40%); pointer-events:none; }
+  .rap-cadre.verre .rap-corps svg{ z-index:1; }
+  .rap-cadre.fille .rap-poignee, .rap-cadre.fille .rap-barre button{ background:#a21caf; }
+  .rap-cadre.fille .rap-barre button[data-a="fermer"]{ background:#b91c1c; }
+  .rap-cadre.fille .rap-tige{ background:linear-gradient(180deg, rgba(162,28,175,.6), rgba(162,28,175,.12)); }
   .rap-menu button{ font:700 14px system-ui, sans-serif; padding:8px 12px; border-radius:10px; border:2px solid #2563eb; background:#fff; color:#1e3a8a; cursor:pointer; text-align:left; }
   `;
 
-  function svgRapporteur(){
+  function svgRapporteur(style){
+    // encre : noire (sans image), prune sur le verre rose (fille), bleu nuit sur le verre bleu (garçon), avec un contour clair pour les nombres
+    const fille = style === 'fille', verre = style === 'fille' || style === 'garcon';
+    const encre = a => fille ? 'rgba(59,10,69,' + Math.min(1, a + .15) + ')' : verre ? 'rgba(8,24,56,' + Math.min(1, a + .15) + ')' : 'rgba(0,0,0,' + a + ')';
+    const bord = fille ? 'rgba(253,231,247,.95)' : verre ? 'rgba(224,242,254,.95)' : 'rgba(255,255,255,.85)';
     let t = '';
     for(let d = 0; d <= 180; d++){
       const a = d * Math.PI / 180, c = Math.cos(a), s = -Math.sin(a);
       const dix = d % 10 === 0, cinq = d % 5 === 0;
       const long = dix ? 18 : cinq ? 11 : 6;
       t += '<line x1="' + (c*(R-long)).toFixed(2) + '" y1="' + (s*(R-long)).toFixed(2) + '" x2="' + (c*(R-0.5)).toFixed(2) + '" y2="' + (s*(R-0.5)).toFixed(2) +
-        '" stroke="rgba(0,0,0,' + (dix ? .8 : cinq ? .55 : .35) + ')" stroke-width="' + (dix ? 1.1 : cinq ? .8 : .5) + '"/>';
+        '" stroke="' + encre(dix ? .8 : cinq ? .55 : .35) + '" stroke-width="' + (dix ? 1.1 : cinq ? .8 : .5) * (verre ? 1.2 : 1) + '"/>';
       if(dix){
         const ext = R - 28, int = R - 46;
         const txt = (x, y, v, taille, op) => '<text x="' + x.toFixed(2) + '" y="' + y.toFixed(2) + '" text-anchor="middle" dominant-baseline="middle" font-size="' + taille +
-          '" font-weight="700" fill="rgba(0,0,0,' + op + ')" style="font-family:Inter,system-ui,sans-serif;paint-order:stroke;stroke:rgba(255,255,255,.85);stroke-width:2.2px">' + v + '</text>';
+          '" font-weight="700" fill="' + encre(op) + '" style="font-family:Inter,system-ui,sans-serif;paint-order:stroke;stroke:' + bord + ';stroke-width:2.2px">' + v + '</text>';
         t += txt(c*ext, s*ext, d, 10.5, .85);                 // échelle extérieure : 0 à droite → 180 à gauche
         if(d > 0 && d < 180) t += txt(c*int, s*int, 180 - d, 8.5, .55);   // échelle intérieure : sens inverse
       }
     }
     // ligne de base, arcs, repère central
-    t = '<line x1="' + (-R) + '" y1="0" x2="' + R + '" y2="0" stroke="rgba(0,0,0,.65)" stroke-width="1.8"/>' +
+    t = '<line x1="' + (-R) + '" y1="0" x2="' + R + '" y2="0" stroke="' + encre(.65) + '" stroke-width="1.8"/>' +
         '<path d="M ' + (-R) + ' 0 A ' + R + ' ' + R + ' 0 0 1 ' + R + ' 0" fill="none" stroke="rgba(0,0,0,.25)" stroke-width="1.2"/>' +
         '<path d="M -98 0 A 98 98 0 0 1 98 0" fill="none" stroke="rgba(0,0,0,.10)" stroke-width=".8" stroke-dasharray="4 5"/>' + t +
         '<line x1="0" y1="0" x2="0" y2="-26" stroke="rgba(37,99,235,.5)" stroke-width="1.1" stroke-dasharray="3 4"/>' +
@@ -68,27 +95,40 @@
     return '<svg viewBox="' + (-R) + ' ' + (-R) + ' ' + (2*R) + ' ' + R + '" width="' + (2*R) + '" height="' + R + '">' + t + '</svg>';
   }
 
-  function installer(){
+  function installer(opt){
+    opt = opt || {};
+    if(window.Rapporteur) return window.Rapporteur;
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
     const cadre = document.createElement('div'); cadre.className = 'rap-cadre';
-    cadre.innerHTML = '<div class="rap-corps">' + svgRapporteur() + '</div><div class="rap-tige"></div>' +
+    const style = opt.style === 'fille' || opt.style === 'garcon' ? opt.style : null;   // sans style : l'ancien rapporteur transparent
+    if(style){ cadre.classList.add('verre', style); cadre.style.setProperty('--rap-img', "url('" + (opt.base || '') + "livre_assets/rapporteur_" + style + ".webp')"); }
+    cadre.innerHTML = '<div class="rap-corps">' + svgRapporteur(style) + '</div><div class="rap-tige"></div>' +
       '<div class="rap-poignee" title="Glisse pour faire tourner">⟳</div><div class="rap-lecture"></div>';
+    if(opt.zIndex) cadre.style.zIndex = opt.zIndex;
+    if(opt.barre){
+      const barre = document.createElement('div'); barre.className = 'rap-barre';
+      barre.innerHTML = '<button type="button" data-a="droit" title="Remettre droit">↔</button><button type="button" data-a="plus" title="Plus grand">+</button>' +
+        '<button type="button" data-a="moins" title="Plus petit">−</button><button type="button" data-a="fermer" title="Ranger le rapporteur">✕</button>';
+      cadre.appendChild(barre);
+    }
     document.body.appendChild(cadre);
     const bouton = document.createElement('button'); bouton.type = 'button'; bouton.className = 'rap-bouton'; bouton.title = 'Rapporteur'; bouton.textContent = '📐';
     const menu = document.createElement('div'); menu.className = 'rap-menu';
     menu.innerHTML = '<button type="button" data-a="voir">👁️ Montrer / cacher</button><button type="button" data-a="centre">🎯 Ramener au centre</button><button type="button" data-a="droit">↔️ Remettre droit</button>' +
       '<button type="button" data-a="plus">➕ Plus grand</button><button type="button" data-a="moins">➖ Plus petit</button>';
-    document.body.appendChild(menu); document.body.appendChild(bouton);
+    if(opt.bouton !== false){ document.body.appendChild(menu); document.body.appendChild(bouton); }
 
     // x, y = position du CENTRE du rapporteur à l'écran
-    const etat = { x: window.innerWidth / 2, y: Math.min(window.innerHeight * 0.55, 380), rot: 0, visible: true, echelle: 1 };
+    const etat = { x: window.innerWidth / 2, y: Math.min(window.innerHeight * 0.55, 380), rot: 0, visible: opt.visible !== false, echelle: 1 };
     const lecture = cadre.querySelector('.rap-lecture');
+    const barreEl = cadre.querySelector('.rap-barre');
     function dessiner(){
       cadre.style.display = etat.visible ? '' : 'none';
       cadre.style.left = etat.x + 'px'; cadre.style.top = etat.y + 'px';
       cadre.style.transform = 'translate(-50%, -100%) rotate(' + etat.rot + 'deg) scale(' + etat.echelle + ')';
       lecture.style.transform = 'translate(-50%, 12px) rotate(' + (-etat.rot) + 'deg)';
       lecture.textContent = 'Rotation ' + Math.round(((etat.rot % 360) + 360) % 360) + '°';
+      if(barreEl) barreEl.style.transform = 'translate(-50%, 40px) rotate(' + (-etat.rot) + 'deg)';
     }
     let glisse = null;
     function debut(e, mode){
@@ -112,6 +152,18 @@
     const fin = () => { glisse = null; };
     window.addEventListener('pointerup', fin); window.addEventListener('pointercancel', fin);
 
+    if(barreEl){
+      barreEl.addEventListener('pointerdown', e => e.stopPropagation());
+      barreEl.addEventListener('click', e => {
+        const b = e.target.closest('button'); if(!b) return;
+        const a = b.dataset.a;
+        if(a === 'droit') etat.rot = 0;
+        if(a === 'plus') etat.echelle = Math.min(1.6, +(etat.echelle + 0.15).toFixed(2));
+        if(a === 'moins') etat.echelle = Math.max(0.55, +(etat.echelle - 0.15).toFixed(2));
+        if(a === 'fermer') etat.visible = false;
+        dessiner();
+      });
+    }
     bouton.addEventListener('click', () => menu.classList.toggle('ouvert'));
     menu.addEventListener('click', e => {
       const a = e.target.closest('button') && e.target.closest('button').dataset.a;
@@ -130,7 +182,17 @@
       dessiner();
     });
     dessiner();
-    window.Rapporteur = { etat, dessiner };
+    window.Rapporteur = {
+      etat, dessiner,
+      montrer(){ etat.visible = true; etat.x = window.innerWidth / 2; etat.y = Math.min(window.innerHeight * 0.55, 380); dessiner(); },
+      cacher(){ etat.visible = false; dessiner(); },
+      basculer(){ if(etat.visible) this.cacher(); else this.montrer(); }
+    };
+    return window.Rapporteur;
   }
-  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installer); else installer();
+  window.RapporteurInstaller = installer;
+  const manuel = document.currentScript && document.currentScript.hasAttribute('data-manuel');
+  if(!manuel){
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => installer()); else installer();
+  }
 })();

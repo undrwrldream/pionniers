@@ -9,7 +9,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <script src="stockage-classe.js"></script>
 <script src="passerelle-core.js"></script>
+<script src="xp-core.js"></script>
 <script src="aide-core.js"></script>
+<script src="compagnon-core.js"></script>
+<script src="lecture-magique.js"></script>
 <style>
   :root{
     --parchment:#F1E4C3; --parchment-dark:#E3D3A6; --ink:#2B2118;
@@ -154,7 +157,8 @@
   .portrait{
     width:176px; height:228px; margin:0 auto;
     background:var(--parchment-dark) center/cover no-repeat;
-    border:3px solid var(--ink); position:relative; cursor:pointer;
+    border:3px solid var(--ink); position:relative;
+    background-position:center 12%;
     clip-path:polygon(50% 0%, 100% 12%, 100% 76%, 50% 100%, 0% 76%, 0% 12%);
     display:flex; align-items:center; justify-content:center;
   }
@@ -164,10 +168,6 @@
     pointer-events:none;
   }
   .portrait-placeholder{ color:var(--iron); font-size:12px; font-style:italic; padding:0 16px; text-align:center; }
-  .portrait-edit{
-    margin-top:6px; font-family:'Crimson Text', serif; font-style:italic; font-size:12px;
-    background:none; border:none; color:var(--burgundy); cursor:pointer; text-decoration:underline;
-  }
   .stats-row{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
   .hp-badge{
     display:inline-block; padding:4px 12px;
@@ -198,9 +198,13 @@
 
   /* ---- Magasin ---- */
   .store h2{ font-family:'Cinzel', serif; font-size:16px; color:var(--burgundy-dark); border-bottom:2px solid var(--ink); padding-bottom:6px; margin:0 0 10px; }
-  .tabs{ display:flex; gap:6px; overflow-x:auto; margin-bottom:14px; padding-bottom:4px; }
+  /* Onglets du Marché : ils se partagent toute la largeur, sans barre de défilement, pour que
+     toutes les catégories (Armes comprises) soient toujours visibles ; sur une page trop étroite,
+     ils passent sur une deuxième ligne plutôt que de se cacher. */
+  .tabs{ display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px; }
   .tab{
-    font-family:'Cinzel', serif; font-size:12px; padding:7px 12px; white-space:nowrap;
+    flex:1 1 0; min-width:max-content; text-align:center;
+    font-family:'Cinzel', serif; font-size:clamp(9.5px, 0.8vw, 12px); padding:6px 5px; white-space:nowrap;
     background:var(--parchment-dark); border:1px solid var(--ink); cursor:pointer; color:var(--ink);
   }
   .tab.active{ background:var(--burgundy); color:var(--parchment); border-color:var(--burgundy); }
@@ -228,7 +232,6 @@
     display:block; margin:0 auto 20px; font-family:'Crimson Text', serif; font-style:italic; font-size:13px;
     background:none; border:1px dashed var(--iron); color:var(--iron); padding:7px 14px; cursor:pointer;
   }
-  #fileInput{ display:none; }
 
   /* ---- Grimoire ---- */
   .grimoire-section{ margin-top:26px; }
@@ -244,7 +247,7 @@
     background:linear-gradient(180deg, #2A2118, #1B150F); box-shadow:none;
   }
   .grimoire-icon{ font-size:26px; flex:0 0 auto; }
-  .grimoire-icon .grimoire-mini{ width:38px; height:38px; object-fit:contain; display:block; }   /* vignette (dossier Mini/) à la place de l'emoji */
+  .grimoire-icon .grimoire-mini{ width:38px; height:38px; object-fit:contain; display:block; }   /* vignette (dossier mini/) à la place de l'emoji */
   .grimoire-toggle-text{ flex:1; display:flex; flex-direction:column; gap:2px; }
   .grimoire-title{ font-family:'Cinzel', serif; font-size:14px; color:var(--gold-light); letter-spacing:0.3px; }
   .grimoire-subtitle{ font-family:'Crimson Text', serif; font-style:italic; font-size:12px; color:#C9BB98; }
@@ -265,16 +268,16 @@
     display:none; flex-direction:column;
   }
   .grimoire-modal.open{ display:flex; }
+  /* Le bouton de retour flotte dans le coin : plus de bande pleine largeur en haut, tout l'écran va au livre. */
   .grimoire-modal-bar{
-    display:flex; justify-content:flex-end; padding:4px 12px;
-    background:#1B150F; border-bottom:2px solid var(--gold); flex:0 0 auto;
+    position:absolute; top:6px; left:8px; z-index:5; height:0; overflow:visible;
   }
   .grimoire-modal-close{
     font-family:'Cinzel', serif; font-size:12px; color:var(--gold-light);
-    background:none; border:1px solid var(--gold); border-radius:6px;
-    padding:4px 12px; cursor:pointer;
+    background:rgba(27,21,15,0.82); border:1px solid var(--gold); border-radius:6px;
+    padding:4px 10px; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.4); opacity:.8;
   }
-  .grimoire-modal-close:hover{ background:rgba(217,166,46,0.15); }
+  .grimoire-modal-close:hover{ background:rgba(60,40,15,0.95); opacity:1; }
   .grimoire-modal-frame{ flex:1; width:100%; border:none; display:block; }
 
   /* ligne d'expérience (XP) sous les points de vie et l'attaque — un clic ouvre le détail des niveaux */
@@ -383,7 +386,7 @@
             <span class="grimoire-chevron">›</span>
           </button>
           <button class="grimoire-toggle grimoire-toggle-bonus" id="cassiopeeToggle" style="margin-top:8px;">
-            <span class="grimoire-icon"><img class="grimoire-mini" src="Mini/cassiopee.webp" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('🌀'))"></span>
+            <span class="grimoire-icon"><img class="grimoire-mini" src="mini/cassiopee.webp" alt="" draggable="false" onerror="this.replaceWith(document.createTextNode('🌀'))"></span>
             <span class="grimoire-toggle-text">
               <span class="grimoire-title">Cassiopée</span>
               <span class="grimoire-subtitle">Chapitre bonus — un portail t'attend</span>
@@ -409,7 +412,7 @@
           <div class="slot slot-gloves" data-slot="gloves"><span class="slot-label">Gants</span></div>
           <div class="portrait-wrap">
             <div class="portrait" id="portrait">
-              <div class="portrait-placeholder" id="portraitPlaceholder">Touchez pour ajouter votre portrait</div>
+              <div class="portrait-placeholder" id="portraitPlaceholder"></div>
             </div>
             <div class="stats-row">
               <div class="hp-badge" id="hpBadge">10/10</div>
@@ -419,8 +422,6 @@
               <span id="xpTexte">XP : 0 / 1000</span>
               <span class="xp-track"><i id="xpRemplissage"></i></span>
             </button>
-            <button class="portrait-edit" id="portraitEditBtn">Changer l'image</button>
-            <input type="file" id="fileInput" accept="image/*">
           </div>
           <div class="slot slot-armor" data-slot="armor"><span class="slot-label">Armure</span></div>
           <div class="slot slot-shield" data-slot="shield"><span class="slot-label">Bouclier</span></div>
@@ -445,35 +446,35 @@
   <div class="xp-carte">
     <h2 id="xpTitre">Ce que rapporte chaque niveau</h2>
     <ul class="xp-niveaux" id="xpNiveaux"></ul>
-    <p class="xp-comment">Gagne de l'expérience (XP) dans les Parchemins de lecture : <b>100 XP</b> par section terminée et <b>200 XP</b> par exercice de l'épreuve de promotion réussi. Tous les <b>1000 XP</b>, tu montes d'un niveau.</p>
+    <p class="xp-comment">Gagne de l'expérience (XP) dans les Parchemins de lecture (<b>100 XP</b> par section des Invocations, <b>200 XP</b> par section des Conjurations, <b>200 XP</b> par exercice de l'épreuve de promotion réussi) et dans le Livre d'Histoire (<b>100 XP</b> par lecture ou questionnaire réussi, <b>50 XP</b> par Cherche et trouve). Rangs : Novice 1 000 · Invocateur 2 500 · Magicien 5 000 · Sorcier 10 000 XP.</p>
     <button class="xp-fermer" id="xpFermer" type="button">Fermer</button>
   </div>
 </div>
 
 <div class="grimoire-modal" id="grimoireModal">
   <div class="grimoire-modal-bar">
-    <button class="grimoire-modal-close" id="grimoireCloseBtn">✕ Retour à la fiche de personnage</button>
+    <button class="grimoire-modal-close" id="grimoireCloseBtn">✕ Fiche de personnage</button>
   </div>
   <iframe id="grimoireFrame" class="grimoire-modal-frame" title="Le Grimoire des Mathématiques"></iframe>
 </div>
 
 <div class="grimoire-modal" id="parcheminsModal">
   <div class="grimoire-modal-bar">
-    <button class="grimoire-modal-close" id="parcheminsCloseBtn">✕ Retour à la fiche de personnage</button>
+    <button class="grimoire-modal-close" id="parcheminsCloseBtn">✕ Fiche de personnage</button>
   </div>
   <iframe id="parcheminsFrame" class="grimoire-modal-frame" title="Les Parchemins de Lecture"></iframe>
 </div>
 
 <div class="grimoire-modal" id="histoireModal">
   <div class="grimoire-modal-bar">
-    <button class="grimoire-modal-close" id="histoireCloseBtn">✕ Retour à la fiche de personnage</button>
+    <button class="grimoire-modal-close" id="histoireCloseBtn">✕ Fiche de personnage</button>
   </div>
-  <iframe id="histoireFrame" class="grimoire-modal-frame" title="Le Livre d'Histoire"></iframe>
+  <iframe id="histoireFrame" class="grimoire-modal-frame" title="Le Livre d'Histoire" allow="fullscreen" allowfullscreen></iframe>
 </div>
 
 <div class="grimoire-modal" id="cassiopeeModal">
   <div class="grimoire-modal-bar">
-    <button class="grimoire-modal-close" id="cassiopeeCloseBtn">✕ Retour à la fiche de personnage</button>
+    <button class="grimoire-modal-close" id="cassiopeeCloseBtn">✕ Fiche de personnage</button>
   </div>
   <iframe id="cassiopeeFrame" class="grimoire-modal-frame" title="Cassiopée"></iframe>
 </div>
@@ -1181,6 +1182,7 @@ async function resynchroniserApresModule(){
   state.portraitImage = resultat.donnees.equipement.portraitImage;
   state.niveau = resultat.donnees.niveauLecture || 0;
   state.xp = resultat.donnees.xp || 0;
+  state.genre = resultat.donnees.genre || null;
   const rangTitreEl = document.getElementById('rangTitre');
   if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[resultat.donnees.niveauLecture || 0] || NIVEAUX_LECTURE[0];
   render();
@@ -1198,7 +1200,8 @@ window.onPasserelleReady = function(identite, coffre){
     equipped: coffre.equipement.equipped,
     portraitImage: coffre.equipement.portraitImage,
     niveau: coffre.niveauLecture || 0,   // rang de mage (0 = Apprenti … 5 = Archimage)
-    xp: coffre.xp || 0                   // expérience, écrite par les Parchemins de lecture
+    xp: coffre.xp || 0,                  // expérience, écrite par les Parchemins de lecture
+    genre: coffre.genre || null          // 'fille' | 'garcon' : portrait et compagnon
   };
   const rangTitreEl = document.getElementById('rangTitre');
   if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[coffre.niveauLecture || 0] || NIVEAUX_LECTURE[0];
@@ -1315,8 +1318,10 @@ function renderDoll(){
   // portrait
   const portrait = document.getElementById('portrait');
   const placeholder = document.getElementById('portraitPlaceholder');
-  if(state.portraitImage){
-    portrait.style.backgroundImage = `url(${state.portraitImage})`;
+  const imagePortrait = cheminPortrait(state.genre, state.niveau);
+  portrait.title = NIVEAUX_LECTURE[state.niveau || 0] || '';
+  if(imagePortrait){
+    portrait.style.backgroundImage = `url(${imagePortrait})`;
     placeholder.style.display = 'none';
   } else {
     portrait.style.backgroundImage = 'none';
@@ -1342,16 +1347,16 @@ function renderDoll(){
 /* ---------- Expérience (XP) : ligne sous les PV / DMG, et fenêtre du détail des niveaux ---------- */
 function renderXp(){
   if(!state) return;
-  const xp = state.xp || 0, niveau = state.niveau || 0, dernier = niveau >= RANK_MULT.length - 1;
-  const palier = (Math.floor(xp / 1000) + 1) * 1000;
-  document.getElementById('xpTexte').textContent = dernier ? ('XP : ' + xp + ' · niveau max') : ('XP : ' + xp + ' / ' + palier);
-  document.getElementById('xpRemplissage').style.width = (dernier ? 100 : (xp % 1000) / 10) + '%';
+  // Seuils des rangs : xp-core.js (Novice 1 000 · Invocateur 2 500 · Magicien 5 000 · Sorcier 10 000 ; Archimage pas par l'XP)
+  const xp = state.xp || 0, prochain = window.XpCore.prochainSeuil(xp), base = window.XpCore.seuilActuel(xp);
+  document.getElementById('xpTexte').textContent = prochain === null ? ('XP : ' + xp + ' · rang max par l\'XP') : ('XP : ' + xp + ' / ' + prochain);
+  document.getElementById('xpRemplissage').style.width = (prochain === null ? 100 : (xp - base) / (prochain - base) * 100) + '%';
 }
 function ouvrirXpModal(){
   const niveau = (state && state.niveau) || 0;
   document.getElementById('xpNiveaux').innerHTML = NIVEAUX_LECTURE.map((nom, i) =>
     '<li class="' + (i === niveau ? 'actuel' : '') + '"><span><b>Niveau ' + (i + 1) + '</b> — ' + nom + '</span><span>' +
-    (i === 0 ? 'point de départ' : 'attaque et PV × ' + RANK_MULT[i]) + '</span></li>').join('');
+    (i === 0 ? 'point de départ' : (window.XpCore.SEUILS[i] !== undefined ? window.XpCore.SEUILS[i].toLocaleString('fr-CA') + ' XP · ' : 'rang spécial · ') + 'attaque et PV × ' + RANK_MULT[i]) + '</span></li>').join('');
   document.getElementById('xpModal').classList.add('open');
 }
 function fermerXpModal(){ document.getElementById('xpModal').classList.remove('open'); }
@@ -1360,7 +1365,7 @@ document.getElementById('xpFermer').addEventListener('click', fermerXpModal);
 document.getElementById('xpModal').addEventListener('click', (e) => { if(e.target.id === 'xpModal') fermerXpModal(); });
 document.addEventListener('keydown', (e) => { if(e.key === 'Escape') fermerXpModal(); });
 
-function render(){ renderDoll(); renderTabs(); renderStoreList(); }
+function render(){ renderDoll(); renderTabs(); renderStoreList(); majCompagnon(); }
 
 document.querySelectorAll('.slot').forEach(slotEl=>{
   slotEl.addEventListener('click', ()=>{
@@ -1368,15 +1373,18 @@ document.querySelectorAll('.slot').forEach(slotEl=>{
     document.querySelector('.store').scrollIntoView({behavior:'smooth'});
   });
 });
-function openFilePicker(){ document.getElementById('fileInput').click(); }
-document.getElementById('portrait').addEventListener('click', openFilePicker);
-document.getElementById('portraitEditBtn').addEventListener('click', openFilePicker);
-document.getElementById('fileInput').addEventListener('change', (e)=>{
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{ state.portraitImage = reader.result; saveState(); render(); };
-  reader.readAsDataURL(file);
-});
+/* Portrait : l'élève ne choisit plus son image. Elle dépend de son genre (choisi à la
+   couverture) et de son rang de mage (écrit par les Parchemins de lecture) :
+   personnages/<rang>-<genre>.webp. Le compagnon (compagnon-core.js) suit les mêmes règles. */
+const RANGS_IMAGES = ['apprenti', 'novice', 'invocateur', 'magicien', 'sorcier', 'archimage'];
+function cheminPortrait(genre, niveau){
+  if(genre !== 'fille' && genre !== 'garcon') return null;
+  const rang = RANGS_IMAGES[Math.max(0, Math.min(RANGS_IMAGES.length - 1, niveau || 0))];
+  return 'personnages/' + rang + '-' + genre + '.webp';
+}
+function majCompagnon(){
+  if(window.Compagnon && state) window.Compagnon.maj({ genre: state.genre, niveau: state.niveau });
+}
 
 // Construit l'URL d'un module (Grimoire, Bestiaire, Parchemins) en y
 // reportant l'identité de l'élève, pour qu'il n'ait jamais à se réidentifier.
@@ -1385,6 +1393,7 @@ function urlAvecIdentite(fichier){
   const params = new URLSearchParams();
   params.set('eleve', identiteEleve.slug);
   params.set('nom', identiteEleve.nom);
+  if(typeof state !== 'undefined' && state && state.genre) params.set('genre', state.genre);   // « magicien » ou « magicienne » (dragon du Grimoire scellé)
   return fichier + '?' + params.toString();
 }
 
@@ -1403,6 +1412,7 @@ function ouvrirGrimoire(mode){
     dernierModeGrimoire = mode;
   }
   document.getElementById('grimoireModal').classList.add('open');
+  if(window.Compagnon) window.Compagnon.maj({ grimoireOuvert: true });   // outils du compagnon : Grimoire seulement
 }
 document.getElementById('grimoireToggle').addEventListener('click', () => ouvrirGrimoire('normal'));
 // Exercices supplémentaires : bouton désactivé tant que les feuilles n'existent pas (attribut « disabled » dans le HTML).
@@ -1410,6 +1420,7 @@ document.getElementById('grimoireToggle').addEventListener('click', () => ouvrir
 document.getElementById('exercicesSuppToggle').addEventListener('click', () => ouvrirGrimoire('supp'));
 document.getElementById('grimoireCloseBtn').addEventListener('click', () => {
   document.getElementById('grimoireModal').classList.remove('open');
+  if(window.Compagnon) window.Compagnon.maj({ grimoireOuvert: false });
   resynchroniserApresModule(); // l'or gagné dans le Grimoire doit apparaître ici sans recharger la page
 });
 
@@ -1424,6 +1435,7 @@ document.getElementById('parcheminsToggle').addEventListener('click', () => {
 });
 document.getElementById('parcheminsCloseBtn').addEventListener('click', () => {
   document.getElementById('parcheminsModal').classList.remove('open');
+  resynchroniserApresModule();   // XP et rang gagnés dans les Parchemins
 });
 
 // Le Livre d'Histoire (chargé seulement au premier clic, comme les autres livres).
@@ -1436,7 +1448,12 @@ document.getElementById('histoireToggle').addEventListener('click', () => {
   document.getElementById('histoireModal').classList.add('open');
 });
 document.getElementById('histoireCloseBtn').addEventListener('click', () => {
-  document.getElementById('histoireModal').classList.remove('open');
+  // Une lecture est en cours (minuterie du compagnon) : le compagnon demande à l'élève de rester.
+  const f = document.getElementById('histoireFrame');
+  let garde = null;
+  try{ garde = f && f.contentWindow && f.contentWindow.GardeLecture; }catch(e){ garde = null; }   // ouvert depuis un dossier : Chrome interdit de regarder dans le livre
+  const fermer = () => { document.getElementById('histoireModal').classList.remove('open'); resynchroniserApresModule(); };
+  if(garde && garde.enCours()) garde.demanderSortie(fermer); else fermer();
 });
 
 // Chapitre bonus : le portail de Cassiopée (la bande dessinée viendra plus tard).

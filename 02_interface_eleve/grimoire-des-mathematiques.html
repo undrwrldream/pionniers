@@ -10,10 +10,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English&family=IM+Fell+English+SC&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
 <script src="stockage-classe.js"></script>
 <script src="passerelle-core.js"></script>
+<script src="ouvertures-core.js"></script>
 <script src="exercices-supp-core.js"></script>
 <script src="types-de-reponse.js"></script>
 <script src="aide-core.js"></script>
 <script src="rapports-core.js"></script>
+<script src="rapporteur.js" data-manuel></script>
+<script src="sorts-outils.js"></script>
+<script src="sorts-core.js"></script>
 <style>
   :root{
     --parchment: #ECD9B0;
@@ -271,6 +275,17 @@
   .cell-perfect{ color: var(--ok); font-weight:700; }
   .cell-partial{ color: #8a6a10; }
   .cell-empty{ color: #b8ab8e; }
+  /* ouvertures de chapitres par élève */
+  .ouv-aide{ font-size:0.88rem; margin:0 0 10px; }
+  .ouv-atelier{ font-size:0.85rem; margin:0 0 10px; padding:6px 10px; border-radius:6px; background:#efe0b0; color:#6b4c00; }
+  table.ouv-grid td input{ width:17px; height:17px; cursor:pointer; accent-color: var(--wax-dark); margin:0; vertical-align:middle; }
+  table.ouv-grid td input:disabled{ cursor:wait; }
+  .ouv-classe{ color: var(--ok); font-weight:700; }
+  table.ouv-grid td.ouv-perso{ background: rgba(122,31,31,0.10); }
+  table.ouv-grid th.ouv-livre{ font-size:0.78rem; }
+  table.ouv-grid .ouv-sep{ border-left:3px double var(--wax-dark); }
+  .ouv-tous{ background:none; border:1px solid var(--parchment-shadow); border-radius:5px; padding:2px 8px; font-size:0.78rem; cursor:pointer; font-family:'IM Fell English SC', serif; color: var(--ink-soft); }
+  .ouv-tous:hover{ border-color: var(--wax); color: var(--wax); }
   .submission{ background:#FBF3DE; border:1px solid var(--parchment-shadow); border-radius:8px; padding:13px 15px; margin-bottom:11px; }
   .submission-head{ display:flex; justify-content:space-between; gap:10px; align-items:flex-start; }
   .chapter-tag{ font-size:0.78rem; color: var(--ink-soft); }
@@ -433,10 +448,13 @@
   #dialogueOk:hover{ background: var(--gold-bright); }
   #dialogueAnnuler{ background: rgba(0,0,0,0.08); color: var(--ink); border:1px solid var(--parchment-shadow); }
   #dialogueAnnuler:hover{ background: rgba(0,0,0,0.14); }
-  .quest-parchment-overlay{ position: fixed; inset:0; z-index: 200; display:none; align-items:center; justify-content:center; background: rgba(10,8,5,0.78); padding:16px; }
+  /* Le parchemin se règle sur la LARGEUR ET la HAUTEUR de l'écran : sur un écran bas (Chromebook, atelier,
+     cadre de la fiche), il rapetisse au lieu de déborder par le haut — sinon le bouton « Quitter » sortait
+     de l'écran et l'élève restait coincé. « safe center » + défilement : filet de sécurité s'il déborde quand même. */
+  .quest-parchment-overlay{ position: fixed; inset:0; z-index: 200; display:none; align-items:safe center; justify-content:center; background: rgba(10,8,5,0.78); padding:28px 16px 16px; overflow-y:auto; }
   .quest-parchment-overlay.open{ display:flex; }
-  .quest-parchment{ position:relative; width:min(96vw, 1000px); aspect-ratio: 1920 / 1280; }
-  .quest-parchment-bg{ position:absolute; inset:0; background: url('livre_assets/quetes_parchemin.png') center / contain no-repeat; }
+  .quest-parchment{ position:relative; flex:none; width:min(96vw, 1000px, calc((100vh - 48px) * 1.5)); aspect-ratio: 1920 / 1280; }
+  .quest-parchment-bg{ position:absolute; inset:0; background: url('livre_assets/quetes_parchemin.webp') center / contain no-repeat; }
   .quest-parchment-close{
     position:absolute; top:-16px; right:0.5%; z-index:5; height:36px; padding:0 16px;
     background: var(--parchment); border:2px solid var(--gold); border-radius:18px; cursor:pointer; white-space:nowrap;
@@ -514,7 +532,7 @@
   }
 
   @media (max-width: 480px){
-    .quest-parchment{ width: min(98vw, 900px); }
+    .quest-parchment{ width: min(98vw, 900px, calc((100vh - 48px) * 1.5)); }
     .quest-parchment-content{ top:20%; left:5%; right:4%; bottom:6%; }
     .quest-hint{ font-size:0.66rem; margin-bottom:5px; line-height:1.2; }
     .quest-progress{ font-size:0.78rem; padding:3px 10px; margin-bottom:6px; }
@@ -590,7 +608,41 @@
     background: rgba(255,255,255,0.45); border:1px solid var(--parchment-shadow);
   }
   .doc-row:hover{ border-color: var(--wax); background: rgba(255,255,255,0.65); }
-  .doc-row .doc-icone{ font-size:1.3rem; flex:0 0 auto; }
+  .doc-row .doc-icone{ font-size:1.6rem; flex:0 0 46px; width:46px; text-align:center; }   /* même largeur que les vignettes : les titres restent alignés */
+  .doc-row .doc-num{ flex:0 0 auto; width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background: var(--ink); color: var(--parchment); font-family:'IM Fell English SC', serif; font-size:0.85rem; line-height:1; }
+  .doc-row.doc-fait .doc-num{ background: var(--ok); }
+  .doc-row.doc-verrouille .doc-num{ background:#8a7c60; opacity:0.75; }
+  /* Documents spéciaux (special:true dans DOCS_CHAPITRES, ex. les missions d'estimation) : fond jaune */
+  .doc-row.doc-special{ background: rgba(242, 201, 76, 0.42); border-color:#C9A227; }
+  .doc-row.doc-special:hover{ background: rgba(242, 201, 76, 0.6); border-color:#a07d10; }
+  .doc-row.doc-special .doc-num{ background:#a07d10; }
+  .doc-row.doc-special.doc-fait{ background: rgba(242, 201, 76, 0.42); border-color: var(--ok); }
+  .doc-row.doc-special.doc-verrouille, .doc-row.doc-special.doc-verrouille:hover{ background: rgba(242, 201, 76, 0.2); border-color:#d9c07a; }
+  .doc-row .doc-retour{ color: var(--wax); }
+  /* Copie d'évaluation retournée (vue élève) */
+  .copie-overlay{ position:fixed; inset:0; z-index:260; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(10,8,5,0.72); }
+  .copie-overlay.open{ display:flex; }
+  .copie-carte{ position:relative; width:min(520px, 100%); max-height:90vh; overflow-y:auto; background: var(--parchment); border:3px solid var(--wax-dark);
+    border-radius:14px; padding:22px 24px; box-shadow:0 12px 40px rgba(0,0,0,.5); }
+  .copie-carte h2{ margin:0 0 10px; font-family:'IM Fell English SC', serif; color: var(--ink); }
+  .copie-fermer{ position:absolute; top:8px; right:10px; background:none; border:none; font-size:22px; cursor:pointer; color: var(--ink); }
+  .copie-score{ font-size:1.15rem; margin:0 0 10px; }
+  .copie-attente{ font-size:1.05rem; }
+  .copie-liste{ list-style:none; padding:0; margin:0 0 12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:6px; }
+  .copie-liste li{ display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; font-weight:700; }
+  .copie-liste li.ok{ background:rgba(47,93,58,0.14); color: var(--ok); }
+  .copie-liste li.ko{ background:rgba(122,31,31,0.12); color: var(--wax); }
+  .copie-marque{ font-size:1.1rem; }
+  .copie-commentaire{ background:rgba(255,255,255,0.55); border-left:4px solid var(--wax-dark); padding:10px 12px; border-radius:6px; }
+  .copie-commentaire p{ margin:6px 0 0; }
+  /* Journal : retour des copies (enseignant) */
+  .retour-bloc{ margin-top:10px; padding:10px; border:1px dashed var(--parchment-shadow); border-radius:8px; background:rgba(255,255,255,0.35); }
+  .retour-bloc label{ font-weight:700; font-size:0.9rem; }
+  .retour-bloc textarea{ width:100%; margin-top:4px; font:inherit; padding:8px; border-radius:6px; border:1px solid var(--parchment-shadow); background:#fffdf6; resize:vertical; }
+  .retour-rangee{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-top:6px; flex-wrap:wrap; }
+  .retour-fait{ color: var(--ok); font-weight:700; font-size:0.9rem; }
+  .retour-btn{ background: var(--wax-dark); color:#fff; border:none; border-radius:6px; padding:7px 12px; cursor:pointer; font:inherit; font-weight:700; }
   .doc-row .doc-mini{ width:46px; height:46px; object-fit:contain; flex:0 0 auto; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.3)); }
   .doc-row.doc-verrouille .doc-mini{ filter:grayscale(1) opacity(0.5); }
   .doc-row .doc-txt{ display:flex; flex-direction:column; gap:1px; min-width:0; }
@@ -650,7 +702,117 @@
   .doc-toast.show{ opacity:1; transform:translate(-50%, 0); }
   @media (max-width: 640px){ .doc-bar{ flex-wrap:wrap; gap:4px 10px; } .doc-bar-titre{ font-size:0.85rem; } }
 
+  /* Documents : parchemin agrandi aux proportions d'un écran (septembre 2026).
+     parchemin_maths_large.webp (2352 × 1307, 1,8 : 1) = parchemin_maths.jpg allongé en hauteur en répétant
+     des bandes unies du parchemin : la bannière, les étoiles et le rebord ne sont pas déformés.
+     Plus de bande de titre au-dessus : le parchemin prend tout l'écran. Le titre et l'état du document
+     sont posés sur le rebord enroulé du bas, et « Fermer » flotte dans le coin en haut à droite.
+     Zone claire mesurée sur l'image (px) : x 150 → 2205, y 235 → 1169. */
+  #docOverlay .doc-stage{ aspect-ratio: 2352 / 1307; width: min(100%, calc(100vh * 1.8)); }
+  @supports (width: 1cqw){ #docOverlay .doc-stage{ width: min(100cqw, calc(100cqh * 1.8)); } }
+  #docOverlay .doc-stage-bg{ background-image: url('livre_assets/parchemin_maths_large.webp'); }
+  #docOverlay .doc-zone{ left:6.38%; top:17.98%; width:87.37%; height:71.46%; }
+  #docOverlay .doc-toast{ top:20%; }
+  #docOverlay .doc-bar{
+    position:absolute; z-index:6; left:0; right:0; bottom:1.4vh; margin:0 auto; width:max-content; max-width:92vw;
+    padding:3px 16px; gap:12px; border:1px solid var(--gold); border-radius:999px;
+    background: rgba(44,26,16,0.88); box-shadow:0 2px 10px rgba(0,0,0,0.35);
+  }
+  #docOverlay .doc-bar-titre{ font-size:0.85rem; }
+  #docOverlay .doc-bar-etat{ flex:0 1 auto; font-size:0.85rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #docOverlay #docCloseBtn{ position:fixed; top:8px; right:10px; z-index:130; padding:5px 12px; font-size:0.9rem; box-shadow:0 2px 8px rgba(0,0,0,0.45); }
+
   /* le livre ne sert qu'à CHOISIR : sections à gauche, sous-sections (documents) à droite */
+  /* Entraînements dans la liste des documents (page de droite) : fine rangée verte, sans numéro */
+  .doc-row.entr-row{ padding:5px 10px; min-height:0; background:linear-gradient(90deg, rgba(34,120,70,0.18), rgba(34,120,70,0.07)); border:1.5px solid rgba(34,120,70,0.55); }
+  .doc-row.entr-row:hover{ border-color:#1f6b3f; background:linear-gradient(90deg, rgba(34,120,70,0.28), rgba(34,120,70,0.1)); }
+  .doc-row.entr-row .doc-num{ background:#1f6b3f; color:#fff; font-size:0.8rem; }
+  .doc-row.entr-row .doc-icone{ font-size:1.25rem; }
+  .doc-row.entr-row .doc-titre{ color:#1c4d2e; font-size:0.9rem; }
+  .doc-row.entr-row .doc-sub{ color:#3f6b4e; font-style:italic; }
+  .doc-row.entr-row .entr-etat{ margin-left:auto; flex:none; font-size:0.66rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; padding:2px 8px; border-radius:999px; background:#1f6b3f; color:#fff; white-space:nowrap; }
+  /* entraînement pas encore fait : seulement les petites étoiles, dans un cercle vert */
+  .doc-row.entr-row:not(.appris):not(.doc-verrouille) .entr-etat{ width:28px; height:28px; padding:0; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:15px; letter-spacing:0;
+    box-shadow:0 0 0 2px rgba(31,107,63,.25), 0 0 10px rgba(80,200,120,.45); }
+  .doc-row.entr-row.appris{ border-style:dashed; background:rgba(34,120,70,0.07); }
+  .doc-row.entr-row.appris .entr-etat{ background:#c9a227; color:#2b1d0e; }
+  .doc-row.entr-row.doc-verrouille{ opacity:.6; cursor:default; }
+  .doc-row.entr-row.doc-verrouille .entr-etat{ background:#6b6b6b; }
+  /* La porte de l'évaluation (gauntlet) et le Grimoire scellé */
+  .doc-row.doc-porte{ background:rgba(180,83,9,0.10); border-color:#b45309; }
+  .doc-row.doc-porte .doc-titre{ color:#7c2d12; }
+  .doc-row.doc-arefaire{ background:rgba(220,38,38,0.10); border:2px solid #b91c1c; animation:porte-pulse 2s ease-in-out infinite; }
+  .doc-row.doc-arefaire .doc-titre{ color:#7f1d1d; }
+  .doc-row.doc-refait{ background:rgba(47,93,58,0.12); border-color: var(--ok); }
+  @keyframes porte-pulse{ 0%,100%{ box-shadow:0 0 0 0 rgba(185,28,28,.0); } 50%{ box-shadow:0 0 0 4px rgba(185,28,28,.18); } }
+  /* Grimoire scellé : le dragon gardien occupe toute la page de gauche (ailes coupées aux bords de la page) */
+  .page-left.scelle::before{ content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:url('livre_assets/dragon_sceau.webp') center top / 118% auto no-repeat; animation:dragon-souffle 5s ease-in-out infinite; transform-origin:50% 20%; }
+  @keyframes dragon-souffle{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.015); } }
+  .page-left.scelle{ overflow:hidden !important; }
+  .dragon-scene{ position:relative; flex:1; min-height:100%; }
+  .dragon-bulle{ position:absolute; left:2%; top:25%; width:44%; padding:10px 13px; background:#f4e9cf; color:#2b1d0e; border:2px solid #7a1f1f; border-radius:14px;
+    font-family:'IM Fell English SC', Georgia, serif; font-size:1.02rem; line-height:1.3; box-shadow:0 6px 16px rgba(0,0,0,.45); animation:dragon-bulle 3.4s ease-in-out infinite; }
+  .dragon-bulle::after{ content:""; position:absolute; right:-14px; top:-14px; border:10px solid transparent; border-left-color:#7a1f1f; border-bottom-color:#7a1f1f; transform:rotate(-8deg); }
+  @keyframes dragon-bulle{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-4px); } }
+  .dragon-btn{ position:absolute; left:50%; bottom:3%; transform:translateX(-50%); white-space:nowrap; font:inherit; font-weight:700; font-size:0.95rem; cursor:pointer;
+    padding:8px 16px; border-radius:999px; border:2px solid #c9a227; background:linear-gradient(180deg, #7a1f1f, #4a1010); color:#fdf4dc; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+  .dragon-btn:hover{ filter:brightness(1.15); }
+  .sceau-bandeau{ margin:0 0 10px; padding:8px 12px; border-radius:8px; background:rgba(122,31,31,0.12); border:1.5px solid var(--wax-dark); color:#5a1414; font-size:0.86rem; line-height:1.35; flex-shrink:0; }
+  .sceau-bandeau b{ color:#7a1f1f; }
+  .porte-res .porte-score{ font-size:1.25rem; margin:0 0 6px; }
+  .porte-res .porte-verdict{ padding:10px 12px; border-radius:8px; margin:0 0 12px; font-weight:700; line-height:1.35; }
+  .porte-res .porte-verdict.ok{ background:rgba(47,93,58,0.16); color: var(--ok); }
+  .porte-res .porte-verdict.ko{ background:rgba(122,31,31,0.12); color: var(--wax); }
+  .porte-notions{ width:100%; border-collapse:collapse; margin:0 0 14px; font-size:0.92rem; }
+  .porte-notions td{ padding:5px 6px; border-bottom:1px solid var(--parchment-shadow); vertical-align:middle; }
+  .porte-notions .barre{ width:90px; height:9px; border-radius:99px; background:rgba(0,0,0,.1); overflow:hidden; }
+  .porte-notions .barre i{ display:block; height:100%; }
+  .porte-notions .etiq{ font-size:0.72rem; font-weight:700; padding:2px 7px; border-radius:999px; white-space:nowrap; }
+  .porte-notions .etiq.ko{ background:var(--wax-dark); color:#fff; } .porte-notions .etiq.ok{ background:var(--ok); color:#fff; }
+  .porte-epreuve h4{ margin:10px 0 4px; font-family:'IM Fell English SC', serif; }
+  .porte-epreuve ul{ list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:3px; font-size:0.86rem; }
+  .porte-epreuve li{ padding:4px 8px; border-radius:6px; }
+  .porte-epreuve li.ok{ background:rgba(47,93,58,0.12); } .porte-epreuve li.ko{ background:rgba(122,31,31,0.10); }
+  .porte-epreuve li small{ display:block; color: var(--ink-soft); }
+  .copie-carte.large{ width:min(680px, 100%); }
+
+  /* Visions du château (page de gauche) : chaque section montre le château à son étape —
+     Bases = les fondations, Consolidation = les échafaudages, Évaluation = le château terminé.
+     Section verrouillée : la vision reste voilée (grise). */
+  .section-card.vision{ padding:0; }
+  .section-card.vision.locked{ padding-right:0; }
+  .section-card.vision .vision-img{ position:relative; height:74px; background:var(--vision) center 58% / cover; border-bottom:1.5px solid var(--parchment-shadow); transition:filter .3s; }
+  .section-card.vision .vision-img::after{ content:""; position:absolute; inset:0; background:linear-gradient(0deg, rgba(20,12,4,.78), rgba(20,12,4,.05) 70%); }
+  .section-card.vision .vision-img h3{ position:absolute; left:12px; right:12px; bottom:6px; margin:0; z-index:1; color:#fff4d6;
+    text-shadow:0 1px 3px #000, 0 0 12px rgba(0,0,0,.85); text-decoration:none !important; opacity:1 !important; }
+  .section-card.vision:hover .vision-img{ filter:brightness(1.08) saturate(1.1); }
+  .section-card.vision.locked .vision-img{ filter:grayscale(1) brightness(.62) sepia(.25); }
+  .section-card.vision.locked .vision-img h3{ color:#e6dcc6; }
+  .section-card.vision .vision-corps{ padding:6px 14px 8px; }
+  .section-card.vision.locked .vision-corps{ padding-right:92px; }
+  .section-card.vision .vision-corps p{ margin:0 0 2px; }
+  .section-card.vision .card-bottom-row .qcount{ margin-top:0; }
+  .section-card.vision.locked::before{ top:calc(50% + 10px); }
+  .section-card.vision.locked::after, .section-card.vision.done::after{ z-index:3; }
+  /* La carte du verdict : la porte runique, « Verdict » écrit en bleu lumineux */
+  .section-card.vision.verdict{ border-color:#3b82f6; box-shadow:0 0 0 1px #60a5fa, 0 0 18px rgba(59,130,246,.55); animation:verdict-pulse 2.4s ease-in-out infinite; }
+  @keyframes verdict-pulse{ 0%,100%{ box-shadow:0 0 0 1px #60a5fa, 0 0 12px rgba(59,130,246,.4); } 50%{ box-shadow:0 0 0 1px #93c5fd, 0 0 26px rgba(96,165,250,.8); } }
+  .section-card.vision.verdict .vision-img{ height:96px; background-position:center 46%; }
+  .section-card.vision.verdict .vision-img h3{ text-align:center; font-size:1.5rem; letter-spacing:.18em; color:#dbeafe !important;
+    text-shadow:0 0 6px #60a5fa, 0 0 16px #3b82f6, 0 0 30px #1d4ed8, 0 1px 2px #000 !important; }
+  .section-card.vision.verdict .vision-corps p{ color:#1e3a8a; font-style:italic; }
+  .verdict-video{ position:fixed; inset:0; z-index:9500; background:#000; display:flex; align-items:center; justify-content:center; animation:verdict-entre .5s ease-out; }
+  .verdict-video.sort{ opacity:0; transition:opacity .45s; }
+  @keyframes verdict-entre{ from{ opacity:0; } to{ opacity:1; } }
+  .verdict-video video{ width:100%; height:100%; object-fit:contain; }
+  .verdict-passer{ position:absolute; right:18px; bottom:18px; font:700 14px Georgia, serif; padding:8px 14px; border-radius:999px; border:1.5px solid #93c5fd;
+    background:rgba(15,23,42,.75); color:#dbeafe; cursor:pointer; }
+
+  /* Barre de sorts (sorts-core.js) : au centre sous le livre ; pendant un document, dans le coin en bas à droite
+     pour laisser voir la bande d'état du document. */
+  body:has(#docOverlay.open) .sorts-barre{ left:auto; right:12px; transform:none; }
+  body:has(#docOverlay.open) .sorts-barre.cachee{ transform:translateY(30px); }
   .section-card.choisie{ border-color: var(--wax); box-shadow: 0 0 0 1px var(--wax); background: rgba(255,255,255,0.55); }
   .sous-sections{ padding-top:88px; }   /* laisse la place aux boutons Punch-math!, Le Serpent des Mesures et Quêtes secondaires, en haut à droite */
   .sous-sections h3{ font-size:1.05rem; margin-bottom:4px; }
@@ -679,6 +841,15 @@
   .quest-heure-ok:disabled{ opacity:0.4; cursor:default; }
   .quest-heure-bravo{ min-height:16px; margin-top:4px; font-family:'IM Fell English SC', serif; font-size:0.7rem; color: var(--ok); text-align:center; line-height:1.15; }
   @media (max-width: 480px){ .quest-clock{ width:86px; height:86px; } }
+  /* ── La scène magique (27 sept. 2026) : la boule de cristal (gauche) et le compagnon (droite) de la fiche
+     prennent leur place ; le livre et la fenêtre des documents se tassent entre les deux, en douceur. ── */
+  :root{ --rg:0px; --rd:0px; }
+  @media (min-width: 861px){
+    body{ padding-left:calc(10px + var(--rg)); padding-right:calc(10px + var(--rd)); transition:padding .6s cubic-bezier(.3,.85,.25,1); }
+    #bookWrap{ width: min(calc(96vw - var(--rg) - var(--rd)), calc(97vh * 1.738), 1924px); transition:width .6s cubic-bezier(.3,.85,.25,1); }
+  }
+  .doc-stagewrap{ padding-left:var(--rg); padding-right:var(--rd); transition:padding .6s cubic-bezier(.3,.85,.25,1); }
+  body:has(#docOverlay.open) .sorts-barre{ right:calc(12px + var(--rd)); transition:right .6s cubic-bezier(.3,.85,.25,1), opacity .25s, transform .25s; }
 </style>
 </head>
 <body>
@@ -715,12 +886,18 @@
         <h2>Le Registre du Maître</h2>
         <button id="closeTeacher">✕</button>
       </div>
-      <p class="lede">Les copies sont corrigées automatiquement. Déverrouille les évaluations, attribue des pièces d'or et suis la progression de chaque élève.</p>
+      <p class="lede">Les copies sont corrigées automatiquement. Déverrouille les évaluations, ouvre des chapitres à certains élèves, attribue des pièces d'or et suis la progression de chaque élève.</p>
       <div class="toolbar">
         <input type="text" id="filterInput" placeholder="Filtrer par prénom...">
         <select id="chapterFilter"><option value="">Tous les chapitres</option></select>
         <button id="unlockToggle">🔒 Évaluations verrouillées</button>
         <button id="refreshBtn">↻ Actualiser</button>
+      </div>
+      <div class="section-block">
+        <h3>Chapitres ouverts par élève</h3>
+        <p class="muted ouv-aide">Coche un chapitre (Grimoire ou Parchemins de lecture) pour l'ouvrir à cet élève seulement. <span class="ouv-classe">✓</span> = déjà ouvert à toute la classe. L'élève le voit à la prochaine ouverture du livre.</p>
+        <p class="ouv-atelier" id="ouvAtelierNote" hidden>Atelier : tout est déverrouillé en ce moment, donc ces cases n'ont pas d'effet visible. Pour voir ce que voit l'élève, mets les « verrous réels » dans la colonne de gauche de l'atelier.</p>
+        <div class="grid-wrap" id="ouverturesWrap"><p class="muted">Chargement…</p></div>
       </div>
       <div class="section-block">
         <h3>Le Trésor Amassé</h3>
@@ -747,6 +924,12 @@
     </div>
   </div>
 
+  <div id="copieOverlay" class="copie-overlay" role="dialog" aria-modal="true">
+    <div class="copie-carte">
+      <button type="button" class="copie-fermer" id="copieFermer" aria-label="Fermer">✕</button>
+      <div id="copieContenu"></div>
+    </div>
+  </div>
   <div id="docOverlay" class="doc-overlay">
     <div class="doc-bar">
       <span class="doc-bar-titre" id="docBarTitre"></span>
@@ -811,6 +994,8 @@
   // ---------- notion helpers ----------
   function T(textFn, answerFn, sets){ return { render: p => ({ text: textFn(p), answer: answerFn(p) }), sets: sets }; }
   function F(sets){ return { render: p => p, sets: sets }; }
+  // Page de gauche : la « vision » du château qui se construit, une image par section (même chose dans chaque chapitre).
+  const VISIONS_CHATEAU = ['livre_assets/chateau_1_bases.webp', 'livre_assets/chateau_2_consolidation.webp', 'livre_assets/chateau_3_evaluation.webp'];
   const SECTION_META = [
     { name:'Section 1 — Les Bases', desc:"Découvre et pratique les notions du chapitre.", maxReward:5 },
     { name:'Section 2 — Consolidation', desc:"Reviens sur les mêmes notions avec de nouveaux nombres pour bien les ancrer.", maxReward:15 },
@@ -1063,6 +1248,21 @@
      =================================================================== */
   const CHAPITRES_OUVERTS = ['mesure1', 'mesure2'];   // chapitres VIII et IX
 
+  /* Ouvertures en plus de cette liste (atelier : tout ouvert ; par élève : Registre du Maître) :
+     voir ouvertures-core.js. */
+  const MODE_ATELIER = window.Ouvertures.MODE_ATELIER;
+  let atelierToutOuvert = MODE_ATELIER;   // l'atelier part tout ouvert ; le stockage peut remettre les verrous
+  let chapitresEleve = [];   // ids des chapitres ouverts pour CET élève seulement
+  function chapitreOuvert(chapterId){
+    return atelierToutOuvert || CHAPITRES_OUVERTS.includes(chapterId) || chapitresEleve.includes(chapterId);
+  }
+  async function chargerOuverturesChapitres(){
+    [atelierToutOuvert, chapitresEleve] = await Promise.all([
+      window.Ouvertures.atelierToutOuvert(),
+      window.Ouvertures.chapitresEleve('maths', currentSlug)
+    ]);
+  }
+
   /* ===================================================================
      SECTIONS FAITES DE DOCUMENTS — pour ces chapitres, les sections
      « Les Bases » (0) et « Consolidation » (1) ne sont plus des séries de
@@ -1079,51 +1279,39 @@
     mesure1: {
       0: { docs: [
         { id:'royaume-aire', titre:"Le royaume de l'Aire", icone:'👑', mode:'lecture', total:1, recompense:10,
-          mini:'chapitre8_aire/Mini/royaume-aire.webp',
+          mini:'chapitre8_aire/mini/royaume-aire.webp',
           fichier:'chapitre8_aire/01-le-royaume-de-l-aire.html',
           desc:"Lis le document du début à la fin.",
           consigne:"Fais défiler le document jusqu'au bout pour gagner 10 🪙",
           libelleProgres:(v, t) => 'Lecture : ' + v + ' / ' + t + ' parties vues', libelleFait:'✓ Lu' },
         { id:'exercices-aire-1', titre:"Exercices du royaume de l'Aire 1", icone:'✏️', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre8_aire/Mini/royaume-aire.webp',
+          mini:'chapitre8_aire/mini/royaume-aire.webp',
           fichier:'chapitre8_aire/02-exercices-aire-1.html',
           desc:"Réussis les 10 défis en entier.",
           consigne:"Réussis les 10 défis pour gagner 20 🪙",
           libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
         { id:'exercices-aire-2', titre:"Exercices du royaume de l'Aire 2", icone:'✏️', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre8_aire/Mini/royaume-aire.webp',
+          mini:'chapitre8_aire/mini/royaume-aire.webp',
           fichier:'chapitre8_aire/03-exercices-aire-2.html',
-          desc:"Réussis les 10 défis en entier. Débloque la Consolidation.",
+          desc:"Réussis les 10 défis en entier.",
           consigne:"Réussis les 10 défis pour gagner 20 🪙 et débloquer la Consolidation",
           libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
         { id:'tetris-labo', titre:"Tétris des triangles : le laboratoire", icone:'🔺', mode:'exercices', total:3, recompense:10,
-          mini:'chapitre8_aire/Mini/tetris.webp',
+          mini:'chapitre8_aire/mini/tetris.webp',
           fichier:'chapitre8_aire/04-tetris-triangles-labo.html',
           desc:"Réussis les 3 exercices, puis invente ta propre pièce.",
           consigne:"Réussis les 3 exercices pour gagner 10 🪙",
           libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
         { id:'tetris-defi', titre:"Tétris des triangles : le défi des pièces", icone:'🔺', mode:'exercices', total:5, recompense:10,
-          mini:'chapitre8_aire/Mini/tetris.webp',
+          mini:'chapitre8_aire/mini/tetris.webp',
           fichier:'chapitre8_aire/05-tetris-triangles-defi-pieces.html',
           desc:"Construis les 5 pièces en suivant le modèle.",
           consigne:"Construis les 5 pièces pour gagner 10 🪙",
-          libelleProgres:(v, t) => v + ' / ' + t + ' pièces construites', libelleFait:'✓ Réussi' },
-        { id:'angles-sportifs-1', titre:"Les angles sportifs 1", icone:'📐', mode:'exercices', total:20, recompense:20,
-          mini:'chapitre8_aire/Mini/rapporteur.webp',
-          fichier:'chapitre8_aire/07-angles-sportifs-1.html',
-          desc:"Mesure les 20 angles avec le rapporteur.",
-          consigne:"Mesure les 20 angles pour gagner 20 🪙 (le rapporteur : bouton 📐 en bas à droite)",
-          libelleProgres:(v, t) => v + ' / ' + t + ' angles mesurés', libelleFait:'✓ Réussi' },
-        { id:'angles-sportifs-2', titre:"Les angles sportifs 2", icone:'📐', mode:'exercices', total:20, recompense:20,
-          mini:'chapitre8_aire/Mini/rapporteur.webp',
-          fichier:'chapitre8_aire/08-angles-sportifs-2.html',
-          desc:"Mesure les 20 angles avec le rapporteur.",
-          consigne:"Mesure les 20 angles pour gagner 20 🪙 (le rapporteur : bouton 📐 en bas à droite)",
-          libelleProgres:(v, t) => v + ' / ' + t + ' angles mesurés', libelleFait:'✓ Réussi' }
+          libelleProgres:(v, t) => v + ' / ' + t + ' pièces construites', libelleFait:'✓ Réussi' }
       ]},
-      1: { exige:'exercices-aire-2', docs: [
+      1: { exigeSection:0, docs: [   // la Consolidation s'ouvre quand TOUTES les Bases sont terminées
         { id:'tetris-reglettes', titre:"Tétris des réglettes", icone:'🧱', mode:'exercices', total:8, recompense:10,
-          mini:'chapitre8_aire/Mini/tetris.webp',
+          mini:'chapitre8_aire/mini/tetris.webp',
           fichier:'chapitre8_aire/06-tetris-reglettes-cuisenaire.html',
           desc:"Fais tomber les réglettes et remplis 8 lignes de 10 cm.",
           consigne:"Remplis 8 lignes de 10 cm pour gagner 10 🪙",
@@ -1133,69 +1321,458 @@
     mesure2: {
       0: { docs: [
         { id:'heure-tarte', titre:"Notions : l'heure en pointe de tarte (1re partie)", icone:'📖', mode:'lecture', total:1, recompense:10,
-          mini:'chapitre9_heure/Mini/tarte.webp',
+          mini:'chapitre9_heure/mini/tarte.webp',
           fichier:'chapitre9_heure/01-heure-en-pointe-de-tarte.html',
           desc:"Lis le document du début à la fin.",
           consigne:"Fais défiler le document jusqu'au bout pour gagner 10 🪙",
           libelleProgres:(v, t) => 'Lecture : ' + v + ' / ' + t + ' parties vues', libelleFait:'✓ Lu' },
         { id:'exercices-fondamentaux', titre:"Exercices : l'heure en pointe de tarte (1re partie)", icone:'✏️', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre9_heure/Mini/tarte.webp',
+          mini:'chapitre9_heure/mini/tarte.webp',
           fichier:'chapitre9_heure/02-exercices-fondamentaux.html',
-          desc:"Réussis les 10 exercices en entier. Débloque la Consolidation.",
+          desc:"Réussis les 10 exercices en entier.",
           consigne:"Réussis les 10 exercices pour gagner 20 🪙 et débloquer la Consolidation",
           libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
         { id:'heure-tarte-2', titre:"Notions : l'heure en pointe de tarte (2e partie)", icone:'📖', mode:'lecture', total:1, recompense:10,
-          mini:'chapitre9_heure/Mini/tarte.webp',
+          mini:'chapitre9_heure/mini/tarte.webp',
           fichier:'chapitre9_heure/04-heure-en-pointe-de-tarte-2e-partie.html',
           desc:"Lis la suite du document du début à la fin.",
           consigne:"Fais défiler le document jusqu'au bout pour gagner 10 🪙",
           libelleProgres:(v, t) => 'Lecture : ' + v + ' / ' + t + ' parties vues', libelleFait:'✓ Lu' },
+        { id:'mission-grandeurs', titre:"Mission estimation : les grandeurs autour de nous", icone:'📏', mode:'exercices', total:10, recompense:10, special:true,
+          fichier:'chapitre9_heure/mission-estimation-grandeurs.html',
+          desc:"Réussis les 10 estimations en entier.",
+          consigne:"Réussis les 10 estimations pour gagner 10 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' estimations réussies', libelleFait:'✓ Réussi' },
+        { id:'formes-mesures-1', titre:"Formes et mesures 1", icone:'📏', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/mini/regle.webp',
+          fichier:'chapitre9_heure/15-formes-et-mesures-1.html',
+          desc:"Mesure avec la règle et réussis les 10 exercices en entier.",
+          consigne:"Réussis les 10 exercices pour gagner 20 🪙 (glisse la règle sur les formes)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
+        { id:'formes-mesures-2', titre:"Formes et mesures 2", icone:'📏', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/mini/regle.webp',
+          fichier:'chapitre9_heure/16-formes-et-mesures-2.html',
+          desc:"Mesure avec la règle et réussis les 10 exercices en entier.",
+          consigne:"Réussis les 10 exercices pour gagner 20 🪙 (glisse la règle sur les formes)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
         { id:'heure-bmx-1', titre:"Exercices : l'heure en saut de BMX 1", icone:'🚲', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre9_heure/Mini/bmx.webp',
+          mini:'chapitre9_heure/mini/bmx.webp',
           fichier:'chapitre9_heure/05-heure-en-saut-de-bmx-1.html',
           desc:"Réussis les 10 défis en entier.",
           consigne:"Réussis les 10 défis pour gagner 20 🪙",
           libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
         { id:'heure-bmx-2', titre:"Exercices : l'heure en saut de BMX 2", icone:'🚲', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre9_heure/Mini/bmx.webp',
+          mini:'chapitre9_heure/mini/bmx.webp',
           fichier:'chapitre9_heure/06-heure-en-saut-de-bmx-2.html',
           desc:"Réussis les 10 défis en entier.",
           consigne:"Réussis les 10 défis pour gagner 20 🪙",
-          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' }
-      ]},
-      1: { exige:'exercices-fondamentaux', docs: [
-        { id:'horloge', titre:'Exercices', icone:'🕒', mode:'exercices', total:6, recompense:10,
-          mini:'chapitre9_heure/Mini/tarte.webp',
-          fichier:'chapitre9_heure/03-horloge-heures-et-quarts.html',
-          desc:"Réussis les 6 exercices en entier.",
-          consigne:"Réussis les 6 exercices pour gagner 10 🪙",
-          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
-        { id:'heure-taux-a', titre:"L'heure et le taux horaire — série A", icone:'💰', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre9_heure/Mini/horloge.webp',
-          fichier:'chapitre9_heure/07-heure-et-taux-horaire-serie-a.html',
-          desc:"Réussis les 10 numéros en entier.",
-          consigne:"Réussis les 10 numéros pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
+        { id:'notions-durees', titre:"Notions : calculer une durée", icone:'🥧', mode:'exercices', total:9, recompense:20,
+          mini:'chapitre9_heure/mini/tarte.webp',
+          fichier:'chapitre9_heure/17-notions-calculer-une-duree.html',
+          desc:"Apprends à finir la tarte, puis réussis les 9 numéros.",
+          consigne:"Réussis les 9 numéros pour gagner 20 🪙",
           libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-quarts-demis', titre:"Exercices : l'heure, quarts et demis", icone:'🕒', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/mini/cadran-digital.webp',
+          fichier:'chapitre9_heure/10-heure-quarts-et-demis.html',
+          desc:"Réussis les 10 exercices en entier.",
+          consigne:"Réussis les 10 exercices pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-vraie-vie', titre:"Exercices : l'heure dans la vraie vie", icone:'🕒', mode:'exercices', total:20, recompense:20,
+          mini:'chapitre9_heure/mini/cadran-digital.webp',
+          fichier:'chapitre9_heure/11-heure-dans-la-vraie-vie.html',
+          desc:"Réussis les 20 défis en entier.",
+          consigne:"Réussis les 20 défis pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-multiples-5', titre:"Exercices : l'heure dans la vraie vie, multiples de 5", icone:'🕒', mode:'exercices', total:20, recompense:20,
+          mini:'chapitre9_heure/mini/cadran-digital.webp',
+          fichier:'chapitre9_heure/12-heure-multiples-de-5.html',
+          desc:"Réussis les 20 défis en entier.",
+          consigne:"Réussis les 20 défis pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' défis réussis', libelleFait:'✓ Réussi' },
+        { id:'mission-biscuits-soda', titre:"Mission biscuits soda", icone:'🍪', mode:'exercices', total:10, recompense:10, special:true,
+          fichier:'chapitre9_heure/mission-biscuits-soda.html',
+          desc:"Réussis les 10 estimations en entier.",
+          consigne:"Réussis les 10 estimations pour gagner 10 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' estimations réussies', libelleFait:'✓ Réussi' },
+        { id:'notions-rapporteur', titre:"Notions : le rapporteur", icone:'📐', mode:'exercices', total:9, recompense:20,
+          mini:'chapitre9_heure/mini/rapporteur.webp',
+          fichier:'chapitre9_heure/18-notions-le-rapporteur.html',
+          desc:"Apprends les familles d'angles et la bonne échelle, puis réussis les 9 numéros.",
+          consigne:"Réussis les 9 numéros pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' },
+        { id:'angles-sportifs-1', titre:"Les angles sportifs 1", icone:'📐', mode:'exercices', total:20, recompense:20,
+          mini:'chapitre9_heure/mini/rapporteur.webp',
+          fichier:'chapitre9_heure/13-angles-sportifs-1.html',
+          desc:"Mesure les 20 angles avec le rapporteur.",
+          consigne:"Mesure les 20 angles pour gagner 20 🪙 (le rapporteur : bouton 📐 en bas à droite)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' angles mesurés', libelleFait:'✓ Réussi' },
+        { id:'angles-sportifs-2', titre:"Les angles sportifs 2", icone:'📐', mode:'exercices', total:20, recompense:20,
+          mini:'chapitre9_heure/mini/rapporteur.webp',
+          fichier:'chapitre9_heure/14-angles-sportifs-2.html',
+          desc:"Mesure les 20 angles avec le rapporteur.",
+          consigne:"Mesure les 20 angles pour gagner 20 🪙 (le rapporteur : bouton 📐 en bas à droite)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' angles mesurés', libelleFait:'✓ Réussi' },
         { id:'heure-taux-b', titre:"L'heure et le taux horaire — série B", icone:'💰', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre9_heure/Mini/horloge.webp',
+          mini:'chapitre9_heure/mini/horloge.webp',
           fichier:'chapitre9_heure/08-heure-et-taux-horaire-serie-b.html',
           desc:"Réussis les 10 numéros en entier.",
           consigne:"Réussis les 10 numéros pour gagner 20 🪙",
           libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' },
         { id:'heure-taux-c', titre:"L'heure et le taux horaire — série C", icone:'💰', mode:'exercices', total:10, recompense:20,
-          mini:'chapitre9_heure/Mini/horloge.webp',
+          mini:'chapitre9_heure/mini/horloge.webp',
           fichier:'chapitre9_heure/09-heure-et-taux-horaire-serie-c.html',
           desc:"Réussis les 10 numéros en entier.",
           consigne:"Réussis les 10 numéros pour gagner 20 🪙",
           libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' }
+      ]},
+      1: { exigeSection:0, docs: [   // la Consolidation s'ouvre quand TOUTES les Bases sont terminées
+        { id:'horloge', titre:'Exercices', icone:'🕒', mode:'exercices', total:6, recompense:10,
+          mini:'chapitre9_heure/mini/tarte.webp',
+          fichier:'chapitre9_heure/03-horloge-heures-et-quarts.html',
+          desc:"Réussis les 6 exercices en entier.",
+          consigne:"Réussis les 6 exercices pour gagner 10 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' exercices réussis', libelleFait:'✓ Réussi' },
+        { id:'heure-taux-a', titre:"L'heure et le taux horaire — série A", icone:'💰', mode:'exercices', total:10, recompense:20,
+          mini:'chapitre9_heure/mini/horloge.webp',
+          fichier:'chapitre9_heure/07-heure-et-taux-horaire-serie-a.html',
+          desc:"Réussis les 10 numéros en entier.",
+          consigne:"Réussis les 10 numéros pour gagner 20 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros réussis', libelleFait:'✓ Réussi' },
+        { id:'mission-guimauves', titre:"Mission guimauves", icone:'🍡', mode:'exercices', total:10, recompense:10, special:true,
+          fichier:'chapitre9_heure/mission-guimauves.html',
+          desc:"Réussis les 10 estimations en entier.",
+          consigne:"Réussis les 10 estimations pour gagner 10 🪙",
+          libelleProgres:(v, t) => v + ' / ' + t + ' estimations réussies', libelleFait:'✓ Réussi' },
+        // La porte de l'évaluation (gauntlet) : 3 épreuves corrigées ensemble — voir PORTES plus bas.
+        { id:'porte-1', titre:"La porte de l'évaluation — épreuve 1", icone:'🏰', mode:'exercices', total:12, recompense:0, gauntlet:true,
+          fichier:'chapitre9_heure/porte-evaluation.html?p=1',
+          desc:"12 numéros mélangés. Aucune correction avant la fin des 3 épreuves.",
+          consigne:"Réponds aux 12 numéros, puis remets l'épreuve (tout sera corrigé après la 3e)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros répondus', libelleFait:'✓ Remise' },
+        { id:'porte-2', titre:"La porte de l'évaluation — épreuve 2", icone:'🏰', mode:'exercices', total:12, recompense:0, gauntlet:true,
+          fichier:'chapitre9_heure/porte-evaluation.html?p=2',
+          desc:"12 numéros mélangés. Aucune correction avant la fin des 3 épreuves.",
+          consigne:"Réponds aux 12 numéros, puis remets l'épreuve (tout sera corrigé après la 3e)",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros répondus', libelleFait:'✓ Remise' },
+        { id:'porte-3', titre:"La porte de l'évaluation — épreuve 3", icone:'🏰', mode:'exercices', total:12, recompense:0, gauntlet:true,
+          fichier:'chapitre9_heure/porte-evaluation.html?p=3',
+          desc:"12 numéros mélangés. Remets-la : tes 3 épreuves seront corrigées ensemble.",
+          consigne:"Réponds aux 12 numéros, puis remets l'épreuve : les 3 seront corrigées ensemble",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros répondus', libelleFait:'✓ Remise' }
+      ]},
+      // Section 3 — Évaluation : l'élève répond à tout, puis remet sa copie (evaluation:true).
+      // Pas de correction affichée ; l'enseignant retourne la copie avec un commentaire (Registre du Maître).
+      2: { docs: [
+        { id:'eval-9-serie-1', titre:"Évaluation — série 1", icone:'📜', mode:'exercices', total:12, recompense:0, evaluation:true,
+          fichier:'chapitre9_heure/eval-1-heure-angles-mesures.html',
+          desc:"12 numéros mélangés. Réponds à tout, puis remets ta copie.",
+          consigne:"Réponds aux 12 numéros, puis remets ta copie à ton enseignant",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros répondus', libelleFait:'✓ Copie remise' },
+        { id:'eval-9-serie-2', titre:"Évaluation — série 2", icone:'📜', mode:'exercices', total:12, recompense:0, evaluation:true,
+          fichier:'chapitre9_heure/eval-2-heure-angles-mesures.html',
+          desc:"12 numéros mélangés. Réponds à tout, puis remets ta copie.",
+          consigne:"Réponds aux 12 numéros, puis remets ta copie à ton enseignant",
+          libelleProgres:(v, t) => v + ' / ' + t + ' numéros répondus', libelleFait:'✓ Copie remise' }
       ]}
     }
   };
+
+  /* ===================================================================
+     ENTRAÎNEMENTS (sorts) — fines sections vertes du menu de gauche.
+     Chaque entraînement apprend à se servir d'un outil en quelques exercices simples;
+     réussi, il ajoute le sort à la barre de sorts (sorts-core.js), en bas de l'écran.
+       • section  : index de la section (0 = Bases, 1 = Consolidation…)
+       • avantDoc : id du document devant lequel il s'affiche, dans la liste de droite
+                    (le premier exercice où l'outil est utile à l'élève)
+       • sort     : id du sort appris (horloge, regle, rapporteur, calculatrice, velo)
+     Il se débloque quand l'élève arrive à cet endroit (le document d'avant est terminé),
+     et le document suivant attend que le sort soit appris. Aucun or : la récompense, c'est le sort.
+     Les documents (dossier entrainements/) parlent au Grimoire comme les autres (postMessage).
+     =================================================================== */
+  const ENTRAINEMENTS = {
+    mesure2: [
+      { id:'entr-horloge', sort:'horloge', section:0, avantDoc:'exercices-fondamentaux', icone:'🕰️', titre:"Entraînement : l'horloge magique", total:6,
+        fichier:'entrainements/entrainement-horloge.html',
+        desc:"Apprends à tourner les aiguilles de l'horloge magique.",
+        consigne:"Réussis les 6 défis pour apprendre le sort de l'horloge magique ✨" },
+      { id:'entr-regle', sort:'regle', section:0, avantDoc:'formes-mesures-1', icone:'📏', titre:'Entraînement : la règle enchantée', total:5,
+        fichier:'entrainements/entrainement-regle.html',
+        desc:'Apprends à placer, déplacer et tourner la règle.',
+        consigne:'Réussis les 5 mesures pour apprendre le sort de la règle enchantée ✨' },
+      { id:'entr-rapporteur', sort:'rapporteur', section:0, avantDoc:'angles-sportifs-1', icone:'📐', titre:'Entraînement : le rapporteur des angles', total:5,
+        fichier:'entrainements/entrainement-rapporteur.html',
+        desc:'Apprends à placer et à tourner le rapporteur.',
+        consigne:'Réussis les 5 angles pour apprendre le sort du rapporteur ✨' },
+      { id:'entr-calculatrice', sort:'calculatrice', section:0, avantDoc:'heure-taux-b', icone:'🧮', titre:'Entraînement : la calculatrice magique', total:6,
+        fichier:'entrainements/entrainement-calculatrice.html',
+        desc:'Apprends à faire tes calculs avec la calculatrice magique.',
+        consigne:'Réussis les 6 calculs pour apprendre le sort de la calculatrice magique ✨' },
+      // Juste avant la porte de l'évaluation (Consolidation) : les tours de BMX en degrés, quarts et demi-tours.
+      { id:'entr-velo', sort:'velo', section:1, avantDoc:'porte-1', icone:'🚲', titre:'Entraînement : le vélo magique', total:7,
+        fichier:'entrainements/entrainement-velo.html',
+        desc:'Fais tourner le vélo magique : degrés, quarts de tour et demi-tours.',
+        consigne:'Réussis les 7 défis pour apprendre le sort du vélo magique ✨' }
+    ]
+  };
+  function entrainementAvantDoc(chapterId, docId){ return (ENTRAINEMENTS[chapterId] || []).find(e => e.avantDoc === docId) || null; }
+  const sortAppris = id => !!(window.Sorts && window.Sorts.appris(id));
+  // Un entraînement s'ouvre quand l'élève arrive à sa place : le document juste avant est terminé.
+  function entrainementRequis(chapterId, e){
+    if(atelierToutOuvert) return null;
+    const cfg = DOCS_CHAPITRES[chapterId] && DOCS_CHAPITRES[chapterId][e.section];
+    if(!cfg) return null;
+    const i = cfg.docs.findIndex(d => d.id === e.avantDoc);
+    if(i <= 0) return null;
+    const prec = cfg.docs[i - 1];
+    return docFait(prec.id) ? null : prec;
+  }
+  function rangeeEntrainement(e){
+    const ok = sortAppris(e.sort);
+    const scelle = !atelierToutOuvert && !!sceauChapitre(currentChapter.id);
+    const requis = ok ? null : entrainementRequis(currentChapter.id, e);
+    const verrou = !ok && (scelle || !!requis);
+    const sub = scelle && !ok ? '🔒 Grimoire scellé : refais d\'abord les documents marqués « À refaire ».'
+      : requis ? 'Termine « ' + requis.titre + ' » pour ouvrir cet entraînement.'
+      : ok ? 'Sort appris ! Lance-le depuis ta barre de sorts, ou refais l\'entraînement.' : e.desc;
+    return '<li class="doc-row entr-row' + (ok ? ' appris' : '') + (verrou ? ' doc-verrouille' : '') + '" data-entr="' + e.id + '"' + (verrou ? ' aria-disabled="true"' : '') + '>' +
+      '<span class="doc-num">✦</span><span class="doc-icone">' + e.icone + '</span>' +
+      '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(e.titre) + '</span><span class="doc-sub">' + escapeHtml(sub) + '</span></span>' +
+      '<span class="entr-etat">' + (ok ? '✦ Sort appris' : verrou ? '🔒' : '<span aria-label="Nouveau sort">✨</span>') + '</span></li>';
+  }
+
+  /* ===================================================================
+     LA PORTE DE L'ÉVALUATION (gauntlet) — fin de la Consolidation.
+     3 épreuves (porte-1..3) de 12 numéros, 2 par notion des Bases. Aucune correction pendant les
+     épreuves : quand la 3e est remise, le Grimoire corrige les 36 numéros d'un coup.
+       • 24 / 36 et plus : la porte s'ouvre → l'Évaluation est débloquée (plus besoin du verrou de l'enseignant).
+       • Moins : diagnostic par notion. Chaque notion sous 4 / 6 envoie son document des Bases « à refaire ».
+         Le Grimoire se SCELLE : seuls ces documents s'ouvrent (même déjà faits), aucun or de plus.
+         Quand ils sont tous refaits en entier, la porte se rouvre : nouvel essai, nouveaux nombres.
+     Aucun or pour la porte. État : clé « porte_<élève>_<chapitre> » =
+       { essai, statut:'en-cours'|'reussi'|'echec', copies:{ 'porte-1': {score,total,details} … },
+         aRefaire:{ docId: refait? }, dernier:{ score, parNotion }, historique:[…], verdictVu:bool }
+     LE VERDICT (27 sept. 2026) : quand la 3e épreuve est remise, l'élève revient au choix des sections ; la
+     3e carte n'est plus le château mais LA PORTE, avec « Verdict » écrit en bleu (verdictVu:false). Un clic
+     joue la vidéo de succès ou de reprise ; ensuite seulement, le dragon scelle le Grimoire (échec) ou
+     l'Évaluation s'ouvre (réussite), et le diagnostic s'affiche. Tant que le verdict n'est pas vu, rien ne change.
+     =================================================================== */
+  const PORTES = {
+    mesure2: {
+      epreuves: ['porte-1', 'porte-2', 'porte-3'],
+      seuil: 24, total: 36, seuilNotion: 4, parNotion: 6,
+      // le verdict : une vidéo muette selon le résultat (dossier chapitre9_heure/porte/)
+      videos: { succes: 'chapitre9_heure/porte/porte_succes.mp4', reprise: 'chapitre9_heure/porte/porte_reprise.mp4' },
+      notions: {
+        tarte:    { nom: "L'heure en pointe de tarte",  doc: 'exercices-fondamentaux' },
+        mesures:  { nom: 'Mesurer avec la règle',        doc: 'formes-mesures-2' },
+        bmx:      { nom: 'Les quarts de tour (BMX)',     doc: 'heure-bmx-2' },
+        durees:   { nom: 'Calculer une durée',           doc: 'notions-durees' },
+        vraievie: { nom: "L'heure dans la vraie vie",    doc: 'heure-vraie-vie' },
+        angles:   { nom: 'Mesurer un angle',             doc: 'angles-sportifs-1' }
+      }
+    }
+  };
+  let portesCache = {};   // chapitre -> état de la porte de l'élève
+  const clePorte = chapterId => 'porte_' + currentSlug + '_' + chapterId;
+  const etatVidePorte = () => ({ essai: 1, statut: 'en-cours', copies: {}, aRefaire: {}, dernier: null, historique: [] });
+  async function chargerPortes(){
+    await Promise.all(Object.keys(PORTES).map(async ch => {
+      try{ const r = await window.storage.get(clePorte(ch), true); portesCache[ch] = (r && r.value) ? JSON.parse(r.value) : etatVidePorte(); }
+      catch(e){ portesCache[ch] = etatVidePorte(); }
+    }));
+  }
+  async function sauverPorte(ch){ try{ await window.storage.set(clePorte(ch), JSON.stringify(portesCache[ch]), true); }catch(e){} }
+  function etatPorte(ch){ return PORTES[ch] ? (portesCache[ch] || null) : null; }
+  function verdictEnAttente(ch){ const e = etatPorte(ch); return !!(e && e.verdictVu === false && (e.statut === 'reussi' || e.statut === 'echec')); }
+  function porteReussie(ch){ const e = etatPorte(ch); if(!e || verdictEnAttente(ch)) return false; return e.statut === 'reussi' || (e.historique || []).some(h => h.reussi); }
+  // Sceau : la porte a échoué et des documents restent à refaire (ce chapitre-ci, ou n'importe lequel si ch est omis).
+  function sceauChapitre(ch){
+    const e = etatPorte(ch);
+    if(!e || e.statut !== 'echec' || e.verdictVu === false) return null;   // le dragon attend que l'élève ait vu le verdict
+    const cfg = DOCS_CHAPITRES[ch];
+    const tous = Object.keys(cfg).flatMap(k => cfg[k].docs);
+    const restants = Object.keys(e.aRefaire).filter(id => !e.aRefaire[id]).map(id => tous.find(d => d.id === id)).filter(Boolean);
+    if(!restants.length) return null;
+    const sections = [...new Set(Object.keys(e.aRefaire).map(id => { const t = trouverDoc(ch, id); return t ? t.sectionIdx : 0; }))];
+    return { chapterId: ch, aRefaire: e.aRefaire, restants, sections };
+  }
+  // Le dragon gardien, en plein sur la page de gauche, avec sa bulle. action : ce que fait le bouton.
+  function peindreDragon(sg, action){
+    const page = $('pageLeft').closest('.page'); if(page) page.classList.add('scelle');
+    const genre = new URLSearchParams(location.search).get('genre');
+    const mage = genre === 'fille' ? 'magicienne' : genre === 'garcon' ? 'magicien' : 'magicien(ne)';
+    $('pageLeft').innerHTML = '<div class="dragon-scene" role="img" aria-label="Un dragon garde le Grimoire scellé">' +
+      '<div class="dragon-bulle">Fais les sections indiquées et je te redonne ton grimoire, ' + mage + '.</div>' +
+      '<button type="button" class="dragon-btn" id="dragonBtn" title="' + escapeHtml(sg.restants.map(d => d.titre).join(' · ')) + '">📜 Voir les documents à refaire</button></div>';
+    $('dragonBtn').addEventListener('click', action);
+  }
+  function oterDragon(){ const page = $('pageLeft') && $('pageLeft').closest('.page'); if(page) page.classList.remove('scelle'); }
+  function sceauGrimoire(){ if(atelierToutOuvert) return null; for(const ch of Object.keys(PORTES)){ const s = sceauChapitre(ch); if(s) return s; } return null; }
+  function messageSceau(s){
+    const ch = CHAPTERS.find(c => c.id === s.chapterId);
+    return "🔒 Ton Grimoire est scellé : la porte de l'évaluation du chapitre " + (ch ? ch.numeral : '') + " est restée fermée. Refais d'abord : " +
+      s.restants.map(d => '« ' + d.titre + ' »').join(', ') + '.';
+  }
+  // Les épreuves sont « faites » selon l'essai en cours (pas selon le stockage des documents).
+  function appliquerPorte(ch){
+    const e = etatPorte(ch); if(!e) return;
+    PORTES[ch].epreuves.forEach(id => {
+      if(e.copies[id]) docProgressCache[id] = { done: true };
+      else if(!(docProgressCache[id] && docProgressCache[id].essai === e.essai && docProgressCache[id].etat)) docProgressCache[id] = { done: false };
+    });
+  }
+  async function remettreEpreuve(a){
+    const ch = a.chapterId, cfg = PORTES[ch], e = etatPorte(ch);
+    if(!cfg || !e || e.statut !== 'en-cours' || e.copies[a.doc.id]) return;
+    const c = a.copie || { score: 0, total: a.doc.total, details: [] };
+    e.copies[a.doc.id] = { score: c.score, total: c.total, details: c.details, date: Date.now() };
+    docProgressCache[a.doc.id] = { done: true };
+    window.storage.set(docProgressKey(ch, a.doc.id), JSON.stringify({ done: false }), true).catch(() => {});   // efface l'état en cours
+    const restantes = cfg.epreuves.filter(id => !e.copies[id]).length;
+    if(restantes){
+      await sauverPorte(ch);
+      if(docActif !== a) return;
+      $('docBarEtat').textContent = '📨 Épreuve remise — encore ' + restantes + ' avant la correction';
+      $('docBarEtat').className = 'doc-bar-etat ok';
+      afficherToastDoc('📨 Épreuve remise !<br><span style="font-size:0.85rem;">Encore ' + restantes + ' épreuve' + (restantes > 1 ? 's' : '') + ' : tout sera corrigé à la fin.</span>');
+      return;
+    }
+    // ----- Les 3 épreuves sont remises : correction d'un seul coup -----
+    const details = cfg.epreuves.flatMap((id, k) => (e.copies[id].details || []).map(d => Object.assign({ epreuve: k + 1 }, d)));
+    const score = details.filter(d => d.isCorrect).length;
+    const parNotion = {};
+    Object.keys(cfg.notions).forEach(n => { const l = details.filter(d => d.notion === n); parNotion[n] = { bon: l.filter(d => d.isCorrect).length, total: l.length }; });
+    const reussi = score >= cfg.seuil;
+    e.dernier = { essai: e.essai, score, total: details.length, parNotion, reussi, date: Date.now() };
+    e.historique = (e.historique || []).concat([{ essai: e.essai, score, total: details.length, reussi, date: Date.now(),
+      parNotion: Object.fromEntries(Object.entries(parNotion).map(([n, v]) => [n, v.bon + '/' + v.total])) }]);
+    e.statut = reussi ? 'reussi' : 'echec';
+    e.verdictVu = false;
+    e.aRefaire = {};
+    if(!reussi) Object.keys(cfg.notions).forEach(n => { if(parNotion[n].bon < cfg.seuilNotion) e.aRefaire[cfg.notions[n].doc] = false; });
+    await sauverPorte(ch);
+    await tracePorteEnseignant(ch, e, details);
+    // Le verdict ne se dit pas ici : l'élève retourne au choix des sections, où la porte l'attend.
+    if(docActif === a){
+      $('docBarEtat').textContent = '📜 Les 3 épreuves sont remises : la porte va rendre son verdict…';
+      $('docBarEtat').className = 'doc-bar-etat ok';
+      afficherToastDoc('📜 Les 3 épreuves sont remises !<br><span style="font-size:0.85rem;">Retourne au Grimoire : la porte va rendre son verdict.</span>');
+      setTimeout(() => { if(docActif === a){ sectionChoisie = null; fermerDoc(); } }, 2800);
+    }
+  }
+  // Le verdict : la vidéo (succès ou reprise) en plein écran dans le Grimoire, muette, puis le résultat.
+  function jouerVerdict(ch){
+    const e = etatPorte(ch), cfg = PORTES[ch]; if(!e || !cfg) return;
+    const reussi = e.statut === 'reussi';
+    const ov = document.createElement('div'); ov.className = 'verdict-video';
+    ov.innerHTML = '<video playsinline muted preload="auto"></video><button type="button" class="verdict-passer">Passer ⏭</button>';
+    document.body.appendChild(ov);
+    if(window.Sorts) window.Sorts.masquer(true);
+    const v = ov.querySelector('video');
+    v.muted = true; v.defaultMuted = true; v.volume = 0;   // jamais de son en classe
+    let fini = false;
+    const fin = async () => {
+      if(fini) return; fini = true;
+      ov.classList.add('sort'); setTimeout(() => ov.remove(), 450);
+      if(window.Sorts) window.Sorts.masquer(false);
+      e.verdictVu = true;
+      await sauverPorte(ch);
+      sectionChoisie = null;
+      renderChapterMenu();
+      afficherResultatPorte(ch);
+    };
+    v.addEventListener('ended', fin);
+    v.addEventListener('error', fin);
+    ov.querySelector('.verdict-passer').addEventListener('click', fin);
+    v.src = reussi ? cfg.videos.succes : cfg.videos.reprise;
+    const pr = v.play(); if(pr && pr.catch) pr.catch(() => {});
+  }
+  async function marquerRefait(a){
+    const ch = a.chapterId, e = etatPorte(ch);
+    e.aRefaire[a.doc.id] = true;
+    const encore = Object.values(e.aRefaire).filter(v => !v).length;
+    if(!encore){
+      // Tout est refait : la porte se rouvre, nouvel essai avec de nouveaux nombres.
+      e.essai += 1; e.statut = 'en-cours'; e.copies = {}; e.aRefaire = {};
+      PORTES[ch].epreuves.forEach(id => { docProgressCache[id] = { done: false };
+        window.storage.set(docProgressKey(ch, id), JSON.stringify({ done: false }), true).catch(() => {}); });
+    }
+    await sauverPorte(ch);
+    if(docActif !== a) return;
+    $('docBarEtat').textContent = encore ? '✓ Refait ! Encore ' + encore + ' document' + (encore > 1 ? 's' : '') + ' à refaire' : '🏰 Tout est refait : la porte de l\'évaluation se rouvre !';
+    $('docBarEtat').className = 'doc-bar-etat ok';
+    afficherToastDoc(encore ? '✓ Document refait !<br><span style="font-size:0.85rem;">Encore ' + encore + ' à refaire avant de retenter la porte.</span>'
+      : '🏰 Le sceau est brisé !<br><span style="font-size:0.85rem;">La porte de l\'évaluation se rouvre, avec de nouveaux nombres.</span>');
+  }
+  function afficherResultatPorte(ch){
+    const cfg = PORTES[ch], e = etatPorte(ch), r = e && e.dernier;
+    if(!r) return;
+    const couleur = (b, t) => b / t >= 0.67 ? 'var(--ok)' : 'var(--wax)';
+    let html = '<div class="porte-res"><h2>🏰 La porte de l\'évaluation</h2>' +
+      '<p class="porte-score">Essai ' + r.essai + ' : <strong>' + r.score + ' / ' + r.total + '</strong> <span style="font-size:0.9rem;color:var(--ink-soft)">(il faut ' + cfg.seuil + ')</span></p>' +
+      '<div class="porte-verdict ' + (r.reussi ? 'ok' : 'ko') + '">' + (r.reussi
+        ? '🎉 La porte s\'ouvre ! Tu peux maintenant faire l\'évaluation du chapitre (Section 3).'
+        : '✗ La porte reste fermée. Ton Grimoire se scelle : refais les documents des notions marquées « À refaire » (même si tu les as déjà faits), puis la porte se rouvrira avec de nouveaux nombres.') + '</div>' +
+      '<table class="porte-notions">' + Object.keys(cfg.notions).map(n => {
+        const v = r.parNotion[n] || { bon: 0, total: cfg.parNotion }, faible = v.bon < cfg.seuilNotion;
+        return '<tr><td>' + escapeHtml(cfg.notions[n].nom) + '</td><td><b>' + v.bon + ' / ' + v.total + '</b></td>' +
+          '<td><div class="barre"><i style="width:' + (100 * v.bon / Math.max(1, v.total)) + '%;background:' + couleur(v.bon, v.total) + '"></i></div></td>' +
+          '<td>' + (r.reussi ? '' : faible ? '<span class="etiq ko">⟲ À refaire</span>' : '<span class="etiq ok">✓</span>') + '</td></tr>';
+      }).join('') + '</table>';
+    // Détail des 3 épreuves (seulement pour l'essai qui vient d'être corrigé)
+    if(e.copies && Object.keys(e.copies).length === cfg.epreuves.length){
+      cfg.epreuves.forEach((id, k) => {
+        const d = e.copies[id].details || [];
+        html += '<div class="porte-epreuve"><h4>Épreuve ' + (k + 1) + ' — ' + d.filter(x => x.isCorrect).length + ' / ' + d.length + '</h4><ul>' +
+          d.map(x => '<li class="' + (x.isCorrect ? 'ok' : 'ko') + '">' + (x.isCorrect ? '✓' : '✗') + ' <b>n° ' + x.numero + '</b> — ' + escapeHtml(x.question) +
+            (x.isCorrect ? '' : '<small>Ta réponse : ' + escapeHtml(x.given || '(rien)') + ' · Bonne réponse : ' + escapeHtml(x.expected) + '</small>') + '</li>').join('') + '</ul></div>';
+      });
+    }
+    html += '</div>';
+    $('copieContenu').innerHTML = html;
+    document.querySelector('#copieOverlay .copie-carte').classList.add('large');
+    $('copieOverlay').classList.add('open');
+  }
+  // Trace pour l'enseignant (journal des copies) : le diagnostic complet de l'essai.
+  async function tracePorteEnseignant(ch, e, details){
+    try{
+      const c = CHAPTERS.find(x => x.id === ch), r = e.dernier, cfg = PORTES[ch];
+      const faibles = Object.keys(cfg.notions).filter(n => r.parNotion[n].bon < cfg.seuilNotion).map(n => cfg.notions[n].nom);
+      const ts = Date.now();
+      await window.storage.set('sub_' + currentSlug + '_' + ch + '_porte_' + r.essai + '_' + ts, JSON.stringify({
+        name: currentStudentName, slug: currentSlug, chapterId: c.id, chapterTitle: c.title, chapterNumeral: c.numeral, sectionIdx: 1,
+        sectionName: SECTION_META[1].name + " — Porte de l'évaluation, essai " + r.essai + ' : ' + (r.reussi ? 'OUVERTE' : 'FERMÉE') +
+          ' — ' + Object.keys(cfg.notions).map(n => cfg.notions[n].nom + ' ' + r.parNotion[n].bon + '/' + r.parNotion[n].total).join(' · ') +
+          (faibles.length && !r.reussi ? ' — à refaire : ' + faibles.join(', ') : ''),
+        timestamp: ts, score: r.score, total: r.total,
+        details: details.map(d => ({ question: 'Ép. ' + d.epreuve + ' n° ' + d.numero + ' [' + (cfg.notions[d.notion] ? cfg.notions[d.notion].nom : d.notion) + '] ' + d.question,
+          given: d.given, expected: d.expected, isCorrect: d.isCorrect })),
+        reward: 0
+      }), true);
+    }catch(err){ /* le journal est facultatif */ }
+  }
 
   // id du document à terminer pour débloquer une section (ou null)
   // Sections qui restent des séries de questions mais dont l'accès dépend d'un document terminé
   // (aucune pour l'instant : la Consolidation du chapitre VIII est faite de documents et porte son propre « exige »).
   const EXIGENCES_SECTIONS = {};
+  // Section qui s'ouvre seulement quand une autre section est terminée en entier (exigeSection : son index).
+  function sectionExigee(chapterId, sectionIdx){
+    const cfg = DOCS_CHAPITRES[chapterId];
+    return (cfg && cfg[sectionIdx] && cfg[sectionIdx].exigeSection !== undefined) ? cfg[sectionIdx].exigeSection : null;
+  }
+  // Documents de la section exigée qui restent à terminer (vide = la section est ouverte).
+  function restantsSectionExigee(chapterId, sectionIdx){
+    const k = sectionExigee(chapterId, sectionIdx);
+    if(k === null) return [];
+    return DOCS_CHAPITRES[chapterId][k].docs.filter(d => !docFait(d.id));
+  }
+  function msgSectionExigee(chapterId, sectionIdx){
+    const k = sectionExigee(chapterId, sectionIdx), tous = DOCS_CHAPITRES[chapterId][k].docs, reste = restantsSectionExigee(chapterId, sectionIdx);
+    return 'Termine tous les documents de « ' + SECTION_META[k].name.split('— ').pop() + ' » pour débloquer celle-ci (' + (tous.length - reste.length) + ' / ' + tous.length + ' terminés).';
+  }
   function docExigePourSection(chapterId, sectionIdx){
     const cfg = DOCS_CHAPITRES[chapterId];
     const exigence = EXIGENCES_SECTIONS[chapterId];
@@ -1735,6 +2312,7 @@
   }
 
   async function ouvrirQuestesMenu(){
+    { const sg = sceauGrimoire(); if(sg){ alerteGrimoire(messageSceau(sg)); return; } }
     $('questOverlayTitle').textContent = 'Quêtes secondaires';
     let boutonsHeures = '';
     for(let n = 1; n <= NB_SERIES_HEURES; n++){
@@ -2469,13 +3047,16 @@
           '<p class="muted">Ouvre le Grimoire à partir de ta fiche de personnage, pas directement — ton enseignant t\'a fourni un lien personnel qui doit rester intact.</p>' +
         '</div>';
     } else {
+      const sg = sceauGrimoire();
+      if(sg){ peindreDragon(sg, () => openChapterMenu(sg.chapterId)); return; }
+      oterDragon();
       left.innerHTML =
         '<p class="muted" style="margin:4px 0 16px;">Choisis un chapitre pour commencer une quête.</p>' +
         '<ul id="tocList"></ul>';
       const list = $('tocList');
       CHAPTERS.forEach(ch => {
         const li = document.createElement('li');
-        const ouvert = CHAPITRES_OUVERTS.includes(ch.id);
+        const ouvert = chapitreOuvert(ch.id);
         const best = studentBest[ch.id];
         li.innerHTML =
           '<span class="chapter-num">' + ch.numeral + '</span>' +
@@ -2520,16 +3101,21 @@
 
   // ---------- chapter menu (choose section) ----------
   async function openChapterMenu(chapterId){
+    const sg = sceauGrimoire();
+    if(sg && sg.chapterId !== chapterId){ alerteGrimoire(messageSceau(sg)); return; }
     currentChapter = CHAPTERS.find(c => c.id === chapterId);
     // Toutes les lectures partent EN MÊME TEMPS (la version de classe les regroupe en une seule
     // requête au script Google) au lieu d'attendre chaque réponse l'une après l'autre.
     sectionProgressCache = {};
     await Promise.all([
+      chargerRetours(currentChapter.id),
       window.storage.get('eval_unlocked', true)
         .then(res => { evalUnlocked = !!(res && res.value === 'true'); }, () => { evalUnlocked = false; }),
       ...SECTION_META.map((m, idx) => loadSectionProgress(currentChapter.id, idx).then(p => { sectionProgressCache[idx] = p; })),
-      chargerProgressionDocs(currentChapter.id)
+      chargerProgressionDocs(currentChapter.id),
+      chargerPortes()
     ]);
+    appliquerPorte(currentChapter.id);
     sectionChoisie = null;
     renderChapterMenu();
   }
@@ -2550,15 +3136,49 @@
     }));
   }
   function docFait(docId){ const p = docProgressCache[docId]; return !!(p && p.done); }
+
+  /* ---------- Copies d'évaluation retournées par l'enseignant ----------
+     Clé retour_<élève>_<chapitre>_<document> : { titre, score, total, resultats:[{numero, question, reussi}], commentaire, date }.
+     L'élève voit ses numéros réussis/ratés et le commentaire — jamais les bonnes réponses. */
+  let retourCache = {};
+  function cleRetour(slug, chapterId, docId){ return 'retour_' + slug + '_' + chapterId + '_' + docId; }
+  async function chargerRetours(chapterId){
+    retourCache = {};
+    const cfg = DOCS_CHAPITRES[chapterId];
+    if(!cfg) return;
+    const evals = Object.keys(cfg).flatMap(idx => cfg[idx].docs).filter(d => d.evaluation);
+    await Promise.all(evals.map(doc => window.storage.get(cleRetour(currentSlug, chapterId, doc.id), true)
+      .then(r => { if(r && r.value) retourCache[doc.id] = JSON.parse(r.value); }, () => {})));
+  }
+  function afficherCopieEleve(doc){
+    const r = retourCache[doc.id];
+    const ov = $('copieOverlay');
+    let html = '<h2>' + escapeHtml(doc.titre) + '</h2>';
+    if(!r){
+      html += '<p class="copie-attente">📨 Ta copie est remise. Ton enseignant ne l\'a pas encore corrigée : reviens voir plus tard !</p>';
+    } else {
+      html += '<p class="copie-score">Résultat : <strong>' + r.score + ' / ' + r.total + '</strong></p>' +
+        '<ul class="copie-liste">' + r.resultats.map(x =>
+          '<li class="' + (x.reussi ? 'ok' : 'ko') + '"><span class="copie-marque">' + (x.reussi ? '✓' : '✗') + '</span>' +
+          '<span>Numéro ' + x.numero + '</span></li>').join('') + '</ul>' +
+        (r.commentaire ? '<div class="copie-commentaire"><strong>Le mot de ton enseignant</strong><p>' + escapeHtml(r.commentaire).replace(/\n/g, '<br>') + '</p></div>' : '');
+    }
+    $('copieContenu').innerHTML = html;
+    ov.classList.add('open');
+  }
   // Un document est verrouillé tant que le précédent, dans la même section, n'est pas terminé
   // (le premier de chaque section est toujours ouvert; la section elle-même a sa propre règle).
   function docPrecedentRequis(chapterId, sectionIdx, docId){
+    if(atelierToutOuvert) return null;
     const cfg = DOCS_CHAPITRES[chapterId] && DOCS_CHAPITRES[chapterId][sectionIdx];
     if(!cfg) return null;
     const i = cfg.docs.findIndex(d => d.id === docId);
-    if(i <= 0) return null;
-    const prec = cfg.docs[i - 1];
-    return docFait(prec.id) ? null : prec;
+    if(i < 0) return null;
+    const prec = i > 0 ? cfg.docs[i - 1] : null;
+    if(prec && !docFait(prec.id)) return prec;
+    const e = entrainementAvantDoc(chapterId, docId);
+    if(e && !sortAppris(e.sort)) return { id: e.id, titre: e.titre };
+    return null;
   }
   function trouverDoc(chapterId, docId){
     const cfg = DOCS_CHAPITRES[chapterId];
@@ -2585,12 +3205,25 @@
 
     let html = '';
     SECTION_META.forEach((meta, idx) => {
+      // La porte a rendu son verdict, pas encore vu : la 3e carte devient la porte, « Verdict » en bleu.
+      if(idx === 2 && verdictEnAttente(currentChapter.id)){
+        html += '<div class="section-card docs-card vision verdict" data-idx="2" data-verdict="1" style="--vision:url(\'livre_assets/chateau_4_verdict.webp\')" title="Découvre le verdict de la porte">' +
+          '<div class="vision-img"><h3>Verdict</h3></div>' +
+          '<div class="vision-corps"><p>La porte a rendu son verdict… Clique pour le découvrir.</p></div></div>';
+        return;
+      }
       const progress = sectionProgressCache[idx] || { bestScore:0, rewardPaid:0, done:false };
       const cfgSection = cfgDocs ? cfgDocs[idx] : null;
-      const lockedByTeacher = idx === 2 && !evalUnlocked;
+      const porteCh = PORTES[currentChapter.id];
+      const lockedByTeacher = idx === 2 && !atelierToutOuvert && (porteCh ? !porteReussie(currentChapter.id) : !evalUnlocked);
       let lockedBySection1 = false, msgSection1 = '';
       const exigeId = docExigePourSection(currentChapter.id, idx);
-      if(exigeId){
+      if(atelierToutOuvert){
+        lockedBySection1 = false;
+      } else if(sectionExigee(currentChapter.id, idx) !== null){
+        lockedBySection1 = restantsSectionExigee(currentChapter.id, idx).length > 0;
+        msgSection1 = msgSectionExigee(currentChapter.id, idx);
+      } else if(exigeId){
         lockedBySection1 = !docFait(exigeId);
         const exige = trouverDoc(currentChapter.id, exigeId);
         msgSection1 = "Termine « " + (exige ? exige.doc.titre : 'la section précédente') + " » pour débloquer celle-ci.";
@@ -2603,15 +3236,15 @@
 
       let desc;
       if(lockedBySection1) desc = msgSection1;
-      else if(lockedByTeacher) desc = "Cette section sera déverrouillée par ton enseignant.";
+      else if(lockedByTeacher) desc = porteCh ? "Franchis la porte de l'évaluation (24 / 36) à la fin de la Consolidation pour ouvrir cette section." : "Cette section sera déverrouillée par ton enseignant.";
       else desc = escapeHtml(meta.desc);
 
       if(cfgSection){
         const nbFaits = cfgSection.docs.filter(d => docFait(d.id)).length;
-        html += '<div class="section-card docs-card' + (locked ? ' locked' : '') + (done ? ' done' : '') + (idx === sectionChoisie ? ' choisie' : '') + '" data-idx="' + idx + '">' +
-          '<h3>' + escapeHtml(meta.name) + '</h3>' +
-          '<p>' + desc + '</p>' +
-          '<div class="card-bottom-row"><span class="qcount">' + nbFaits + ' / ' + cfgSection.docs.length + ' terminés</span></div>' +
+        html += '<div class="section-card docs-card vision' + (locked ? ' locked' : '') + (done ? ' done' : '') + (idx === sectionChoisie ? ' choisie' : '') + '" data-idx="' + idx + '" style="--vision:url(\'' + VISIONS_CHATEAU[idx] + '\')" title="' + escapeHtml(meta.desc) + '">' +
+          '<div class="vision-img"><h3>' + escapeHtml(meta.name) + '</h3></div>' +
+          '<div class="vision-corps">' + (locked ? '<p>' + desc + '</p>' : '') +
+          '<div class="card-bottom-row"><span class="qcount">' + nbFaits + ' / ' + cfgSection.docs.length + ' terminés</span></div></div>' +
         '</div>';
         return;
       }
@@ -2620,24 +3253,45 @@
         ? '<span class="card-reward">🪙 ' + meta.maxReward + '</span>'
         : '';
 
-      html += '<div class="section-card' + (locked ? ' locked' : '') + (done ? ' done' : '') + '" data-idx="' + idx + '">' +
-        '<h3>' + escapeHtml(meta.name) + '</h3>' +
-        '<p>' + desc + '</p>' +
+      html += '<div class="section-card vision' + (locked ? ' locked' : '') + (done ? ' done' : '') + '" data-idx="' + idx + '" style="--vision:url(\'' + VISIONS_CHATEAU[idx] + '\')" title="' + escapeHtml(meta.desc) + '">' +
+        '<div class="vision-img"><h3>' + escapeHtml(meta.name) + '</h3></div>' +
+        '<div class="vision-corps">' + (locked ? '<p>' + desc + '</p>' : '') +
         '<div class="card-bottom-row">' +
           '<span class="qcount">' + currentChapter.notions.length + ' questions</span>' +
           rewardHtml +
-        '</div>' +
+        '</div></div>' +
       '</div>';
     });
+    const sc = atelierToutOuvert ? null : sceauChapitre(currentChapter.id);
+    if(sc){
+      if(sectionChoisie === null || !sc.sections.includes(sectionChoisie)) sectionChoisie = sc.sections[0] || 0;
+      peindreDragon(sc, () => { sectionChoisie = sc.sections[0] || 0; renderDroiteChapitre(); });
+      return;
+    }
+    oterDragon();
     $('pageLeft').innerHTML =
       '<button class="backlink" id="toTocBtn">‹ Retour à la table des matières</button>' + html;
     $('toTocBtn').addEventListener('click', () => { sectionChoisie = null; renderLeftPage(); renderTocView(); });
     $('pageLeft').querySelectorAll('.section-card').forEach(card => {
       card.addEventListener('click', () => {
+        if(card.dataset.verdict){ jouerVerdict(currentChapter.id); return; }
         const idx = parseInt(card.getAttribute('data-idx'), 10);
         const cfgSection = cfgDocs ? cfgDocs[idx] : null;
-        if(idx === 2 && !evalUnlocked){
+        if(!atelierToutOuvert){
+        if(idx === 2 && PORTES[currentChapter.id] && !porteReussie(currentChapter.id)){
+          alerteGrimoire("🏰 L'évaluation est gardée par une porte : réussis les 3 épreuves de « La porte de l'évaluation » (24 / 36) à la fin de la Consolidation.");
+          return;
+        }
+        if(idx === 2 && !PORTES[currentChapter.id] && !evalUnlocked){
           alerteGrimoire("Cette section est verrouillée. Ton enseignant doit d'abord la déverrouiller.");
+          return;
+        }
+        if(sceauChapitre(currentChapter.id) && idx !== 0 && !(sceauChapitre(currentChapter.id).sections || []).includes(idx)){
+          alerteGrimoire("🔒 Le Grimoire est scellé : refais d'abord les documents marqués « À refaire » dans les Bases.");
+          return;
+        }
+        if(restantsSectionExigee(currentChapter.id, idx).length){
+          alerteGrimoire(msgSectionExigee(currentChapter.id, idx));
           return;
         }
         const exigeId = docExigePourSection(currentChapter.id, idx);
@@ -2650,6 +3304,7 @@
           alerteGrimoire("Obtiens au moins 6/10 en Section 1 avant de tenter la Section 2.");
           return;
         }
+        }   // fin des verrous (sautés dans l'atelier quand tout est ouvert)
         if(cfgSection){
           // Section faite de documents : ses sous-sections s'affichent sur la page de droite.
           sectionChoisie = idx;
@@ -2662,7 +3317,7 @@
     });
   }
 
-  // Vignette du document (dossier Mini/ à côté du document) ; sans vignette, l'icône emoji du document.
+  // Vignette du document (dossier mini/ à côté du document) ; sans vignette, l'icône emoji du document.
   function iconeDoc(doc){
     return doc.mini
       ? '<img class="doc-mini" src="' + escapeHtml(doc.mini) + '" alt="" draggable="false">'
@@ -2675,23 +3330,54 @@
     flecheRetour(true);   // une section est ouverte à droite : la flèche permet de la refermer et de retrouver l'astrolabe
     const idx = sectionChoisie;
     let rows = '';
-    cfg.docs.forEach(doc => {
+    const sceau = atelierToutOuvert ? null : sceauChapitre(currentChapter.id);
+    const porte = etatPorte(currentChapter.id);
+    cfg.docs.forEach((doc, n) => {
+      const numero = '<span class="doc-num">' + (n + 1) + '</span>';   // numéro du document dans sa section
+      const entr = entrainementAvantDoc(currentChapter.id, doc.id);
+      if(entr && entr.section === idx) rows += rangeeEntrainement(entr);
       const fait = docFait(doc.id);
+      // Grimoire scellé (porte échouée) : seuls les documents à refaire s'ouvrent.
+      if(sceau){
+        const aRefaire = sceau.aRefaire.hasOwnProperty(doc.id);
+        if(aRefaire){
+          const refait = sceau.aRefaire[doc.id];
+          rows += '<li class="doc-row ' + (refait ? 'doc-refait' : 'doc-arefaire') + '" data-doc="' + doc.id + '">' + numero + iconeDoc(doc) +
+            '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(doc.titre) + '</span>' +
+            '<span class="doc-sub">' + (refait ? '✓ Refait ! La porte t\'attend quand tout est refait.' : '⟲ À refaire en entier pour rouvrir la porte de l\'évaluation.') + '</span></span>' +
+            '<span class="doc-etat">' + (refait ? '<span class="doc-ok">✓ Refait</span>' : '<span class="card-reward">⟲</span>') + '</span></li>';
+        } else {
+          rows += '<li class="doc-row doc-verrouille' + (doc.gauntlet ? ' doc-porte' : '') + '" data-doc="' + doc.id + '" aria-disabled="true">' + numero + iconeDoc(doc) +
+            '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(doc.titre) + '</span>' +
+            '<span class="doc-sub">🔒 Grimoire scellé : refais d\'abord les documents marqués « À refaire ».</span></span></li>';
+        }
+        return;
+      }
+      if(doc.gauntlet && fait){
+        const corrige = porte && porte.statut !== 'en-cours';
+        rows += '<li class="doc-row doc-fait doc-porte" data-doc="' + doc.id + '">' + numero + iconeDoc(doc) +
+          '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(doc.titre) + '</span>' +
+          '<span class="doc-sub">' + (corrige ? '📜 Corrigée — clique pour voir le résultat de la porte' : '📨 Remise — corrigée avec les autres après la 3e épreuve') + '</span></span>' +
+          '<span class="doc-etat"><span class="doc-ok">' + (corrige ? (porte.statut === 'reussi' ? '🏰 Ouverte' : '✗ Fermée') : '✓ Remise') + '</span></span></li>';
+        return;
+      }
       const requis = fait ? null : docPrecedentRequis(currentChapter.id, idx, doc.id);
       const enCours = !fait && !requis && !!(docProgressCache[doc.id] && docProgressCache[doc.id].etat);
       if(requis){
-        rows += '<li class="doc-row doc-verrouille" data-doc="' + doc.id + '" aria-disabled="true">' +
-          iconeDoc(doc) +
+        rows += '<li class="doc-row doc-verrouille' + (doc.special ? ' doc-special' : '') + (doc.gauntlet ? ' doc-porte' : '') + '" data-doc="' + doc.id + '" aria-disabled="true">' +
+          numero + iconeDoc(doc) +
           '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(doc.titre) + '</span>' +
           '<span class="doc-sub">' + escapeHtml('Termine « ' + requis.titre + ' » pour ouvrir celui-ci.') + '</span></span>' +
         '</li>';
         return;
       }
-      rows += '<li class="doc-row' + (fait ? ' doc-fait' : '') + '" data-doc="' + doc.id + '">' +
-        iconeDoc(doc) +
+      rows += '<li class="doc-row' + (fait ? ' doc-fait' : '') + (doc.special ? ' doc-special' : '') + (doc.gauntlet ? ' doc-porte' : '') + '" data-doc="' + doc.id + '">' +
+        numero + iconeDoc(doc) +
         '<span class="doc-txt"><span class="doc-titre">' + escapeHtml(doc.titre) + '</span>' +
-        '<span class="doc-sub">' + escapeHtml(doc.desc) + (enCours ? ' <b class="doc-encours">· En cours — tu reprends où tu étais.</b>' : '') + '</span></span>' +
-        '<span class="doc-etat">' + (fait ? '<span class="doc-ok">' + doc.libelleFait + '</span>' : '<span class="card-reward">🪙 ' + doc.recompense + '</span>') + '</span>' +
+        '<span class="doc-sub">' + (doc.evaluation && fait
+            ? (retourCache[doc.id] ? '<b class="doc-retour">📬 Copie retournée : ' + retourCache[doc.id].score + ' / ' + retourCache[doc.id].total + ' — clique pour la voir</b>' : '📨 Copie remise — en attente de correction')
+            : escapeHtml(doc.desc) + (enCours ? ' <b class="doc-encours">· En cours — tu reprends où tu étais.</b>' : '')) + '</span></span>' +
+        '<span class="doc-etat">' + (fait ? '<span class="doc-ok">' + doc.libelleFait + '</span>' : (doc.evaluation ? '<span class="card-reward">📜</span>' : doc.gauntlet ? '<span class="card-reward">🏰</span>' : '<span class="card-reward">🪙 ' + doc.recompense + '</span>')) + '</span>' +
       '</li>';
     });
     swapRight(
@@ -2701,9 +3387,14 @@
         '<ul class="doc-list">' + rows + '</ul>' +
       '</div>'
     );
-    $('pageRight').querySelectorAll('.doc-row').forEach(row => {
+    $('pageRight').querySelectorAll('.doc-row[data-doc]').forEach(row => {
       row.addEventListener('click', () => ouvrirDoc(idx, row.getAttribute('data-doc')));
     });
+    $('pageRight').querySelectorAll('.doc-row[data-entr]').forEach(row => {
+      row.addEventListener('click', () => ouvrirEntrainement(row.getAttribute('data-entr')));
+    });
+    // Grimoire scellé : on amène le premier document à refaire sous les yeux de l'élève.
+    if(sceau){ const premier = $('pageRight').querySelector('.doc-arefaire'); if(premier) setTimeout(() => premier.scrollIntoView({ block:'center', behavior:'smooth' }), 350); }
   }
 
   // ---------- documents : fenêtre plein écran, suivi et récompense ----------
@@ -2719,15 +3410,25 @@
     const cfg = DOCS_CHAPITRES[currentChapter.id][sectionIdx];
     const doc = cfg.docs.find(d => d.id === docId);
     if(!doc) return;
-    const requis = docFait(doc.id) ? null : docPrecedentRequis(currentChapter.id, sectionIdx, doc.id);
+    const sceau = atelierToutOuvert ? null : sceauChapitre(currentChapter.id);
+    const aRefaire = !!(sceau && sceau.aRefaire.hasOwnProperty(doc.id));
+    if(sceau && !aRefaire){ alerteGrimoire("🔒 Le Grimoire est scellé : refais d'abord les documents marqués « À refaire »."); return; }
+    if(doc.gauntlet && docFait(doc.id)){
+      const porte = etatPorte(currentChapter.id);
+      if(porte && porte.statut !== 'en-cours') afficherResultatPorte(currentChapter.id);
+      else alerteGrimoire("📨 Cette épreuve est remise. Elle sera corrigée avec les autres quand tu auras remis les 3 épreuves.");
+      return;
+    }
+    const requis = (docFait(doc.id) || aRefaire) ? null : docPrecedentRequis(currentChapter.id, sectionIdx, doc.id);
     if(requis){
       alerteGrimoire("Ce document est verrouillé. Termine d'abord « " + requis.titre + " ».");
       return;
     }
-    docActif = { chapterId: currentChapter.id, sectionIdx, doc, termineTraite: false };
+    if(doc.evaluation && docFait(doc.id)){ afficherCopieEleve(doc); return; }
+    docActif = { chapterId: currentChapter.id, sectionIdx, doc, termineTraite: false, copie: null };
     const fait = docFait(doc.id);
     // Rapports détaillés : seulement tant que le document n'est pas réussi (le relire ensuite est libre).
-    if(!fait && window.Rapports){
+    if(!fait && window.Rapports && !doc.evaluation && !doc.gauntlet){
       const ordreDoc = cfg.docs.findIndex(d => d.id === doc.id);
       window.Rapports.debut(currentSlug, 'g_' + currentChapter.id + '_' + doc.id, {
         titre: doc.titre,
@@ -2737,13 +3438,39 @@
       });
     }
     $('docBarTitre').textContent = doc.titre;
-    $('docBarEtat').textContent = fait ? '✓ Déjà réussi — tu peux le relire librement (aucun or de plus)' : doc.consigne;
-    $('docBarEtat').className = 'doc-bar-etat' + (fait ? ' ok' : '');
+    $('docBarEtat').textContent = aRefaire && !sceau.aRefaire[doc.id] ? '⟲ À refaire : réussis tout le document pour rouvrir la porte de l\'évaluation'
+      : fait ? '✓ Déjà réussi — tu peux le relire librement (aucun or de plus)' : doc.consigne;
+    $('docBarEtat').className = 'doc-bar-etat' + (fait && !aRefaire ? ' ok' : '');
     $('docToast').classList.remove('show');
     // Un document commencé mais pas terminé reprend là où l'élève s'était arrêté.
     const partiel = docProgressCache[doc.id];
     const etat = (!fait && partiel && partiel.etat) ? partiel.etat : null;
-    $('docFrame').src = doc.fichier + (etat ? '?etat=' + encodeURIComponent(JSON.stringify(etat)) : '');
+    const extra = [];
+    if(doc.gauntlet) extra.push('essai=' + ((etatPorte(currentChapter.id) || {}).essai || 1));
+    if(etat) extra.push('etat=' + encodeURIComponent(JSON.stringify(etat)));
+    $('docFrame').src = doc.fichier + (extra.length ? (doc.fichier.includes('?') ? '&' : '?') + extra.join('&') : '');
+    $('docOverlay').classList.add('open');
+  }
+  // Entraînement d'un sort : même fenêtre du parchemin que les documents, sans or ni rapport détaillé.
+  function ouvrirEntrainement(entrId){
+    const e = (ENTRAINEMENTS[currentChapter.id] || []).find(x => x.id === entrId);
+    if(!e) return;
+    const dejaAppris = sortAppris(e.sort);
+    if(!dejaAppris && !atelierToutOuvert){
+      if(sceauChapitre(currentChapter.id)){ alerteGrimoire("🔒 Le Grimoire est scellé : refais d'abord les documents marqués « À refaire »."); return; }
+      const requis = entrainementRequis(currentChapter.id, e);
+      if(requis){ alerteGrimoire("Cet entraînement est verrouillé. Termine d'abord « " + requis.titre + " »."); return; }
+    }
+    const doc = Object.assign({ mode:'exercices', recompense:0, libelleFait:'✦ Sort appris',
+      libelleProgres:(v, t) => v + ' / ' + t + ' réussis' }, e);
+    docActif = { chapterId: currentChapter.id, sectionIdx: e.section, doc, termineTraite: false, copie: null, entrainement: true };
+    $('docBarTitre').textContent = e.titre;
+    $('docBarEtat').textContent = dejaAppris ? '✦ Sort déjà appris — entraîne-toi autant que tu veux' : e.consigne;
+    $('docBarEtat').className = 'doc-bar-etat' + (dejaAppris ? ' ok' : '');
+    $('docToast').classList.remove('show');
+    // l'élève fait l'entraînement avec SES outils : version fille (règle et rapporteur roses) selon le genre reçu par le Grimoire
+    const genreEleve = new URLSearchParams(location.search).get('genre');
+    $('docFrame').src = e.fichier + (genreEleve ? (e.fichier.includes('?') ? '&' : '?') + 'genre=' + encodeURIComponent(genreEleve) : '');
     $('docOverlay').classList.add('open');
   }
   function fermerDoc(){
@@ -2756,6 +3483,8 @@
     if(currentChapter) renderChapterMenu();   // rafraîchit les statuts, l'or et les déverrouillages
   }
   $('docCloseBtn').addEventListener('click', fermerDoc);
+  $('copieFermer').addEventListener('click', () => { $('copieOverlay').classList.remove('open'); document.querySelector('#copieOverlay .copie-carte').classList.remove('large'); });
+  $('copieOverlay').addEventListener('click', e => { if(e.target === $('copieOverlay')) $('copieOverlay').classList.remove('open'); });
 
   /* Les documents ont leur propre fond opaque (blanc crème) : sur le parchemin, on le rend transparent
      pour que le parchemin reste visible, on masque leur bandeau collant (le titre est déjà dans la barre
@@ -2808,9 +3537,25 @@
     const a = docActif;
     if(!a || a.termineTraite) return;
     a.termineTraite = true;
+    if(a.entrainement){
+      // Entraînement réussi : le sort s'ajoute à la barre de sorts (aucun or).
+      const nouveau = window.Sorts ? await window.Sorts.apprendre(a.doc.sort) : false;
+      if(docActif !== a) return;
+      $('docBarEtat').textContent = '✦ Sort appris : ' + (window.Sorts ? window.Sorts.nom(a.doc.sort) : '');
+      $('docBarEtat').className = 'doc-bar-etat ok';
+      if(currentChapter) renderChapterMenu();
+      afficherToastDoc(nouveau
+        ? '✨ Nouvelle habileté : un sort appris !<br><strong>' + escapeHtml(window.Sorts.nom(a.doc.sort)) + '</strong><br><span style="font-size:0.85rem;">Il brille maintenant dans ta barre de sorts, en bas de l\'écran.</span>'
+        : '✦ Bravo, entraînement réussi !<br><span style="font-size:0.85rem;">Tu connaissais déjà ce sort.</span>');
+      return;
+    }
+    if(a.doc.gauntlet){ await remettreEpreuve(a); return; }
     if(window.Rapports) window.Rapports.termine();
     if(etatDocMinuterie){ clearTimeout(etatDocMinuterie); etatDocMinuterie = null; }
     etatDocEnAttente = null;
+    // Grimoire scellé : un document à refaire, réussi en entier, compte comme refait.
+    const sceau = sceauChapitre(a.chapterId);
+    if(sceau && sceau.aRefaire.hasOwnProperty(a.doc.id) && !sceau.aRefaire[a.doc.id]) await marquerRefait(a);
     if(docFait(a.doc.id)) return;                     // déjà récompensé : aucune récompense de plus
     const progres = { done:true, rewardPaid:a.doc.recompense, date:Date.now() };
     docProgressCache[a.doc.id] = progres;
@@ -2818,9 +3563,16 @@
     await awardCoins(a.doc.recompense);
     await enregistrerCopieDoc(a);
     if(docActif !== a) return;   // l'élève a fermé le document (ou en a ouvert un autre) entre-temps : le menu se remettra à jour tout seul
+    if(a.doc.evaluation){
+      $('docBarEtat').textContent = '✓ Copie remise à ton enseignant';
+      $('docBarEtat').className = 'doc-bar-etat ok';
+      afficherToastDoc('📨 Copie remise !<br><span style="font-size:0.85rem;">Ton enseignant va la corriger et te la retourner.</span>');
+      return;
+    }
     $('docBarEtat').textContent = a.doc.libelleFait + ' — +' + a.doc.recompense + ' 🪙';
     $('docBarEtat').className = 'doc-bar-etat ok';
-    const debloque = docExigePourSection(a.chapterId, a.sectionIdx + 1) === a.doc.id;
+    const debloque = docExigePourSection(a.chapterId, a.sectionIdx + 1) === a.doc.id ||
+      (sectionExigee(a.chapterId, a.sectionIdx + 1) === a.sectionIdx && !restantsSectionExigee(a.chapterId, a.sectionIdx + 1).length);
     afficherToastDoc('🎉 ' + (a.doc.mode === 'lecture' ? 'Document lu jusqu\'au bout !' : 'Bravo, tout est réussi !') +
       '<br><strong>+' + a.doc.recompense + ' 🪙</strong>' +
       (debloque ? '<br><span style="font-size:0.85rem;">La ' + escapeHtml(SECTION_META[a.sectionIdx + 1].name.split('— ').pop()) + ' est débloquée !</span>' : ''));
@@ -2839,6 +3591,11 @@
         details: [{ question: a.doc.titre, given: a.doc.mode === 'lecture' ? "Lu jusqu'au bout" : (a.doc.total + ' / ' + a.doc.total + ' réussis'), expected: '', isCorrect: true }],
         reward: a.doc.recompense
       };
+      if(a.doc.evaluation && a.copie){
+        // Évaluation : la vraie copie, numéro par numéro, que l'enseignant pourra retourner.
+        Object.assign(submission, { evaluation: true, docId: a.doc.id, docTitre: a.doc.titre,
+          score: a.copie.score, total: a.copie.total, details: a.copie.details });
+      }
       await window.storage.set('sub_' + currentSlug + '_' + ch.id + '_doc_' + a.doc.id + '_' + ts, JSON.stringify(submission), true);
     }catch(e){ /* le journal est facultatif : la récompense est déjà versée */ }
   }
@@ -2851,14 +3608,20 @@
     if(window.Rapports) window.Rapports.activite();
     if(d.type === 'tentative'){
       // Rapports détaillés : « numéro X, bonne ou mauvaise réponse ». Rien d'autre ne change.
-      if(window.Rapports && !docFait(docActif.doc.id)) window.Rapports.tentative(d.numero, !!d.correcte);
+      if(window.Rapports && !docActif.entrainement && !docFait(docActif.doc.id)) window.Rapports.tentative(d.numero, !!d.correcte);
     } else if(d.type === 'progress'){
       if(docFait(docActif.doc.id)) return;
       $('docBarEtat').textContent = docActif.doc.consigne + '  ·  ' + docActif.doc.libelleProgres(d.vus, d.total);
     } else if(d.type === 'etat'){
-      if(docFait(docActif.doc.id)) return;
+      if(docActif.entrainement || docFait(docActif.doc.id)) return;
       docProgressCache[docActif.doc.id] = d.etat ? { done:false, etat:d.etat } : { done:false };
+      if(docActif.doc.gauntlet && d.etat) docProgressCache[docActif.doc.id].essai = (etatPorte(docActif.chapterId) || {}).essai || 1;
       planifierSauvegardeEtatDoc(docActif.chapterId, docActif.doc.id);
+    } else if(d.type === 'copie'){
+      // Évaluation remise : la page envoie sa copie corrigée avec SA clé, juste avant « termine ».
+      if((docActif.doc.evaluation || docActif.doc.gauntlet) && !docFait(docActif.doc.id)){
+        docActif.copie = { score: +d.score || 0, total: +d.total || docActif.doc.total, details: Array.isArray(d.details) ? d.details : [] };
+      }
     } else if(d.type === 'termine'){
       terminerDoc();
     }
@@ -3002,8 +3765,9 @@
     return z;
   })();
   const ASTRO_JEUX = ['', 'echecs', 'punch', 'tetris', 'serpent'];
-  // Tetris n'est pas encore prêt : dès que ce fichier existera dans 02_interface_eleve, l'arc bleu le lancera.
-  const FICHIER_TETRIS = 'tetris.html';
+  // Le Tétris des Aires (tetris-des-aires.html, fait dans une autre conversation le 25 septembre 2026).
+  // L'arc bleu le lance dès que ce fichier est présent dans 02_interface_eleve ; sinon, il ne fait rien.
+  const FICHIER_TETRIS = 'tetris-des-aires.html';
 
   function astroImageVisible(){
     const couche = document.querySelector('.astro-couche');
@@ -3063,6 +3827,7 @@
   }
 
   async function lancerJeuAstrolabe(jeu){
+    { const sg = sceauGrimoire(); if(sg){ alerteGrimoire(messageSceau(sg)); return; } }
     if(jeu === 'punch') return ouvrirPunchMath();
     if(jeu === 'serpent') return ouvrirSerpent();
     if(jeu === 'echecs') return ouvrirJeu('echecs/index.html', "♞ Échec-et-Math", "Affronte la machine ou un camarade");
@@ -3070,7 +3835,7 @@
       let existe = false;
       try{ existe = (await fetch(FICHIER_TETRIS, { method:'HEAD', cache:'no-store' })).ok; }catch(e){}
       if(!existe){ alerteGrimoire("Ce mécanisme de l'astrolabe tourne encore à vide… Un nouveau jeu s'y prépare. Reviens bientôt !"); return; }
-      return ouvrirJeu(FICHIER_TETRIS, '🧱 Tetris', '');
+      return ouvrirJeu(FICHIER_TETRIS, '🧱 Le Tétris des Aires', '');
     }
   }
   function ouvrirJeu(fichier, titre, etat){
@@ -3476,12 +4241,36 @@
     if(identite){ currentStudentName = identite.nom; currentSlug = identite.slug; }
   })();
   renderLeftPage();
+  // Les ouvertures (atelier, élève) arrivent du stockage : on redessine la table des matières si elle est encore affichée.
+  chargerOuverturesChapitres().then(async () => { await chargerPortes(); if($('tocList')) renderLeftPage(); installerSorts(); });
+
+  // ---------- Barre de sorts (sorts-core.js) : outils appris par les entraînements ----------
+  // Sorts appris : clé « sorts_<élève> ». Dans l'atelier tout ouvert, tous les sorts sont utilisables.
+  function installerSorts(){
+    if(!window.Sorts) return;
+    const cle = 'sorts_' + currentSlug;
+    window.Sorts.installer({
+      lire: async () => { try{ const r = await window.storage.get(cle, true); return (r && r.value) ? JSON.parse(r.value) : {}; }catch(e){ return {}; } },
+      ecrire: async (o) => { await window.storage.set(cle, JSON.stringify(o), true); },
+      toutOuvert: atelierToutOuvert,
+      alerte: alerteGrimoire
+    }).then(() => {   // les sorts appris changent les verrous des entraînements : on redessine le chapitre ouvert
+      if(currentChapter && $('pageLeft') && $('pageLeft').querySelector('.section-card')){ renderMenuGauche(); if(sectionChoisie !== null) renderDroiteChapitre(); }
+    });
+    // Les jeux plein écran (Punch-math, Serpent, Tétris, échecs) cachent la barre et rangent les outils.
+    setInterval(() => {
+      window.Sorts.masquer(!!document.querySelector('#punchOverlay.open, #serpentOverlay.open, #jeuOverlay.open'));
+    }, 400);
+  }
   const vueDemandee = new URLSearchParams(window.location.search).get('vue');
   if(vueDemandee === 'supp' && currentSlug){
     openExercicesSupplementaires();
   } else {
     renderTocView();
   }
+  // Atelier seulement : « Tableau de bord enseignant » ouvre le Registre par l'adresse (?vue=enseignant).
+  // Jamais dans la version de classe, sinon un élève pourrait l'ouvrir en modifiant l'adresse.
+  if(vueDemandee === 'enseignant' && MODE_ATELIER) openTeacherPanel();
 
   // ---------- secret trigger ----------
   // Accès enseignant : aucune icône à l'écran. Combinaison discrète au clavier uniquement
@@ -3499,8 +4288,11 @@
     chapterFilterEl.appendChild(opt);
   });
 
-  $('closeTeacher').addEventListener('click', () => { $('teacherOverlay').style.display = 'none'; });
-  $('refreshBtn').addEventListener('click', loadSubmissions);
+  $('closeTeacher').addEventListener('click', () => {
+    $('teacherOverlay').style.display = 'none';
+    if($('tocList')) renderLeftPage();   // un chapitre ouvert à l'élève courant apparaît tout de suite
+  });
+  $('refreshBtn').addEventListener('click', async () => { await loadSubmissions(); chargerOuverturesPourTous(); });
   $('filterInput').addEventListener('input', renderSubmissions);
   $('chapterFilter').addEventListener('change', renderSubmissions);
 
@@ -3526,7 +4318,118 @@
     $('teacherOverlay').style.display = 'flex';
     await loadEvalFlagForTeacher();
     await loadSubmissions();
+    await chargerOuverturesPourTous();   // après le journal : les élèves qui ont seulement remis une copie y figurent aussi
   }
+
+  /* ---------- Chapitres ouverts par élève (Grimoire + Parchemins de lecture) ----------
+     Liste des élèves = ceux qui ont un coffre (ils ont ouvert leur fiche) + ceux qui ont remis une copie.
+     Chaque case cochée ajoute l'id du chapitre dans la clé de ce livre pour cet élève (voir ouvertures-core.js). */
+  const LIVRES_OUVERTURES = [
+    { livre:'maths', titre:'Grimoire des mathématiques',
+      chapitres: CHAPTERS.map(ch => ({ id:ch.id, court:ch.numeral, titre:ch.numeral + ' — ' + ch.title })),
+      ouvertATous: id => CHAPITRES_OUVERTS.includes(id) },
+    { livre:'lecture', titre:'Parchemins de lecture',
+      chapitres: window.Ouvertures.CHAPITRES_LECTURE,
+      ouvertATous: () => false }
+  ];
+  let ouverturesEleves = [];   // [{ slug, nom, ouv:{ maths:[ids], lecture:[ids] } }]
+  async function chargerOuverturesPourTous(){
+    const wrap = $('ouverturesWrap');
+    $('ouvAtelierNote').hidden = !(MODE_ATELIER && atelierToutOuvert);
+    wrap.innerHTML = '<p class="muted">Chargement…</p>';
+    try{
+      const res = await window.storage.list('coffre_', true);
+      const noms = {};
+      ((res && res.keys) || [])
+        .filter(k => k.indexOf('coffre_bak') !== 0)
+        .forEach(k => { noms[k.slice('coffre_'.length)] = ''; });
+      allSubmissions.forEach(s => { if(s.slug) noms[s.slug] = s.name || ''; });
+      const slugs = Object.keys(noms).filter(Boolean);
+      ouverturesEleves = await Promise.all(slugs.map(async slug => {
+        const [coffre, ...listes] = await Promise.all([
+          window.storage.get('coffre_' + slug, true).then(r => { try{ return JSON.parse(r.value).donnees || null; }catch(e){ return null; } }, () => null),
+          ...LIVRES_OUVERTURES.map(L => window.Ouvertures.chapitresEleve(L.livre, slug))
+        ]);
+        const ouv = {};
+        LIVRES_OUVERTURES.forEach((L, k) => { ouv[L.livre] = listes[k]; });
+        return { slug, nom: (coffre && coffre.nom) || noms[slug] || slug, ouv };
+      }));
+      ouverturesEleves.sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+      rendreOuvertures();
+    }catch(e){
+      wrap.innerHTML = '<p class="muted">Impossible de charger la liste des élèves pour le moment.</p>';
+    }
+  }
+  // Tous les chapitres qu'on PEUT ouvrir à l'élève sont-ils ouverts ?
+  function toutOuvertPour(el){
+    return LIVRES_OUVERTURES.every(L => L.chapitres.every(c => L.ouvertATous(c.id) || el.ouv[L.livre].includes(c.id)));
+  }
+  function rendreOuvertures(){
+    const wrap = $('ouverturesWrap');
+    if(!ouverturesEleves.length){
+      wrap.innerHTML = '<p class="muted">Aucun élève pour le moment (un élève apparaît ici dès qu\'il a ouvert sa fiche de personnage).</p>';
+      return;
+    }
+    let html = '<table class="progress-grid ouv-grid"><thead><tr><th rowspan="2">Élève</th>';
+    LIVRES_OUVERTURES.forEach((L, k) => { html += '<th class="ouv-livre' + (k > 0 ? ' ouv-sep' : '') + '" colspan="' + L.chapitres.length + '">' + escapeHtml(L.titre) + '</th>'; });
+    html += '<th rowspan="2"></th></tr><tr>';
+    LIVRES_OUVERTURES.forEach((L, k) => L.chapitres.forEach((c, j) => {
+      html += '<th' + (k > 0 && j === 0 ? ' class="ouv-sep"' : '') + ' title="' + escapeHtml(c.titre) + '">' + escapeHtml(c.court) + '</th>';
+    }));
+    html += '</tr></thead><tbody>';
+    ouverturesEleves.forEach((el, i) => {
+      html += '<tr><td class="name-cell" title="' + escapeHtml(el.slug) + '">' + escapeHtml(el.nom) + '</td>';
+      LIVRES_OUVERTURES.forEach((L, k) => L.chapitres.forEach((c, j) => {
+        const sep = (k > 0 && j === 0) ? ' ouv-sep' : '';
+        if(L.ouvertATous(c.id)){
+          html += '<td class="' + sep + '" title="Ouvert à toute la classe"><span class="ouv-classe">✓</span></td>';
+        } else {
+          const coche = el.ouv[L.livre].includes(c.id);
+          html += '<td class="' + (coche ? 'ouv-perso' : '') + sep + '"><input type="checkbox" data-i="' + i + '" data-livre="' + L.livre + '" data-ch="' + escapeHtml(c.id) + '"' + (coche ? ' checked' : '') +
+            ' title="' + escapeHtml(L.titre + ' · ' + c.titre) + '"></td>';
+        }
+      }));
+      html += '<td><button class="ouv-tous" data-i="' + i + '">' + (toutOuvertPour(el) ? 'aucun' : 'tous') + '</button></td></tr>';
+    });
+    html += '</tbody></table>';
+    wrap.innerHTML = html;
+    wrap.querySelectorAll('input[type=checkbox]').forEach(box => {
+      box.addEventListener('change', () => {
+        const el = ouverturesEleves[+box.dataset.i];
+        const nouv = {};
+        nouv[box.dataset.livre] = el.ouv[box.dataset.livre].filter(id => id !== box.dataset.ch);
+        if(box.checked) nouv[box.dataset.livre].push(box.dataset.ch);
+        enregistrerOuvertures(el, nouv);
+      });
+    });
+    wrap.querySelectorAll('.ouv-tous').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const el = ouverturesEleves[+btn.dataset.i];
+        const tout = btn.textContent === 'tous';
+        const nouv = {};
+        LIVRES_OUVERTURES.forEach(L => { nouv[L.livre] = tout ? L.chapitres.map(c => c.id).filter(id => !L.ouvertATous(id)) : []; });
+        enregistrerOuvertures(el, nouv);
+      });
+    });
+  }
+  // nouv : { livre: [ids] } — seuls les livres présents sont réécrits.
+  async function enregistrerOuvertures(el, nouv){
+    $('ouverturesWrap').querySelectorAll('input, button').forEach(x => { x.disabled = true; });
+    for(const L of LIVRES_OUVERTURES){
+      if(!nouv[L.livre]) continue;
+      // Même ordre que la table des matières, pour une clé lisible dans la feuille.
+      const liste = L.chapitres.map(c => c.id).filter(id => nouv[L.livre].includes(id));
+      try{
+        await window.Ouvertures.enregistrer(L.livre, el.slug, liste);
+        el.ouv[L.livre] = liste;
+        if(L.livre === 'maths' && el.slug === currentSlug) chapitresEleve = liste.slice();
+      }catch(e){
+        alerteGrimoire("Impossible d'enregistrer l'ouverture pour le moment (" + L.titre + "). Rien n'a changé pour cet élève dans ce livre.");
+      }
+    }
+    rendreOuvertures();
+  }
+
 
   async function loadSubmissions(){
     $('submissionsList').innerHTML = '<p class="muted">Chargement des copies...</p>';
@@ -3537,7 +4440,7 @@
       for(const key of keys){
         try{
           const res = await window.storage.get(key, true);
-          if(res && res.value) subs.push(JSON.parse(res.value));
+          if(res && res.value){ const s = JSON.parse(res.value); s._cle = key; subs.push(s); }
         }catch(e){ /* skip unreadable entry */ }
       }
       subs.sort((a,b) => b.timestamp - a.timestamp);
@@ -3558,6 +4461,41 @@
         const resultat = await window.PasserelleCore.chargerCoffre(slug, namesBySlug[slug]);
         coinsCache[slug] = resultat.donnees.or || 0;
       }catch(e){ coinsCache[slug] = coinsCache[slug] || 0; }
+    }
+  }
+
+  /* ---------- Retour des copies d'évaluation ----------
+     L'enseignant écrit un commentaire et retourne la copie : l'élève voit alors, dans son Grimoire,
+     ses numéros réussis/ratés et le commentaire (pas les bonnes réponses). On peut retourner de nouveau
+     pour corriger le commentaire. */
+  function blocRetour(s){
+    const deja = s.retour ? '<span class="retour-fait">📬 Retournée le ' + new Date(s.retour.date).toLocaleString('fr-CA') + '</span>' : '';
+    return '<div class="retour-bloc">' +
+      '<label>Commentaire pour ' + escapeHtml(s.name) + '</label>' +
+      '<textarea rows="3" data-cle="' + escapeHtml(s._cle) + '" placeholder="Ex. Beau travail sur l\'heure ! Revois comment placer le rapporteur.">' + escapeHtml((s.retour && s.retour.commentaire) || '') + '</textarea>' +
+      '<div class="retour-rangee">' + deja + '<button type="button" class="retour-btn" data-cle="' + escapeHtml(s._cle) + '">' + (s.retour ? 'Retourner de nouveau' : '📬 Retourner la copie à l\'élève') + '</button></div>' +
+    '</div>';
+  }
+  async function retournerCopie(cle, btn){
+    const s = allSubmissions.find(x => x._cle === cle);
+    if(!s) return;
+    const zone = $('submissionsList').querySelector('textarea[data-cle="' + CSS.escape(cle) + '"]');
+    const commentaire = zone ? zone.value.trim() : '';
+    btn.disabled = true;
+    try{
+      const retour = {
+        titre: s.docTitre || s.sectionName, score: s.score, total: s.total,
+        resultats: s.details.map((d, k) => ({ numero: d.numero || (k + 1), question: d.question, reussi: !!d.isCorrect })),
+        commentaire, date: Date.now()
+      };
+      await window.storage.set(cleRetour(s.slug, s.chapterId, s.docId), JSON.stringify(retour), true);
+      s.retour = { commentaire, date: retour.date };
+      const copie = Object.assign({}, s); delete copie._cle;
+      await window.storage.set(cle, JSON.stringify(copie), true);
+      renderSubmissions();
+    }catch(e){
+      alerteGrimoire("Impossible de retourner la copie pour le moment. Réessaie dans un instant.");
+      btn.disabled = false;
     }
   }
 
@@ -3625,7 +4563,8 @@
               '<span class="muted">' + date + '</span></div>' +
             '<div class="score-badge' + (s.score===s.total ? ' perfect':'') + '">' + s.score + ' / ' + s.total + '</div>' +
           '</div>' +
-          '<details><summary>Voir le détail des réponses</summary><ul class="detail-list">' + detailsHtml + '</ul></details>' +
+          '<details' + (s.evaluation && !s.retour ? ' open' : '') + '><summary>Voir le détail des réponses</summary><ul class="detail-list">' + detailsHtml + '</ul></details>' +
+          (s.evaluation ? blocRetour(s) : '') +
           '<div class="award-row">' +
             '<span class="coin-count">🪙 ' + coinCount + '</span>' +
             '<button class="award-btn" data-slug="' + s.slug + '">+ Donner une pièce d\'or</button>' +
@@ -3634,6 +4573,9 @@
       );
     }).join('');
 
+    $('submissionsList').querySelectorAll('.retour-btn').forEach(btn => {
+      btn.addEventListener('click', () => retournerCopie(btn.dataset.cle, btn));
+    });
     $('submissionsList').querySelectorAll('.award-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const slug = btn.getAttribute('data-slug');
@@ -3653,5 +4595,16 @@
     });
   }
 </script>
+<script>
+/* La scène magique : place prise par la boule (gauche) et le compagnon (droite), envoyée par la fiche (lecture-magique.js). */
+window.addEventListener('message', e => {
+  const d = e.data;
+  if(!d || d.type !== 'scene-magique') return;
+  document.documentElement.style.setProperty('--rg', Math.max(0, d.gauche | 0) + 'px');
+  document.documentElement.style.setProperty('--rd', Math.max(0, d.droite | 0) + 'px');
+});
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="lecture-magique.js" data-agent></script>
 </body>
 </html>
