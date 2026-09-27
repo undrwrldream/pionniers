@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entraînement : le rapporteur des angles</title>
+<script src="commun.js"></script>
+<script src="../rapporteur.js" data-manuel></script>
+<script src="../sorts-outils.js"></script>
+<style>
+  .dessin{ display:block; margin:8px 0 2px; overflow:visible; }
+</style>
+</head>
+<body>
+<script>
+(function(){
+  /* Un angle : son sommet, un premier côté à « depart » degrés et un deuxième côté à « depart + ouverture ».
+     (0° = vers la droite, les degrés tournent dans le sens inverse des aiguilles d'une montre, comme au rapporteur.)
+     Les côtés dépassent le rapporteur (rayon 172 px) pour qu'on puisse bien lire la graduation. */
+  function angle(ouverture, depart, couleur){
+    const L = 215, W = 520, Ht = 250;
+    const rad = d => d * Math.PI / 180;
+    const a1 = rad(depart), a2 = rad(depart + ouverture);
+    // sommet placé pour que les deux côtés restent dans le dessin
+    const pts = [[0, 0], [Math.cos(a1) * L, -Math.sin(a1) * L], [Math.cos(a2) * L, -Math.sin(a2) * L]];
+    const minX = Math.min(...pts.map(p => p[0])), maxX = Math.max(...pts.map(p => p[0]));
+    const minY = Math.min(...pts.map(p => p[1])), maxY = Math.max(...pts.map(p => p[1]));
+    const ox = (W - (maxX - minX)) / 2 - minX, oy = (Ht - (maxY - minY)) / 2 - minY;
+    const P = p => (p[0] + ox).toFixed(1) + ',' + (p[1] + oy).toFixed(1);
+    const r = 34, arc = [Math.cos(a1) * r, -Math.sin(a1) * r], arc2 = [Math.cos(a2) * r, -Math.sin(a2) * r];
+    return '<svg class="dessin" width="' + W + '" height="' + Ht + '">' +
+      '<path d="M ' + P(arc) + ' A ' + r + ' ' + r + ' 0 ' + (ouverture > 180 ? 1 : 0) + ' 0 ' + P(arc2) + '" fill="none" stroke="' + couleur + '" stroke-width="2.5" stroke-dasharray="4 3"/>' +
+      '<line x1="' + (ox) + '" y1="' + (oy) + '" x2="' + (pts[1][0] + ox).toFixed(1) + '" y2="' + (pts[1][1] + oy).toFixed(1) + '" stroke="#1f2937" stroke-width="3.5" stroke-linecap="round"/>' +
+      '<line x1="' + (ox) + '" y1="' + (oy) + '" x2="' + (pts[2][0] + ox).toFixed(1) + '" y2="' + (pts[2][1] + oy).toFixed(1) + '" stroke="' + couleur + '" stroke-width="3.5" stroke-linecap="round"/>' +
+      '<circle cx="' + ox.toFixed(1) + '" cy="' + oy.toFixed(1) + '" r="5.5" fill="#dc2626" stroke="#fff" stroke-width="2"/></svg>';
+  }
+  function lancer(){ SortsOutils.rapporteur.ouvrir(); }
+
+  Entrainement.demarrer({
+    icone: '📐',
+    titre: 'Entraînement : le rapporteur des angles',
+    sousTitre: 'Apprends à placer ton rapporteur magique et à lire la bonne échelle.',
+    intro:
+      '<h2><span class="rond">✦</span>La leçon</h2>' +
+      '<ul><li><b>Glisse le rapporteur</b> pour le déplacer. Place son <b>centre</b> (le petit trou, en bas au milieu) sur le <b>sommet</b> de l\'angle, le point rouge.</li>' +
+      '<li>Le bord droit du rapporteur, la ligne du <b>0</b>, doit suivre un des deux côtés de l\'angle. Pour ça, <b>tourne-le</b> avec la poignée ⟳ <b>⟳</b>. Le bouton <b>↔</b> le remet droit.</li>' +
+      '<li>Lis le nombre sur l\'autre côté. Prends <b>l\'échelle qui commence à 0</b> sur ton premier côté !</li>' +
+      '<li>Les boutons <b>+</b> et <b>−</b> grossissent ou rapetissent le rapporteur.</li></ul>' +
+      '<p>Un angle <b>aigu</b> est plus petit que 90°, un angle <b>obtus</b> est plus grand. Ça t\'aide à vérifier ta lecture.</p>',
+    lancer: { texte: '✨ Faire apparaître le rapporteur des angles', action: lancer },
+    defis: [
+      { titre: 'Mesure cet angle', html: angle(90, 0, '#2563eb'), reponse: 90, tolerance: 2, unite: '°', aide: 'Centre sur le point rouge, 0 sur le côté noir. Cet angle a la forme d\'un coin de feuille.' },
+      { titre: 'Mesure cet angle aigu', html: angle(60, 0, '#16a34a'), reponse: 60, tolerance: 2, unite: '°', aide: 'Il est aigu : ta réponse doit être plus petite que 90°. As-tu pris l\'échelle qui part de 0 ?' },
+      { titre: 'Mesure cet angle obtus', html: angle(130, 0, '#9333ea'), reponse: 130, tolerance: 2, unite: '°', aide: 'Il est obtus : ta réponse doit être plus grande que 90°.' },
+      { titre: 'Mesure cet angle penché', html: angle(45, 25, '#ea580c'), reponse: 45, tolerance: 2, unite: '°', aide: 'Tourne le rapporteur avec la poignée ⟳ pour que la ligne du 0 suive le côté noir.' },
+      { titre: 'Mesure cet angle tourné vers la gauche', html: angle(150, 30, '#be123c'), reponse: 150, tolerance: 2, unite: '°',
+        aide: 'Le côté rouge part vers la gauche : mets la ligne du 0 sur lui et lis l\'échelle qui commence à 0 à GAUCHE. C\'est un grand angle obtus.' }
+    ],
+    fin: 'Le sort du rapporteur des angles est maintenant dans ta barre de sorts, en bas du Grimoire.'
+  });
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

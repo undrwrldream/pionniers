@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entraînement : le vélo magique</title>
+<script src="commun.js"></script>
+<script src="../sorts-outils.js"></script>
+<style>
+  .tableau{ border-collapse:collapse; margin:8px 0 4px; font-size:15px; }
+  .tableau td, .tableau th{ border:1px solid #d9c49a; padding:4px 10px; text-align:center; }
+  .tableau th{ background:rgba(88,28,135,.12); color:#3b0764; }
+</style>
+</head>
+<body>
+<script>
+(function(){
+  const V = SortsOutils.velo;
+  // Le vélo se place à droite de la leçon, un peu plus petit, pour laisser le texte visible.
+  function placerVelo(){
+    const e = Math.max(0.5, Math.min(0.8, (window.innerWidth - 640) / 880, (window.innerHeight - 20) / 560));
+    V.placer({ left: Math.max(610, window.innerWidth - 880 * e - 16), top: 4, echelle: e });
+  }
+  function lancer(){ placerVelo(); V.ouvrir(); }
+  window.addEventListener('resize', () => { if(V.visible()) placerVelo(); });
+
+  const est = n => () => V.visible() && V.lire() === n;
+  V.surChangement(() => Entrainement.reverifier());
+
+  Entrainement.demarrer({
+    icone: '🚲',
+    titre: 'Entraînement : le vélo magique',
+    sousTitre: 'Fais tourner le vélo dans les airs, comme un champion de BMX. Ta magie compte les degrés et les tours.',
+    intro:
+      '<h2><span class="rond">✦</span>La leçon</h2>' +
+      '<p>Un <b>tour complet</b>, c\'est <b>360°</b>. On peut le couper en morceaux :</p>' +
+      '<table class="tableau"><tr><th>Rotation</th><th>Degrés</th></tr>' +
+      '<tr><td>un quart de tour</td><td>90°</td></tr>' +
+      '<tr><td>un demi-tour</td><td>180°</td></tr>' +
+      '<tr><td>trois quarts de tour</td><td>270°</td></tr>' +
+      '<tr><td>un tour complet</td><td>360°</td></tr></table>' +
+      '<p><b>Glisse le vélo avec ta souris</b> pour le faire tourner. Dans le sens des aiguilles d\'une montre ↻, les degrés augmentent ; dans l\'autre sens ↺, ils diminuent jusqu\'à 0°.</p>' +
+      '<p>À gauche, ta magie écrit les <b>degrés</b>. À droite, elle compte les <b>quarts de tour</b> et les <b>demi-tours</b>. Les boutons <b>− 1°</b>, <b>+ 1°</b>, <b>− 90°</b> et <b>+ 90°</b> t\'aident à être précis.</p>',
+    lancer: { texte: '✨ Faire apparaître le vélo magique', action: lancer },
+    defis: [
+      { titre: 'Un quart de tour', auto: true, verifier: est(90),
+        html: '<p>Fais faire au vélo <b>un quart de tour</b>. Regarde combien de degrés ta magie écrit.</p>', bravo: 'Oui ! Un quart de tour, c\'est 90°.' },
+      { titre: 'Un demi-tour', auto: true, verifier: est(180),
+        html: '<p>Continue jusqu\'à <b>un demi-tour</b> : le vélo a maintenant les roues en l\'air !</p>', bravo: 'Bravo ! Un demi-tour, c\'est 180°, ou 2 quarts de tour.' },
+      { titre: 'Trois quarts de tour', auto: true, verifier: est(270),
+        html: '<p>Fais <b>trois quarts de tour</b>. Combien de degrés, d\'après toi ?</p>', bravo: 'Parfait ! 3 × 90° = 270°.' },
+      { titre: 'Le fameux 720', auto: true, verifier: est(720),
+        html: '<p>Les champions de BMX réussissent un <b>720</b> : <b>deux tours complets</b>. Fais tourner le vélo jusqu\'à <b>720°</b>. Combien de demi-tours as-tu faits ?</p>', bravo: 'Incroyable ! 720°, c\'est 2 tours, 4 demi-tours ou 8 quarts de tour.' },
+      { titre: 'Le légendaire 1080', auto: true, verifier: est(1080),
+        html: '<p>Le saut le plus difficile : le <b>1080</b>, <b>trois tours complets</b>. À toi !</p>', bravo: 'Légendaire ! 1080° = 3 × 360°.' },
+      { titre: 'Reviens en arrière', auto: true, verifier: est(450),
+        html: '<p>Fais tourner le vélo <b>dans l\'autre sens</b> ↺ jusqu\'à <b>5 quarts de tour</b>. Combien de degrés est-ce ?</p>', bravo: 'Bien joué ! 5 quarts de tour = 5 × 90° = 450°.' },
+      { titre: 'Sans le vélo', reponse: 12, unite: 'quarts de tour',
+        html: '<p>Combien de <b>quarts de tour</b> y a-t-il dans un <b>1080</b> ?</p>', aide: 'Un tour complet contient 4 quarts de tour. Combien de tours dans 1080° ?', bravo: 'Exact ! 3 tours × 4 quarts = 12 quarts de tour.' }
+    ],
+    fin: 'Le sort du vélo magique est maintenant dans ta barre de sorts, en bas du Grimoire. Lance-le pour t\'aider avec les quarts de tour, les demi-tours et les degrés.'
+  });
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

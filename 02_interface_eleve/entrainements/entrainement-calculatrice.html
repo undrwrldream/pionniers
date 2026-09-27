@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entraînement : la calculatrice magique</title>
+<script src="commun.js"></script>
+<script src="../sorts-outils.js"></script>
+<style>
+  .calcul{ font-size:26px; font-weight:800; letter-spacing:.02em; margin:6px 0; color:#3b2a1a; }
+  .touche{ display:inline-block; min-width:26px; padding:1px 7px; border-radius:7px; background:#7c3aed; color:#fff; font-weight:800; font-size:14px; text-align:center; }
+  .touche.fn{ background:#ede9fe; color:#6d28d9; }
+</style>
+</head>
+<body>
+<script>
+(function(){
+  const C = SortsOutils.calculatrice;
+  // La calculatrice se place en haut à droite, un peu plus petite, pour laisser la leçon visible.
+  function placerCalc(){
+    const e = Math.max(0.7, Math.min(0.95, (window.innerHeight - 16) / 540));
+    C.placer({ top: 8, right: 18, echelle: e });
+  }
+  function lancer(){ placerCalc(); C.ouvrir(); }
+  window.addEventListener('resize', () => { if(C.visible()) placerCalc(); });
+  const t = (k, fn) => '<span class="touche' + (fn ? ' fn' : '') + '">' + k + '</span>';
+
+  Entrainement.demarrer({
+    icone: '🧮',
+    titre: 'Entraînement : la calculatrice magique',
+    sousTitre: 'Apprends à faire tes calculs avec ta calculatrice de mage.',
+    intro:
+      '<h2><span class="rond">✦</span>La leçon</h2>' +
+      '<ul><li>Tape le premier nombre, puis l\'opération (' + t('+') + ' ' + t('−') + ' ' + t('×') + ' ' + t('÷') + '), puis le deuxième nombre, et termine avec ' + t('=') + '.</li>' +
+      '<li>' + t('←', 1) + ' efface le dernier chiffre. ' + t('Reset', 1) + ' efface tout le calcul.</li>' +
+      '<li>La virgule ' + t(',') + ' sert pour les nombres décimaux, comme les montants d\'argent : 12,50 $.</li>' +
+      '<li>Tu peux aussi utiliser les touches de ton clavier, et changer la couleur de ta calculatrice en haut.</li>' +
+      '<li>Tu peux la déplacer en la tenant par son bandeau.</li></ul>' +
+      '<p><b>Attention :</b> la calculatrice fait exactement ce que tu tapes. Relis toujours ton calcul !</p>',
+    lancer: { texte: '✨ Faire apparaître la calculatrice magique', action: lancer },
+    defis: [
+      { titre: 'Une addition', html: '<div class="calcul">347 + 586 = ?</div>', reponse: 933, aide: 'Tape 347, puis +, puis 586, puis =.' },
+      { titre: 'Une soustraction', html: '<div class="calcul">1 000 − 268 = ?</div>', reponse: 732, aide: 'Tape 1000 (sans espace), puis −, puis 268, puis =.' },
+      { titre: 'Une multiplication', html: '<div class="calcul">24 × 15 = ?</div>', reponse: 360, aide: 'La touche × est à droite, dans la colonne mauve.' },
+      { titre: 'Une division', html: '<div class="calcul">144 ÷ 12 = ?</div>', reponse: 12, aide: 'La touche ÷ est tout en haut de la colonne mauve.' },
+      { titre: 'Efface et recommence', html: '<p>Tape <b>8 × 7</b>, puis appuie sur ' + t('Reset', 1) + ' pour tout effacer. Ensuite, calcule :</p><div class="calcul">9 × 6 = ?</div>', reponse: 54, aide: 'Après Reset, l\'écran revient à 0 : tape 9 × 6 =.' },
+      { titre: 'Un problème de taux horaire', html: '<p>Léa gagne <b>12,50 $ de l\'heure</b> en gardant des enfants. Combien gagne-t-elle en <b>6 heures</b> ?</p><div class="calcul">12,50 × 6 = ?</div>', reponse: 75, unite: '$',
+        aide: 'Tape 12, puis la virgule, puis 5, puis × 6 =.' }
+    ],
+    fin: 'Le sort de la calculatrice magique est maintenant dans ta barre de sorts, en bas du Grimoire. Pratique pour les problèmes de taux horaire qui t\'attendent !'
+  });
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

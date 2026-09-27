@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entraînement : l'horloge magique</title>
+<script src="commun.js"></script>
+<script src="../sorts-outils.js"></script>
+<style>
+  .modele{ display:flex; align-items:center; gap:14px; margin-top:8px; }
+  .modele svg{ width:130px; height:130px; flex:none; }
+</style>
+</head>
+<body>
+<script>
+(function(){
+  const H = SortsOutils.horloge;
+  // L'horloge se place à droite du texte, un peu plus petite, pour laisser la leçon visible.
+  function placerHorloge(){
+    const e = Math.max(0.55, Math.min(0.9, (window.innerHeight - 20) / 600, (window.innerWidth - 640) / 446));
+    H.placer({ left: Math.max(620, window.innerWidth - 446 * e - 16), top: 6, echelle: e });
+  }
+  function lancer(){ placerHorloge(); H.ouvrir(); }
+  window.addEventListener('resize', () => { if(H.visible()) placerHorloge(); });
+
+  // Petit dessin d'horloge ordinaire (pour les défis « reproduis cette horloge »).
+  function dessin(h, m){
+    let s = '<svg viewBox="-60 -60 120 120"><circle r="56" fill="#fff" stroke="#3b2a1a" stroke-width="3"/>';
+    for(let i = 0; i < 60; i++){ const a = i * 6 * Math.PI / 180, g = i % 5 === 0, r1 = g ? 46 : 50;
+      s += '<line x1="' + (Math.sin(a) * r1).toFixed(1) + '" y1="' + (-Math.cos(a) * r1).toFixed(1) + '" x2="' + (Math.sin(a) * 54).toFixed(1) + '" y2="' + (-Math.cos(a) * 54).toFixed(1) + '" stroke="#3b2a1a" stroke-width="' + (g ? 2.2 : 0.8) + '"/>'; }
+    for(let n = 1; n <= 12; n++){ const a = n * 30 * Math.PI / 180; s += '<text x="' + (Math.sin(a) * 37).toFixed(1) + '" y="' + (-Math.cos(a) * 37 + 4.5).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="800" fill="#3b2a1a" font-family="Nunito, sans-serif">' + n + '</text>'; }
+    const am = m * 6, ah = (h % 12) * 30 + m * 0.5;
+    s += '<line x1="0" y1="0" x2="0" y2="-27" stroke="#b45309" stroke-width="6" stroke-linecap="round" transform="rotate(' + ah + ')"/>';
+    s += '<line x1="0" y1="0" x2="0" y2="-44" stroke="#1e3a8a" stroke-width="3.5" stroke-linecap="round" transform="rotate(' + am + ')"/>';
+    return s + '<circle r="4" fill="#3b2a1a"/></svg>';
+  }
+  const est = (h, m, jour) => () => { if(!H.visible()) return false; const t = H.lire(); return (jour ? t.h === h : t.h % 12 === h % 12) && t.m === m; };
+  const surveiller = () => Entrainement.reverifier();
+  H.surChangement(surveiller);
+
+  Entrainement.demarrer({
+    icone: '🕰️',
+    titre: "Entraînement : l'horloge magique",
+    sousTitre: "Apprends à faire tourner les aiguilles. Ta magie écrit l'heure dans les airs.",
+    intro:
+      '<h2><span class="rond">✦</span>La leçon</h2>' +
+      '<p>L\'horloge magique a deux aiguilles :</p>' +
+      '<ul><li>la <b>grande aiguille argentée</b> montre les <b>minutes</b>;</li>' +
+      '<li>la <b>petite aiguille dorée</b> montre les <b>heures</b>.</li></ul>' +
+      '<p><b>Glisse la grande aiguille</b> avec ta souris ou ton doigt. Quand elle fait <b>un tour complet</b>, 60 minutes ont passé : la petite aiguille avance d\'<b>une heure</b>.</p>' +
+      '<p>Au-dessus de l\'horloge, ta magie <b>écrit l\'heure numérique dans les airs</b>. Les boutons <b>− 1 min</b> et <b>+ 1 min</b> t\'aident à être précis.</p>',
+    lancer: { texte: "✨ Faire apparaître l'horloge magique", action: lancer },
+    defis: [
+      { titre: "Place l'horloge à 4:00", auto: true, verifier: est(4, 0),
+        html: '<p>La grande aiguille pointe le <b>12</b> et la petite pointe le <b>4</b>.</p>', bravo: "Parfait ! Il est 4:00 : la grande aiguille est sur le 12." },
+      { titre: "Place l'horloge à 7:30", auto: true, verifier: est(7, 30),
+        html: '<p>30 minutes, c\'est <b>une demi-heure</b> : la grande aiguille pointe le <b>6</b>. La petite aiguille est alors <b>entre le 7 et le 8</b>.</p>', bravo: "Bravo ! À 7:30, la petite aiguille est à mi-chemin entre 7 et 8." },
+      { titre: "Place l'horloge à 2:15", auto: true, verifier: est(2, 15),
+        html: '<p>15 minutes, c\'est <b>un quart d\'heure</b> : la grande aiguille pointe le <b>3</b>.</p>', bravo: "Oui ! 2:15, c'est deux heures et quart." },
+      { titre: "Place l'horloge à 10:45", auto: true, verifier: est(10, 45),
+        html: '<p>45 minutes : la grande aiguille pointe le <b>9</b>. Attention, la petite aiguille est <b>presque sur le 11</b>, mais il n\'est pas encore 11 heures !</p>', bravo: "Excellent ! 10:45, c'est 11 heures moins le quart." },
+      { titre: "Reproduis cette horloge, puis lis l'heure dans les airs", auto: true, verifier: est(8, 20),
+        html: '<div class="modele">' + dessin(8, 20) + '<p>Fais la même heure avec ta magie. Compte les minutes de <b>5 en 5</b> : chaque chiffre de l\'horloge vaut 5 minutes.</p></div>', bravo: "Bien vu ! Cette horloge montre 8:20." },
+      { titre: "L'après-midi : place l'horloge à 15:40", auto: true, verifier: est(15, 40, true),
+        html: '<p>Après midi, on continue de compter : 13, 14, 15… <b>15:40</b>, c\'est <b>3 h 40 de l\'après-midi</b>. Place les aiguilles sur 3:40, puis appuie sur <b>🌙 Après-midi</b> : ta magie écrira 15:40.</p>', bravo: "Magnifique ! 3 h 40 de l'après-midi s'écrit 15:40." }
+    ],
+    fin: "Le sort de l'horloge magique est maintenant dans ta barre de sorts, en bas du Grimoire. Tu pourras le lancer pour t'aider à résoudre tes problèmes sur l'heure."
+  });
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

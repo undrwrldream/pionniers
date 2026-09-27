@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Entraînement : la règle enchantée</title>
+<script src="commun.js"></script>
+<script src="../sorts-outils.js"></script>
+<style>
+  .dessin{ display:block; margin:8px 0 2px; overflow:visible; }
+</style>
+</head>
+<body>
+<script>
+(function(){
+  const CM = SortsOutils.regle.CM;   // 38 px = 1 cm : la même échelle que la règle
+  const PAD = 24;
+  // Segment de « cm » centimètres, incliné de « angle » degrés, avec un point rouge à chaque bout.
+  function segment(cm, angle, couleur, forme){
+    const a = (angle || 0) * Math.PI / 180, L = cm * CM;
+    const dx = Math.cos(a) * L, dy = -Math.sin(a) * L;
+    const minX = Math.min(0, dx), minY = Math.min(0, dy);
+    const W = Math.abs(dx) + 2 * PAD, Ht = Math.max(Math.abs(dy), forme ? 20 : 0) + 2 * PAD;
+    const x1 = PAD - minX, y1 = PAD - minY + (forme && !dy ? 10 : 0), x2 = x1 + dx, y2 = y1 + dy;
+    let s = '<svg class="dessin" width="' + W.toFixed(0) + '" height="' + Ht.toFixed(0) + '">';
+    if(forme === 'crayon'){
+      // un crayon de la gomme (gauche) à la pointe (droite)
+      const g = 0.8 * CM, p = 1.1 * CM;
+      s += '<rect x="' + x1 + '" y="' + (y1 - 11) + '" width="' + g + '" height="22" rx="5" fill="#f9a8d4" stroke="#9d174d"/>' +
+        '<rect x="' + (x1 + g) + '" y="' + (y1 - 11) + '" width="' + (L - g - p) + '" height="22" fill="#facc15" stroke="#a16207"/>' +
+        '<polygon points="' + (x2 - p) + ',' + (y1 - 11) + ' ' + x2 + ',' + y1 + ' ' + (x2 - p) + ',' + (y1 + 11) + '" fill="#fde68a" stroke="#a16207"/>' +
+        '<polygon points="' + (x2 - 0.35 * CM) + ',' + (y1 - 3.5) + ' ' + x2 + ',' + y1 + ' ' + (x2 - 0.35 * CM) + ',' + (y1 + 3.5) + '" fill="#374151"/>';
+    } else {
+      s += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="' + couleur + '" stroke-width="5" stroke-linecap="round"/>';
+    }
+    s += '<circle cx="' + x1.toFixed(1) + '" cy="' + y1.toFixed(1) + '" r="6" fill="#dc2626" stroke="#fff" stroke-width="2"/>' +
+         '<circle cx="' + x2.toFixed(1) + '" cy="' + y2.toFixed(1) + '" r="6" fill="#dc2626" stroke="#fff" stroke-width="2"/></svg>';
+    return s;
+  }
+  function lancer(){ SortsOutils.regle.ouvrir(); }
+
+  Entrainement.demarrer({
+    icone: '📏',
+    titre: 'Entraînement : la règle enchantée',
+    sousTitre: 'Apprends à placer, déplacer et tourner ta règle magique.',
+    intro:
+      '<h2><span class="rond">✦</span>La leçon</h2>' +
+      '<ul><li><b>Glisse la règle</b> pour la déplacer.</li>' +
+      '<li>Place le <b>0</b> de la règle sur le <b>premier point rouge</b>. Attention : le 0 n\'est pas tout au bout de la règle !</li>' +
+      '<li>Lis le nombre vis-à-vis du <b>deuxième point rouge</b>.</li>' +
+      '<li>Pour mesurer un trait penché, <b>tourne la règle</b> avec la poignée ⟳ <b>⟳</b>. Le bouton <b>↔ Droite</b> la remet à l\'horizontale.</li></ul>' +
+      '<p>Toutes les mesures sont en <b>centimètres entiers</b>.</p>',
+    lancer: { texte: '✨ Faire apparaître la règle enchantée', action: lancer },
+    defis: [
+      { titre: 'Mesure ce trait', html: segment(6, 0, '#2563eb'), reponse: 6, unite: 'cm', aide: 'Place bien le 0 sur le premier point rouge.' },
+      { titre: 'Mesure ce petit trait', html: segment(3, 0, '#16a34a'), reponse: 3, unite: 'cm', aide: 'Le 0 va sur le premier point, pas le bout de la règle.' },
+      { titre: 'Mesure le crayon, de la gomme jusqu\'à la pointe', html: segment(9, 0, '', 'crayon'), reponse: 9, unite: 'cm', aide: 'Mesure du point rouge de la gomme jusqu\'au point rouge de la pointe.' },
+      { titre: 'Mesure ce trait debout', html: segment(4, 90, '#9333ea'), reponse: 4, unite: 'cm', aide: 'Tourne la règle avec la poignée ⟳ pour qu\'elle soit debout, le long du trait.' },
+      { titre: 'Mesure ce trait penché', html: segment(5, 30, '#ea580c'), reponse: 5, unite: 'cm', aide: 'Tourne la règle avec la poignée ⟳ jusqu\'à ce qu\'elle suive le trait.' }
+    ],
+    fin: 'Le sort de la règle enchantée est maintenant dans ta barre de sorts, en bas du Grimoire.'
+  });
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>
