@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notions : le rapporteur</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:880px; margin:0 auto; padding:22px 16px 40px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:rgba(255,250,236,0.78); border:1px solid #d9c49a; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; }
+  .entete p{ margin:2px 0 0; font-size:14px; opacity:.8; }
+  .puces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .puces span{ font-size:13px; font-weight:800; background:#fff; border:1px solid #e3d2ad; border-radius:999px; padding:3px 10px; }
+  .score{ font-weight:800; font-size:17px; background:#fff; border:1px solid #d9c49a; border-radius:999px; padding:6px 14px; white-space:nowrap; }
+  .barre{ height:8px; border-radius:99px; background:rgba(59,42,26,.12); overflow:hidden; margin-top:8px; width:100%; }
+  .barre i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#e8b86a,#b45309); transition:width .3s; }
+
+  .notion{ background:rgba(255,250,236,0.9); border:1px solid #d9c49a; border-radius:16px; padding:18px 20px; }
+  .notion h2{ margin:0 0 4px; font-size:20px; font-weight:800; display:flex; align-items:center; gap:10px; }
+  .notion h2 .rond{ width:32px; height:32px; border-radius:50%; background:#4a2c0a; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+  .notion .sous{ margin:0 0 12px 42px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; opacity:.65; font-weight:800; }
+  .notion p{ margin:8px 0; font-size:16.5px; line-height:1.5; }
+  .retiens{ margin-top:12px; background:#fff7e6; border:1px dashed #d9a441; border-radius:12px; padding:10px 14px; font-size:15.5px; font-weight:700; }
+  .piege{ margin-top:10px; background:#fdecec; border:1px solid #f1b4b4; border-radius:12px; padding:10px 14px; font-size:15.5px; }
+
+  .familles{ display:grid; grid-template-columns:repeat(4, 1fr); gap:8px; margin-top:10px; }
+  .famille{ background:#fff; border:1px solid #ecdcb8; border-radius:12px; padding:8px; text-align:center; font-size:14px; font-weight:700; }
+  .famille b{ display:block; font-size:16px; }
+  .famille svg{ width:100%; max-width:120px; height:auto; }
+  .jouet{ display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-top:12px; background:#fff; border:1px solid #ecdcb8; border-radius:14px; padding:12px 14px; }
+  .jouet svg{ width:230px; max-width:100%; height:auto; }
+  .jouet .info{ flex:1; min-width:200px; }
+  .jouet .grand{ font-size:34px; font-weight:800; }
+  .jouet .fam{ font-size:18px; font-weight:800; }
+  .jouet input[type=range]{ width:100%; accent-color:#b45309; }
+
+  .etapes3{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:10px; }
+  .etapes3 div{ background:#fff; border:1px solid #ecdcb8; border-radius:12px; padding:10px 12px; font-size:15px; }
+  .etapes3 .t{ display:block; font-size:16px; margin-bottom:2px; font-weight:800; }
+  .choix-zero{ display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
+
+  .rapporteur{ width:100%; max-width:560px; height:auto; display:block; margin:6px auto; }
+  .rapporteur text{ font-family:'Nunito', system-ui, sans-serif; font-weight:800; }
+
+  .carte{ background:rgba(255,252,244,0.93); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; display:flex; gap:14px; }
+  .carte.ok{ border-color:#86c79a; background:rgba(240,253,244,0.94); }
+  .gauche{ flex:0 0 58px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .image{ width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; line-height:1; box-shadow:inset 0 0 0 1px rgba(59,42,26,.08); background:#EAF1FF; }
+  .num{ width:30px; height:30px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .carte.ok .num{ background:#16a34a; }
+  .corps{ flex:1; min-width:0; }
+  .enonce{ margin:4px 0 10px; font-size:17px; line-height:1.45; font-weight:700; }
+  .mini-grille{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+  .mini{ background:#fff; border:1px solid #ecdcb8; border-radius:12px; padding:8px; text-align:center; }
+  .mini.bon{ border-color:#86c79a; background:#f0fdf4; } .mini.faux{ border-color:#dc2626; }
+  .mini svg{ width:100%; max-width:130px; height:auto; }
+  .pastilles{ display:flex; flex-wrap:wrap; gap:4px; justify-content:center; }
+  .pastille{ font:inherit; font-size:13px; font-weight:800; padding:4px 9px; border-radius:999px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; cursor:pointer; }
+  .pastille.choisi{ background:#4a2c0a; border-color:#4a2c0a; color:#fff; }
+  .pastille:disabled{ cursor:default; }
+  .etape{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0; }
+  .etape .lib{ font-weight:800; font-size:15.5px; }
+  input{ font:inherit; font-size:17px; width:90px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input:focus{ outline:none; border-color:#b45309; }
+  input.bon, input:disabled{ background:#f0fdf4; border-color:#86c79a; color:#14532d; }
+  input.faux{ border-color:#dc2626; background:#fff5f5; }
+  .unite{ font-weight:800; opacity:.7; }
+  .actions{ display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
+  button{ font:inherit; font-weight:800; font-size:16px; padding:9px 18px; border-radius:10px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button:disabled{ background:#16a34a; cursor:default; }
+  button.pastille:hover:not(:disabled){ background:#fff3dc; } button.pastille.choisi:hover:not(:disabled){ background:#6b3f10; }
+  .msg{ font-weight:800; font-size:15px; }
+  .msg.bon{ color:#15803d; } .msg.faux{ color:#b91c1c; }
+  .conseil{ margin-top:8px; font-size:15px; font-weight:700; color:#8a4b08; background:#fff7e6; border-left:4px solid #d9a441; border-radius:8px; padding:8px 12px; }
+  @keyframes secoue{ 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+  .secoue{ animation:secoue .35s ease; }
+  .titre-section{ margin:8px 4px 0; font-size:19px; font-weight:800; }
+  .noir{ color:#1f160d; font-weight:800; } .bleu{ color:#1d4ed8; font-weight:800; }
+  @media (max-width:620px){ .familles, .mini-grille{ grid-template-columns:repeat(2, 1fr); } .etapes3{ grid-template-columns:1fr; } .gauche{ flex-basis:44px; } .image{ width:44px; height:44px; font-size:24px; border-radius:12px; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <div style="flex:1;min-width:220px">
+      <h1>Notions : le rapporteur</h1>
+      <p>Le rapporteur, c'est une demi-tarte : 180°.</p>
+      <div class="puces"><span>aigu : moins de 90°</span><span>droit : 90°</span><span>obtus : entre 90° et 180°</span><span>plat : 180°</span></div>
+      <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div class="score" id="score">0 / 9 réussis</div>
+  </div>
+
+  <!-- ───────── A. Les familles d'angles ───────── -->
+  <section class="notion">
+    <h2><span class="rond">A</span>Les quatre familles d'angles</h2>
+    <p class="sous">On compare avec une pointe de tarte</p>
+    <p>Tu connais déjà l'<b>angle droit</b> (1 pointe de tarte, 90°) et l'<b>angle plat</b> (une demi-tarte, 180°). Il manque deux familles :</p>
+    <div class="familles" id="familles"></div>
+    <p><b>Essaie :</b> fais glisser pour ouvrir l'angle et regarde sa famille changer.</p>
+    <div class="jouet">
+      <svg id="jouetSvg" viewBox="0 0 240 140" aria-label="Angle qui s'ouvre"></svg>
+      <div class="info">
+        <div class="grand" id="jouetDeg">60°</div>
+        <div class="fam" id="jouetFam"></div>
+        <input type="range" id="jouetRange" min="5" max="180" value="60" aria-label="Ouverture de l'angle">
+      </div>
+    </div>
+  </section>
+  <div id="groupe1"></div>
+
+  <!-- ───────── B. Mesurer en 3 étapes ───────── -->
+  <section class="notion">
+    <h2><span class="rond">B</span>Mesurer un angle en 3 étapes</h2>
+    <p class="sous">Le rapporteur a deux échelles</p>
+    <div class="etapes3">
+      <div><span class="t">1. Le centre</span>Pose le petit trou du rapporteur sur le <b>sommet</b> de l'angle (le coin).</div>
+      <div><span class="t">2. Le 0</span>Place un côté de l'angle sur la ligne du bas, là où il y a un <b>0</b>.</div>
+      <div><span class="t">3. La bonne échelle</span>Lis sur l'échelle qui <b>part de ce 0</b>, là où passe l'autre côté.</div>
+    </div>
+    <p>Il y a deux 0 : un à droite et un à gauche. L'échelle <span class="noir">noire (dehors)</span> part du 0 de <b>droite</b>. L'échelle <span class="bleu">bleue (dedans)</span> part du 0 de <b>gauche</b>.</p>
+    <p><b>Essaie :</b> le même angle, tourné d'un côté puis de l'autre.</p>
+    <div class="choix-zero">
+      <button type="button" class="pastille choisi" data-demo="d">Le côté est sur le 0 de droite</button>
+      <button type="button" class="pastille" data-demo="g">Le côté est sur le 0 de gauche</button>
+    </div>
+    <svg class="rapporteur" id="demoRap" viewBox="0 0 400 240" aria-label="Rapporteur posé sur un angle de 40 degrés"></svg>
+    <div class="retiens" id="demoTexte"></div>
+    <div class="piege">⚠️ <b>Piège :</b> chaque trait du rapporteur porte deux nombres, par exemple 40 et 140. Avant de lire, demande-toi : mon angle est-il aigu (moins de 90°) ou obtus (plus de 90°) ? Ça te dit lequel des deux nombres est le bon.</div>
+  </section>
+  <div id="groupe2"></div>
+
+  <h3 class="titre-section">À toi ! Le rapporteur est déjà posé : trouve la bonne échelle et lis.</h3>
+  <div id="groupe3"></div>
+</main>
+<script>
+(function(){
+  const RAD = Math.PI / 180;
+  const famille = a => a < 90 ? 'aigu' : a === 90 ? 'droit' : a < 180 ? 'obtus' : 'plat';
+  const nombre = txt => { const t = String(txt || '').trim().replace(',', '.').replace(/[^0-9.]/g, ''); if(!t) return null; const x = parseFloat(t); return isNaN(x) ? null : x; };
+
+  /* ───────── petit angle (sans rapporteur) ───────── */
+  function petitAngle(a, w, h, cx, cy, L){
+    const x = cx + L * Math.cos(a * RAD), y = cy - L * Math.sin(a * RAD);
+    let s = '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + L) + '" y2="' + cy + '" stroke="#3b2a1a" stroke-width="4" stroke-linecap="round"/>';
+    s += '<line x1="' + cx + '" y1="' + cy + '" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#3b2a1a" stroke-width="4" stroke-linecap="round"/>';
+    if(a === 90) s += '<path d="M' + (cx + 16) + ' ' + cy + ' V ' + (cy - 16) + ' H ' + cx + '" fill="none" stroke="#b45309" stroke-width="3"/>';
+    else { const r = 22, ex = cx + r * Math.cos(a * RAD), ey = cy - r * Math.sin(a * RAD);
+      s += '<path d="M' + (cx + r) + ' ' + cy + ' A ' + r + ' ' + r + ' 0 0 0 ' + ex.toFixed(1) + ' ' + ey.toFixed(1) + '" fill="none" stroke="#b45309" stroke-width="3"/>'; }
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="4" fill="#3b2a1a"/>';
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '">' + s + '</svg>';
+  }
+  const FAM = [
+    { n:'Aigu', a:45, t:'moins de 90° : plus petit qu\'une pointe' },
+    { n:'Droit', a:90, t:'90° : une pointe de tarte' },
+    { n:'Obtus', a:130, t:'entre 90° et 180° : plus d\'une pointe' },
+    { n:'Plat', a:180, t:'180° : une demi-tarte' } ];
+  document.getElementById('familles').innerHTML = FAM.map(f => '<div class="famille">' + petitAngle(f.a, 130, 80, f.a > 90 ? 70 : 20, 70, 55) + '<b>' + f.n + '</b>' + f.t + '</div>').join('');
+
+  // jouet : l'angle qui s'ouvre
+  function majJouet(){
+    const a = +document.getElementById('jouetRange').value;
+    let s = '<path d="M20 120 A100 100 0 0 1 220 120" fill="#fdf1d8" stroke="#c9924a" stroke-width="3"/>' +
+            '<line x1="120" y1="120" x2="120" y2="20" stroke="#c9924a" stroke-width="2" stroke-dasharray="5 5"/>';
+    const x = 120 + 100 * Math.cos(a * RAD), y = 120 - 100 * Math.sin(a * RAD), c = a < 90 ? '#16a34a' : a === 90 ? '#b45309' : a < 180 ? '#7c3aed' : '#1d4ed8';
+    s += '<path d="M120 120 L220 120 A100 100 0 0 0 ' + x.toFixed(1) + ' ' + y.toFixed(1) + ' Z" fill="' + c + '" opacity=".22"/>';
+    s += '<line x1="120" y1="120" x2="220" y2="120" stroke="#3b2a1a" stroke-width="4" stroke-linecap="round"/><line x1="120" y1="120" x2="' + x.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="#3b2a1a" stroke-width="4" stroke-linecap="round"/><circle cx="120" cy="120" r="4" fill="#3b2a1a"/>';
+    document.getElementById('jouetSvg').innerHTML = s;
+    document.getElementById('jouetDeg').textContent = a + '°';
+    const f = famille(a), el = document.getElementById('jouetFam');
+    el.textContent = { aigu:'Angle aigu : moins d\'une pointe', droit:'Angle droit : une pointe pile', obtus:'Angle obtus : plus d\'une pointe', plat:'Angle plat : la demi-tarte' }[f];
+    el.style.color = c;
+  }
+  document.getElementById('jouetRange').addEventListener('input', majJouet);
+  majJouet();
+
+  /* ───────── le rapporteur (SVG) ─────────
+     Centre (200, 210), rayon 170. Échelle noire (dehors) : 0 à droite. Échelle bleue (dedans) : 0 à gauche.
+     angle = mesure de l'angle ; zero = 'd' (un côté sur le 0 de droite) ou 'g' (sur le 0 de gauche). */
+  function rapporteur(angle, zero, opts){
+    opts = opts || {};
+    const cx = 200, cy = 210, R = 170, P = (r, phi) => [cx + r * Math.cos(phi * RAD), cy - r * Math.sin(phi * RAD)];
+    let s = '<path d="M' + (cx - R) + ' ' + cy + ' A ' + R + ' ' + R + ' 0 0 1 ' + (cx + R) + ' ' + cy + ' Z" fill="rgba(219,234,254,.55)" stroke="#475569" stroke-width="2"/>';
+    s += '%%RAYONS%%';
+    s += '<path d="M' + (cx - R + 58) + ' ' + cy + ' A ' + (R - 58) + ' ' + (R - 58) + ' 0 0 1 ' + (cx + R - 58) + ' ' + cy + '" fill="none" stroke="#94a3b8" stroke-width="1"/>';
+    for(let d = 0; d <= 180; d++){
+      const l = d % 10 === 0 ? 14 : d % 5 === 0 ? 9 : 5, [x1, y1] = P(R, d), [x2, y2] = P(R - l, d);
+      s += '<line x1="' + x1.toFixed(1) + '" y1="' + y1.toFixed(1) + '" x2="' + x2.toFixed(1) + '" y2="' + y2.toFixed(1) + '" stroke="#1f160d" stroke-width="' + (d % 10 ? .8 : 1.4) + '"/>';
+      if(d % 10 === 0){
+        const [xo, yo] = P(R - 26, d), [xi, yi] = P(R - 46, d);
+        const fo = opts.surligne === 'noir' ? ' fill="#1f160d"' : opts.surligne === 'bleu' ? ' fill="#1f160d" opacity=".3"' : ' fill="#1f160d"';
+        const fi = opts.surligne === 'bleu' ? ' fill="#1d4ed8"' : opts.surligne === 'noir' ? ' fill="#1d4ed8" opacity=".3"' : ' fill="#1d4ed8"';
+        const leve = (d === 0 || d === 180) ? -9 : 4;
+        s += '<text x="' + xo.toFixed(1) + '" y="' + (yo + leve).toFixed(1) + '" text-anchor="middle" font-size="12"' + fo + '>' + d + '</text>';
+        s += '<text x="' + xi.toFixed(1) + '" y="' + (yi + leve).toFixed(1) + '" text-anchor="middle" font-size="11"' + fi + '>' + (180 - d) + '</text>';
+      }
+    }
+    s += '<line x1="' + (cx - R) + '" y1="' + cy + '" x2="' + (cx + R) + '" y2="' + cy + '" stroke="#475569" stroke-width="1.5"/>';
+    // les deux côtés de l'angle
+    const base = zero === 'd' ? 0 : 180, autre = zero === 'd' ? angle : 180 - angle;
+    const [bx, by] = P(R + 18, base), [ax, ay] = P(R + 18, autre);
+    const r = 34, [ex, ey] = P(r, autre), [sx, sy] = P(r, base);
+    s += '<path d="M' + sx.toFixed(1) + ' ' + sy.toFixed(1) + ' A ' + r + ' ' + r + ' 0 0 ' + (zero === 'd' ? 0 : 1) + ' ' + ex.toFixed(1) + ' ' + ey.toFixed(1) + '" fill="none" stroke="#f59e0b" stroke-width="4"/>';
+    const rayons = '<line x1="' + cx + '" y1="' + cy + '" x2="' + bx.toFixed(1) + '" y2="' + by.toFixed(1) + '" stroke="#dc2626" stroke-width="3.5" stroke-linecap="round" opacity=".9"/>' +
+                   '<line x1="' + cx + '" y1="' + cy + '" x2="' + ax.toFixed(1) + '" y2="' + ay.toFixed(1) + '" stroke="#dc2626" stroke-width="3.5" stroke-linecap="round" opacity=".9"/>';
+    s = s.replace('%%RAYONS%%', rayons);
+    s += '<circle cx="' + cx + '" cy="' + cy + '" r="5" fill="#fff" stroke="#1f160d" stroke-width="2"/>';
+    return s;
+  }
+
+  // démo : 40° d'un côté puis de l'autre
+  function majDemo(z){
+    document.querySelectorAll('[data-demo]').forEach(b => b.classList.toggle('choisi', b.dataset.demo === z));
+    document.getElementById('demoRap').innerHTML = rapporteur(40, z, { surligne: z === 'd' ? 'noir' : 'bleu' });
+    document.getElementById('demoTexte').innerHTML = z === 'd'
+      ? '💡 Le côté est sur le <b>0 de droite</b> : on lit l\'échelle <span class="noir">noire</span>. L\'autre côté passe sur <b>40</b>. L\'angle est aigu, 40° a du sens. (L\'échelle bleue dit 140 au même endroit : c\'est le piège.)'
+      : '💡 Le côté est sur le <b>0 de gauche</b> : on lit l\'échelle <span class="bleu">bleue</span>. L\'autre côté passe sur <b>40</b>. C\'est le même angle de 40°. (L\'échelle noire dit 140 au même endroit : c\'est le piège.)';
+  }
+  document.querySelectorAll('[data-demo]').forEach(b => b.addEventListener('click', () => majDemo(b.dataset.demo)));
+  majDemo('d');
+
+  /* ───────── les numéros ─────────
+     classe : 4 petits angles à classer (aigu, droit, obtus, plat)
+     echelle + mesure : choisir l'échelle, puis lire (guidé)
+     mesure : lire l'angle, tolérance ±2° */
+  const NUMEROS = [
+    { groupe:1, image:'🔎', type:'classe', texte:"Classe chaque angle dans sa famille.", angles:[140, 35, 180, 90] },
+    { groupe:2, image:'📐', type:'guide', texte:"Le rapporteur est posé sur un angle.", angle:40, zero:'g' },
+    { groupe:3, image:'🏒', type:'mesure', texte:"L'angle du bâton de hockey.", angle:35, zero:'d' },
+    { groupe:3, image:'🏸', type:'mesure', texte:"L'angle du bras du joueur de badminton.", angle:130, zero:'g' },
+    { groupe:3, image:'⛷️', type:'mesure', texte:"L'angle des bâtons du skieur.", angle:70, zero:'g' },
+    { groupe:3, image:'🏹', type:'mesure', texte:"L'angle de l'arc qu'on tire.", angle:145, zero:'d' },
+    { groupe:3, image:'🛹', type:'mesure', texte:"L'angle de la rampe de planche.", angle:20, zero:'g' },
+    { groupe:3, image:'⚽', type:'mesure', texte:"L'angle de la jambe qui frappe le ballon.", angle:105, zero:'d' },
+    { groupe:3, image:'🏀', type:'mesure', texte:"L'angle du lancer au panier. Attention, il est proche de 90° !", angle:85, zero:'g' }
+  ];
+  const FAMS = ['aigu', 'droit', 'obtus', 'plat'];
+
+  const etatInitial = (function(){ try{ return JSON.parse(new URLSearchParams(location.search).get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};      // 'i' ou 'i:k' → réponse
+  const etapesOk = new Set((etatInitial && etatInitial.e) || []);
+  const reussis = new Set((etatInitial && etatInitial.ok) || []);
+  const derniereErreur = {};
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+
+  NUMEROS.forEach((q, i) => {
+    let corps = '<p class="enonce">' + q.texte + (q.type === 'mesure' ? ' Combien mesure-t-il ?' : '') + '</p>';
+    if(q.type === 'classe'){
+      corps += '<div class="mini-grille">' + q.angles.map((a, k) => '<div class="mini" id="mini' + i + '_' + k + '">' +
+        petitAngle(a, 130, 80, a > 90 ? 70 : 20, 70, 55) +
+        '<div class="pastilles">' + FAMS.map(f => '<button type="button" class="pastille" data-i="' + i + '" data-k="' + k + '" data-f="' + f + '">' + f + '</button>').join('') + '</div></div>').join('') + '</div>';
+    } else {
+      corps += '<svg class="rapporteur" viewBox="0 0 400 240">' + rapporteur(q.angle, q.zero) + '</svg>';
+      if(q.type === 'guide'){
+        corps += '<div class="etape"><span class="lib">a) Le côté est sur quel 0 ? Donc quelle échelle lis-tu ?</span>' +
+          '<span class="pastilles"><button type="button" class="pastille" data-i="' + i + '" data-k="0" data-f="noir">l\'échelle noire (dehors)</button>' +
+          '<button type="button" class="pastille" data-i="' + i + '" data-k="0" data-f="bleu">l\'échelle bleue (dedans)</button></span></div>';
+        corps += '<div class="etape"><span class="lib">b) Lis la mesure sur cette échelle :</span><input id="c' + i + '" data-i="' + i + '" inputmode="numeric"><span class="unite">°</span></div>';
+      } else {
+        corps += '<div class="etape"><input id="c' + i + '" data-i="' + i + '" inputmode="numeric"><span class="unite">°</span></div>';
+      }
+    }
+    corps += '<div class="actions"><button type="button" data-verifier="' + i + '">Vérifier</button><span class="msg" id="msg' + i + '"></span></div><div id="conseil' + i + '"></div>';
+    document.getElementById('groupe' + q.groupe).insertAdjacentHTML('beforeend',
+      '<div class="carte" id="carte' + i + '"><div class="gauche"><div class="image">' + q.image + '</div><div class="num">' + (i + 1) + '</div></div><div class="corps">' + corps + '</div></div>');
+  });
+
+  // pastilles (choix)
+  document.querySelectorAll('.pastille[data-i]').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.i, k = b.dataset.k, cle = i + ':' + k;
+    if(reussis.has(i) || etapesOk.has(cle)) return;
+    valeurs[cle] = b.dataset.f; afficherChoix(i, k);
+    const m = document.getElementById('mini' + i + '_' + k); if(m) m.classList.remove('faux');
+    envoyerEtat();
+  }));
+  function afficherChoix(i, k){
+    document.querySelectorAll('.pastille[data-i="' + i + '"][data-k="' + k + '"]').forEach(b => b.classList.toggle('choisi', valeurs[i + ':' + k] === b.dataset.f));
+  }
+  document.querySelectorAll('input[data-i]').forEach(el => {
+    const cle = el.dataset.i;
+    if(valeurs[cle] != null) el.value = valeurs[cle];
+    el.addEventListener('input', () => { valeurs[cle] = el.value; el.classList.remove('faux'); envoyerEtat(); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter') verifier(+el.dataset.i); });
+  });
+
+  const echelleJuste = q => q.zero === 'd' ? 'noir' : 'bleu';
+  function conseilMesure(q, n){
+    const f = famille(q.angle);
+    if(Math.abs(n - (180 - q.angle)) <= 2 && q.angle !== 90)
+      return "Tu as lu l'autre échelle ! Le côté est sur le 0 de " + (q.zero === 'd' ? 'droite : lis l\'échelle noire (dehors).' : 'gauche : lis l\'échelle bleue (dedans).') +
+             " Et cet angle est " + f + " : ta réponse doit être " + (f === 'aigu' ? 'plus petite' : 'plus grande') + " que 90°.";
+    if(famille(Math.round(n)) !== f) return "Regarde bien : cet angle est-il plus petit ou plus grand qu'une pointe de tarte (90°) ?";
+    return "Tu y es presque. Suis bien le côté rouge jusqu'à l'échelle et compte les petits traits : chacun vaut 1°.";
+  }
+
+  function verifier(i){
+    if(reussis.has(i)) return;
+    const q = NUMEROS[i], m = document.getElementById('msg' + i);
+    let ok = true, leConseil = null, signature = '';
+    if(q.type === 'classe'){
+      if(q.angles.every((a, k) => !valeurs[i + ':' + k])) return;
+      q.angles.forEach((a, k) => {
+        const cle = i + ':' + k, box = document.getElementById('mini' + i + '_' + k);
+        signature += (valeurs[cle] || '-') + ',';
+        if(etapesOk.has(cle)) return;
+        if(valeurs[cle] === famille(a)){ etapesOk.add(cle); box.classList.add('bon'); box.querySelectorAll('button').forEach(b => b.disabled = true); }
+        else { ok = false; if(valeurs[cle]){ box.classList.add('faux'); if(!leConseil) leConseil = "Compare chaque angle avec une pointe de tarte (90°) : plus petit, pile pareil, plus grand, ou une ligne droite ?"; } }
+      });
+    } else {
+      const el = document.getElementById('c' + i);
+      if(q.type === 'guide'){
+        const cle = i + ':0';
+        if(!valeurs[cle] && !el.value.trim()) return;
+        signature = (valeurs[cle] || '-') + '|';
+        if(!etapesOk.has(cle)){
+          if(valeurs[cle] === echelleJuste(q)){ etapesOk.add(cle); document.querySelectorAll('.pastille[data-i="' + i + '"]').forEach(b => b.disabled = true); }
+          else { ok = false; if(valeurs[cle]) leConseil = "Regarde où est posé le côté du bas : sur le 0 de droite ou sur le 0 de gauche ? L'échelle qui part de ce 0 est la bonne."; }
+        }
+      } else if(!el.value.trim()) return;
+      signature += el.value.trim();
+      const n = nombre(el.value);
+      if(n === null){ ok = false; if(el.value.trim()){ el.classList.add('faux'); leConseil = leConseil || "Écris seulement un nombre de degrés."; } }
+      else if(Math.abs(n - q.angle) > 2){ ok = false; el.classList.add('faux'); leConseil = leConseil || conseilMesure(q, n); }
+      else if(ok){ el.classList.add('bon'); }
+    }
+    if(ok || derniereErreur[i] !== signature){
+      parent({ type:'tentative', numero:String(i + 1), correcte:ok });
+      if(!ok) derniereErreur[i] = signature;
+    }
+    if(ok){ reussis.add(i); marquer(i, true); maj(); }
+    else {
+      m.textContent = 'Pas tout à fait, réessaie !'; m.className = 'msg faux';
+      document.getElementById('conseil' + i).innerHTML = leConseil ? '<div class="conseil">💡 ' + leConseil + '</div>' : '';
+      const carte = document.getElementById('carte' + i); carte.classList.remove('secoue'); void carte.offsetWidth; carte.classList.add('secoue');
+    }
+    envoyerEtat();
+  }
+  function marquer(i, annoncer){
+    const carte = document.getElementById('carte' + i); carte.classList.add('ok');
+    carte.querySelectorAll('input, .pastille').forEach(el => { el.disabled = true; });
+    carte.querySelectorAll('input').forEach(el => { el.classList.remove('faux'); el.classList.add('bon'); });
+    carte.querySelectorAll('.mini').forEach(el => { el.classList.remove('faux'); el.classList.add('bon'); });
+    const b = carte.querySelector('[data-verifier]'); b.disabled = true; b.textContent = '✓ Réussi';
+    if(annoncer){ const m = document.getElementById('msg' + i); m.textContent = 'Bonne réponse !'; m.className = 'msg bon'; }
+    document.getElementById('conseil' + i).innerHTML = '';
+  }
+
+  // reprise
+  NUMEROS.forEach((q, i) => {
+    if(q.type === 'classe') q.angles.forEach((a, k) => { afficherChoix(i, k); if(etapesOk.has(i + ':' + k)){ const box = document.getElementById('mini' + i + '_' + k); box.classList.add('bon'); box.querySelectorAll('button').forEach(b => b.disabled = true); } });
+    if(q.type === 'guide'){ afficherChoix(i, 0); if(etapesOk.has(i + ':0')) document.querySelectorAll('.pastille[data-i="' + i + '"]').forEach(b => b.disabled = true); }
+  });
+  reussis.forEach(i => marquer(i, false));
+  document.querySelectorAll('[data-verifier]').forEach(b => b.addEventListener('click', () => verifier(+b.dataset.verifier)));
+
+  function envoyerEtat(){
+    const vide = reussis.size === 0 && etapesOk.size === 0 && Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: (vide || reussis.size === NUMEROS.length) ? null : { v: valeurs, e: [...etapesOk], ok: [...reussis] } });
+  }
+  function maj(){
+    const n = reussis.size;
+    document.getElementById('score').textContent = n + ' / ' + NUMEROS.length + ' réussis';
+    document.getElementById('barre').style.width = (100 * n / NUMEROS.length) + '%';
+    parent({ type:'progress', vus:n, total:NUMEROS.length });
+    if(n === NUMEROS.length) parent({ type:'termine' });
+  }
+  maj();
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

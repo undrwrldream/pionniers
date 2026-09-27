@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Formes et mesures 1</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:900px; margin:0 auto; padding:22px 16px 140px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:rgba(255,250,236,0.8); border:1px solid #d9c49a; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; }
+  .entete p{ margin:3px 0 0; font-size:14px; opacity:.85; line-height:1.4; }
+  .puces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .puces span{ font-size:13px; font-weight:800; background:#fff; border:1px solid #e3d2ad; border-radius:999px; padding:3px 10px; }
+  .score{ font-weight:800; font-size:17px; background:#fff; border:1px solid #d9c49a; border-radius:999px; padding:6px 14px; white-space:nowrap; }
+  .barre{ height:8px; border-radius:99px; background:rgba(59,42,26,.12); overflow:hidden; margin-top:8px; width:100%; }
+  .barre i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#e8b86a,#b45309); transition:width .3s; }
+  .carte{ background:rgba(255,252,244,0.92); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; }
+  .carte.ok{ border-color:#86c79a; background:rgba(240,253,244,0.94); }
+  .tete{ display:flex; gap:12px; align-items:flex-start; }
+  .num{ flex:0 0 30px; width:30px; height:30px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .carte.ok .num{ background:#16a34a; }
+  .enonce{ margin:3px 0 0; font-size:17px; line-height:1.4; font-weight:700; }
+  .indice{ margin:2px 0 0; font-size:14px; opacity:.75; }
+  /* Fond uni, SANS quadrillage : un quadrillage de 1 cm permettrait de compter les carreaux au lieu de mesurer.
+     Les formes sont dessinées à l'échelle de la règle (1 cm = CM pixels) : on ne les rapetisse jamais. */
+  .zone{ margin:10px 0 4px; overflow-x:auto; padding:6px 0; background:#fbf6ea; border:1px dashed #e7d7b1; border-radius:12px; }
+  .zone svg{ display:block; margin:0 auto; overflow:visible; }
+  .rangee{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px; }
+  input{ font:inherit; font-size:18px; width:100px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input:focus{ outline:none; border-color:#b45309; }
+  input:disabled{ background:#f0fdf4; border-color:#86c79a; color:#14532d; }
+  .unite{ font-weight:800; opacity:.7; }
+  button{ font:inherit; font-weight:800; font-size:16px; padding:9px 18px; border-radius:10px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button:disabled{ background:#16a34a; cursor:default; }
+  .msg{ font-weight:800; font-size:15px; }
+  .msg.bon{ color:#15803d; } .msg.faux{ color:#b91c1c; }
+  @keyframes secoue{ 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+  .secoue{ animation:secoue .35s ease; }
+
+  /* ---------- La règle ---------- */
+  .regle{ position:fixed; left:0; top:0; z-index:50; touch-action:none; user-select:none; -webkit-user-select:none; cursor:grab;
+    filter:drop-shadow(0 6px 10px rgba(0,0,0,.22)); }
+  .regle:active{ cursor:grabbing; }
+  .regle svg{ display:block; overflow:visible; }
+  .regle-poignee{ position:absolute; top:50%; width:36px; height:36px; margin-top:-18px; border-radius:50%; background:#2563eb; border:3px solid #fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.3); color:#fff; font:700 17px/30px system-ui, sans-serif; text-align:center; cursor:grab; }
+  .regle-outils{ position:fixed; right:14px; bottom:14px; z-index:51; display:flex; gap:6px; }
+  .regle-outils button{ font-size:14px; padding:8px 12px; background:#2563eb; border:2px solid #fff; box-shadow:0 3px 10px rgba(0,0,0,.25); }
+  .regle-outils button:hover{ background:#1d4ed8; }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <div style="flex:1;min-width:230px">
+      <h1>Formes et mesures 1</h1>
+      <p>Glisse la règle sur la forme. Place le 0 sur le premier point rouge et lis le nombre au deuxième point rouge. Toutes les mesures sont en centimètres entiers.</p>
+      <div class="puces"><span>0 sur le premier point rouge</span><span>Lis au deuxième point</span><span>Réponse en cm</span></div>
+      <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div class="score" id="score">0 / 10 réussis</div>
+  </div>
+  <div id="liste" style="display:flex;flex-direction:column;gap:14px"></div>
+</main>
+
+<div class="regle" id="regle"><div class="regle-poignee" id="reglePoignee" title="Glisse pour faire tourner la règle">⟳</div></div>
+<div class="regle-outils">
+  <button type="button" id="regleDroit" title="Remettre la règle à l'horizontale">↔ Remettre droite</button>
+  <button type="button" id="regleRamener" title="Ramener la règle en bas de l'écran">↺ Ramener la règle</button>
+</div>
+
+<script>
+(function(){
+  const CM = 38;            // pixels par centimètre : la règle et les formes utilisent la même échelle
+  const MARGE = 16;             // espace entre le bout de la règle et le 0
+  const QUESTIONS = [{"texte": "Mesure ce segment.", "couleur": "#3B82F6", "forme": {"type": "segment", "points": [[0, 0], [4, 0]]}, "reponse": 4}, {"texte": "Mesure le crayon, de la gomme jusqu'à la pointe.", "couleur": "#EAB308", "forme": {"type": "crayon", "cm": 7}, "reponse": 7}, {"texte": "Mesure le côté du carré.", "indice": "Le côté marqué en rouge.", "couleur": "#F59E0B", "forme": {"type": "poly", "points": [[0, 0], [5, 0], [5, 5], [0, 5]], "marque": [3, 2]}, "reponse": 5}, {"texte": "Mesure la longueur du rectangle.", "indice": "La longueur est le côté le plus long.", "couleur": "#10B981", "forme": {"type": "poly", "points": [[0, 0], [9, 0], [9, 4], [0, 4]], "marque": [3, 2]}, "reponse": 9}, {"texte": "Mesure la largeur de ce rectangle debout.", "indice": "La largeur est le côté le plus court.", "couleur": "#6366F1", "forme": {"type": "poly", "points": [[0, 0], [3, 0], [3, 6], [0, 6]], "marque": [3, 2]}, "reponse": 3}, {"texte": "Mesure la base du triangle.", "indice": "La base est le côté du bas.", "couleur": "#8B5CF6", "forme": {"type": "poly", "points": [[0, 4], [6, 4], [3, 0]], "marque": [0, 1]}, "reponse": 6}, {"texte": "Mesure la flèche, de la queue jusqu'à la pointe.", "couleur": "#EF4444", "forme": {"type": "fleche", "cm": 8}, "reponse": 8}, {"texte": "Mesure le côté du petit carré.", "indice": "Regarde bien, il est petit !", "couleur": "#F97316", "forme": {"type": "poly", "points": [[0, 0], [2, 0], [2, 2], [0, 2]], "marque": [3, 2]}, "reponse": 2}, {"texte": "Mesure la grande base du trapèze.", "indice": "La grande base est le côté du bas.", "couleur": "#06B6D4", "forme": {"type": "poly", "points": [[0, 4], [10, 4], [8, 0], [2, 0]], "marque": [0, 1]}, "reponse": 10}, {"texte": "Mesure ce tout petit segment.", "couleur": "#14B8A6", "forme": {"type": "segment", "points": [[0, 0], [1, 0]]}, "reponse": 1}];
+
+  /* =================== LA RÈGLE (10 cm, graduée au millimètre) ===================
+     Le pivot est le 0 de la règle, sur son bord du haut (le bord gradué) :
+     on place le 0 sur le premier point rouge, puis on tourne avec la poignée bleue. */
+  const LARG = 10 * CM + 2 * MARGE, HAUT = 58;
+  (function dessinerRegle(){
+    let s = '<svg width="' + LARG + '" height="' + HAUT + '" viewBox="0 0 ' + LARG + ' ' + HAUT + '">' +
+      '<defs><linearGradient id="plast" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>' +
+      '<stop offset=".55" stop-color="#eef5ff" stop-opacity=".78"/><stop offset="1" stop-color="#dbe8f8" stop-opacity=".85"/></linearGradient></defs>' +
+      '<rect x="0.5" y="0.5" width="' + (LARG - 1) + '" height="' + (HAUT - 1) + '" rx="8" fill="url(#plast)" stroke="rgba(30,41,59,.35)"/>' +
+      '<rect x="3" y="' + (HAUT - 9) + '" width="' + (LARG - 6) + '" height="5" rx="2.5" fill="rgba(255,255,255,.6)"/>';
+    for(let mm = 0; mm <= 100; mm++){
+      const x = MARGE + mm * CM / 10;
+      const cmPile = mm % 10 === 0, demi = mm % 5 === 0;
+      const long = cmPile ? 20 : demi ? 14 : 8;
+      s += '<line x1="' + x.toFixed(2) + '" y1="0" x2="' + x.toFixed(2) + '" y2="' + long + '" stroke="#0f172a" stroke-width="' + (cmPile ? 1.6 : 1) + '"/>';
+      if(cmPile) s += '<text x="' + x.toFixed(2) + '" y="38" text-anchor="middle" font-family="Nunito, system-ui, sans-serif" font-size="15" font-weight="800" fill="#0f172a">' + (mm / 10) + '</text>';
+    }
+    s += '<text x="' + (LARG - 6) + '" y="' + (HAUT - 12) + '" text-anchor="end" font-family="Nunito, system-ui, sans-serif" font-size="10" font-weight="800" fill="#475569">cm</text></svg>';
+    document.getElementById('regle').insertAdjacentHTML('afterbegin', s);
+  })();
+  const regle = document.getElementById('regle');
+  const poignee = document.getElementById('reglePoignee');
+  poignee.style.left = (LARG + 6) + 'px';
+  regle.style.width = LARG + 'px';
+  regle.style.transformOrigin = MARGE + 'px 0px';
+  const pos = { x: 0, y: 0, rot: 0 };   // x, y = position du 0 à l'écran ; rot en degrés
+  function placer(){
+    regle.style.transform = 'translate(' + (pos.x - MARGE) + 'px,' + pos.y + 'px) rotate(' + pos.rot + 'deg)';
+  }
+  function ramener(){ pos.x = 24 + MARGE; pos.y = window.innerHeight - HAUT - 70; pos.rot = 0; placer(); }
+  ramener();
+  let glisse = null;
+  regle.addEventListener('pointerdown', e => {
+    if(e.target === poignee) return;
+    e.preventDefault();
+    glisse = { mode:'deplacer', x0:e.clientX, y0:e.clientY, px:pos.x, py:pos.y };
+    try{ regle.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  poignee.addEventListener('pointerdown', e => {
+    e.preventDefault(); e.stopPropagation();
+    glisse = { mode:'tourner' };
+    try{ poignee.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  window.addEventListener('pointermove', e => {
+    if(!glisse) return;
+    if(glisse.mode === 'deplacer'){
+      pos.x = Math.max(0, Math.min(window.innerWidth, glisse.px + e.clientX - glisse.x0));
+      pos.y = Math.max(0, Math.min(window.innerHeight - 20, glisse.py + e.clientY - glisse.y0));
+    } else {
+      let a = Math.atan2(e.clientY - pos.y, e.clientX - pos.x) * 180 / Math.PI;
+      // petit aimant : l'horizontale, la verticale et les multiples de 15° « collent » un peu
+      const proche = Math.round(a / 15) * 15;
+      if(Math.abs(a - proche) < 2.5) a = proche;
+      pos.rot = a;
+    }
+    placer();
+  });
+  const fin = () => { glisse = null; };
+  window.addEventListener('pointerup', fin); window.addEventListener('pointercancel', fin);
+  document.getElementById('regleRamener').addEventListener('click', ramener);
+  document.getElementById('regleDroit').addEventListener('click', () => { pos.rot = 0; placer(); });
+  window.addEventListener('resize', () => { pos.x = Math.min(pos.x, window.innerWidth - 10); pos.y = Math.min(pos.y, window.innerHeight - 20); placer(); });
+
+  /* =================== LES FORMES (à l'échelle) ===================
+     Chaque forme : des points en centimètres (y vers le bas). « marque » = les deux points
+     à mesurer (points rouges). Sans marque (périmètre), on mesure tous les côtés. */
+  const PAD = 26;
+  function dessinerForme(q){
+    const f = q.forme;
+    const pts = f.points || [];
+    let xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    if(f.type === 'crayon' || f.type === 'fleche'){ xs = [0, f.cm]; ys = [-0.45, 0.45]; }
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const W = (maxX - minX) * CM + 2 * PAD, H = (maxY - minY) * CM + 2 * PAD;
+    const X = x => ((x - minX) * CM + PAD).toFixed(2), Y = y => ((y - minY) * CM + PAD).toFixed(2);
+    const c = q.couleur;
+    let s = '<svg width="' + W.toFixed(0) + '" height="' + H.toFixed(0) + '" viewBox="0 0 ' + W.toFixed(2) + ' ' + H.toFixed(2) + '">';
+    const point = (x, y) => '<circle cx="' + X(x) + '" cy="' + Y(y) + '" r="6.5" fill="#EF4444" stroke="#fff" stroke-width="2.2"/>';
+    if(f.type === 'segment' || f.type === 'brisee'){
+      s += '<polyline points="' + pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ') + '" fill="none" stroke="' + c + '" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>';
+      pts.forEach(p => s += point(p[0], p[1]));
+    } else if(f.type === 'poly'){
+      s += '<polygon points="' + pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ') + '" fill="' + c + '" fill-opacity="0.22" stroke="' + c + '" stroke-width="4" stroke-linejoin="round"/>';
+      if(f.marque){
+        const a = pts[f.marque[0]], b = pts[f.marque[1]];
+        s += '<line x1="' + X(a[0]) + '" y1="' + Y(a[1]) + '" x2="' + X(b[0]) + '" y2="' + Y(b[1]) + '" stroke="' + c + '" stroke-width="7" stroke-linecap="round"/>';
+        s += point(a[0], a[1]) + point(b[0], b[1]);
+      } else {
+        pts.forEach(p => s += '<circle cx="' + X(p[0]) + '" cy="' + Y(p[1]) + '" r="4" fill="' + c + '"/>');
+      }
+    } else if(f.type === 'crayon'){
+      // crayon : gomme, virole, corps, bois taillé, mine — de 0 à f.cm
+      const L = f.cm, g = 0.7, v = 0.35, pointe = 1.3, r = 0.4;
+      s += '<rect x="' + X(0) + '" y="' + Y(-r) + '" width="' + (g * CM).toFixed(2) + '" height="' + (2 * r * CM).toFixed(2) + '" rx="6" fill="#f9a8d4" stroke="#9d174d" stroke-width="1.5"/>';
+      s += '<rect x="' + X(g) + '" y="' + Y(-r) + '" width="' + (v * CM).toFixed(2) + '" height="' + (2 * r * CM).toFixed(2) + '" fill="#cbd5e1" stroke="#475569" stroke-width="1.5"/>';
+      s += '<rect x="' + X(g + v) + '" y="' + Y(-r) + '" width="' + ((L - g - v - pointe) * CM).toFixed(2) + '" height="' + (2 * r * CM).toFixed(2) + '" fill="#facc15" stroke="#a16207" stroke-width="1.5"/>';
+      s += '<line x1="' + X(g + v) + '" y1="' + Y(0) + '" x2="' + X(L - pointe) + '" y2="' + Y(0) + '" stroke="#eab308" stroke-width="3"/>';
+      s += '<polygon points="' + X(L - pointe) + ',' + Y(-r) + ' ' + X(L) + ',' + Y(0) + ' ' + X(L - pointe) + ',' + Y(r) + '" fill="#fde68a" stroke="#a16207" stroke-width="1.5" stroke-linejoin="round"/>';
+      s += '<polygon points="' + X(L - 0.45) + ',' + Y(-0.14) + ' ' + X(L) + ',' + Y(0) + ' ' + X(L - 0.45) + ',' + Y(0.14) + '" fill="#334155"/>';
+      s += point(0, 0) + point(L, 0);
+    } else if(f.type === 'fleche'){
+      const L = f.cm;
+      s += '<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(L - 0.45) + '" y2="' + Y(0) + '" stroke="' + c + '" stroke-width="6" stroke-linecap="round"/>';
+      s += '<polygon points="' + X(L) + ',' + Y(0) + ' ' + X(L - 0.55) + ',' + Y(-0.32) + ' ' + X(L - 0.55) + ',' + Y(0.32) + '" fill="' + c + '" stroke="' + c + '" stroke-width="2" stroke-linejoin="round"/>';
+      s += point(0, 0) + point(L, 0);
+    }
+    return s + '</svg>';
+  }
+
+  /* =================== EXERCICES (même fonctionnement que les autres documents) =================== */
+  const etatInitial = (function(){ try{ return JSON.parse(new URLSearchParams(location.search).get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};
+  const reussis = new Set((etatInitial && etatInitial.ok) || []);
+  const derniereErreur = {};
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+  function lireCm(txt){
+    const t = String(txt || '').trim().toLowerCase().replace(/\s+/g, '').replace(/cm$/, '').replace(',', '.');
+    if(!/^\d+(\.\d+)?$/.test(t)) return null;
+    return parseFloat(t);
+  }
+
+  const liste = document.getElementById('liste');
+  liste.innerHTML = QUESTIONS.map((q, i) =>
+    '<div class="carte" id="carte' + i + '">' +
+      '<div class="tete"><div class="num">' + (i + 1) + '</div><div><p class="enonce">' + q.texte + '</p>' +
+      (q.indice ? '<p class="indice">' + q.indice + '</p>' : '') + '</div></div>' +
+      '<div class="zone">' + dessinerForme(q) + '</div>' +
+      '<div class="rangee"><input id="r' + i + '" data-q="' + i + '" inputmode="decimal" autocomplete="off" placeholder="?"><span class="unite">cm</span>' +
+      '<button type="button" data-verifier="' + i + '">Vérifier</button><span class="msg" id="msg' + i + '"></span></div>' +
+    '</div>').join('');
+
+  document.querySelectorAll('input[data-q]').forEach(el => {
+    const i = el.dataset.q;
+    if(valeurs[i] != null) el.value = valeurs[i];
+    el.addEventListener('input', () => { valeurs[i] = el.value; envoyerEtat(); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter') verifier(+i); });
+  });
+  document.querySelectorAll('[data-verifier]').forEach(b => b.addEventListener('click', () => verifier(+b.dataset.verifier)));
+  reussis.forEach(i => marquer(i, false));
+
+  function marquer(i, annoncer){
+    const carte = document.getElementById('carte' + i); if(!carte) return;
+    carte.classList.add('ok');
+    carte.querySelector('.num').textContent = '✓';
+    carte.querySelector('input').disabled = true;
+    const b = carte.querySelector('button'); b.disabled = true; b.textContent = '✓ Réussi';
+    if(annoncer){ const m = document.getElementById('msg' + i); m.textContent = 'Bonne mesure !'; m.className = 'msg bon'; }
+  }
+  function verifier(i){
+    if(reussis.has(i)) return;
+    const el = document.getElementById('r' + i);
+    if(!el.value.trim()) return;                        // une réponse vide n'est pas une tentative
+    const v = lireCm(el.value);
+    const ok = v !== null && v === QUESTIONS[i].reponse;
+    const sig = el.value.trim().toLowerCase();
+    if(ok || derniereErreur[i] !== sig){
+      parent({ type:'tentative', numero:String(i + 1), correcte:ok });
+      if(!ok) derniereErreur[i] = sig;
+    }
+    const m = document.getElementById('msg' + i);
+    if(ok){ reussis.add(i); marquer(i, true); maj(); }
+    else{
+      m.textContent = QUESTIONS[i].perimetre ? 'Pas tout à fait. Mesure chaque côté, puis additionne.' : 'Pas tout à fait. Place bien le 0 sur le premier point rouge.';
+      m.className = 'msg faux';
+      const carte = document.getElementById('carte' + i);
+      carte.classList.remove('secoue'); void carte.offsetWidth; carte.classList.add('secoue');
+    }
+    envoyerEtat();
+  }
+  function envoyerEtat(){
+    const vide = reussis.size === 0 && Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: (vide || reussis.size === QUESTIONS.length) ? null : { v: valeurs, ok: [...reussis] } });
+  }
+  function maj(){
+    const n = reussis.size;
+    document.getElementById('score').textContent = n + ' / ' + QUESTIONS.length + ' réussis';
+    document.getElementById('barre').style.width = (100 * n / QUESTIONS.length) + '%';
+    parent({ type:'progress', vus:n, total:QUESTIONS.length });
+    if(n === QUESTIONS.length) parent({ type:'termine' });
+  }
+  maj();
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

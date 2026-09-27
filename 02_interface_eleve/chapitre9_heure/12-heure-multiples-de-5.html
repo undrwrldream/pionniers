@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>L'heure dans la vraie vie : multiples de 5</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:880px; margin:0 auto; padding:22px 16px 40px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:rgba(255,250,236,0.78); border:1px solid #d9c49a; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; }
+  .entete p{ margin:2px 0 0; font-size:14px; opacity:.8; }
+  .puces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .puces span{ font-size:13px; font-weight:800; background:#fff; border:1px solid #e3d2ad; border-radius:999px; padding:3px 10px; }
+  .score{ font-weight:800; font-size:17px; background:#fff; border:1px solid #d9c49a; border-radius:999px; padding:6px 14px; white-space:nowrap; }
+  .barre{ height:8px; border-radius:99px; background:rgba(59,42,26,.12); overflow:hidden; margin-top:8px; width:100%; }
+  .barre i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#e8b86a,#b45309); transition:width .3s; }
+  .carte{ background:rgba(255,252,244,0.9); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; display:flex; gap:14px; }
+  .carte.ok{ border-color:#86c79a; background:rgba(240,253,244,0.92); }
+  .gauche{ flex:0 0 58px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .image{ width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; line-height:1; box-shadow:inset 0 0 0 1px rgba(59,42,26,.08); }
+  .num{ width:30px; height:30px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .carte.ok .num{ background:#16a34a; }
+  .corps{ flex:1; min-width:0; }
+  .enonce{ margin:4px 0 10px; font-size:17px; line-height:1.45; font-weight:700; }
+  .calcul{ display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+  .ecran{ font-family:ui-monospace, 'Courier New', monospace; font-weight:800; font-size:16px; letter-spacing:1px; background:#1f160d; color:#ffd88a; border-radius:9px; padding:4px 10px; }
+  .ecart{ font-family:ui-monospace, 'Courier New', monospace; font-weight:800; font-size:15px; background:#fff3dc; border:1px solid #e8c98a; color:#8a4b08; border-radius:999px; padding:3px 10px; }
+  .rangee{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .champ{ display:flex; align-items:center; gap:6px; }
+  .etiquette{ font-weight:800; font-size:15px; opacity:.85; }
+  input{ font:inherit; font-size:17px; width:110px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input.court{ width:84px; }
+  input:focus{ outline:none; border-color:#b45309; }
+  input:disabled{ background:#f0fdf4; border-color:#86c79a; color:#14532d; }
+  .unite{ font-weight:800; opacity:.7; }
+  .actions{ display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
+  button{ font:inherit; font-weight:800; font-size:16px; padding:9px 18px; border-radius:10px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button:disabled{ background:#16a34a; cursor:default; }
+  .msg{ font-weight:800; font-size:15px; }
+  .msg.bon{ color:#15803d; } .msg.faux{ color:#b91c1c; }
+  @keyframes secoue{ 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+  .secoue{ animation:secoue .35s ease; }
+  .astuce{ text-align:center; font-size:14px; opacity:.7; }
+  @media (max-width:520px){ .gauche{ flex-basis:44px; } .image{ width:44px; height:44px; font-size:24px; border-radius:12px; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <div style="flex:1;min-width:220px">
+      <h1>L'heure dans la vraie vie : multiples de 5</h1>
+      <p>Les minutes vont de 5 en 5 (7:05, 8:55, 14:10…). Écris une heure en heure digitale ; pour une durée, écris les heures et les minutes.</p>
+      <div class="puces"><span>1 h = 60 min</span><span>5, 10, 15, 20… 55 min</span></div>
+      <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div class="score" id="score">0 / 20 réussis</div>
+  </div>
+  <div id="liste"></div>
+  <p class="astuce">Une réponse fausse ? Relis le problème, refais ton calcul et réessaie.</p>
+</main>
+<script>
+(function(){
+  /* Types de réponse :
+     • heure : une heure digitale (13:00, 13h00, 13 h…). Les heures après midi sont aussi acceptées
+       sur 12 h (1:00 pour 13:00).
+     • duree : des heures et/ou des minutes (30 min, ou 1 h 15, ou 75 min). */
+  const QUESTIONS = [{"calcul": "7:05 + 10 min", "image": "🪥", "fond": "#FFF3E8", "texte": "Il est 7:05. Tu te brosses les dents pendant 10 min. À quelle heure as-tu fini ?", "reponses": [{"type": "heure", "attendu": "7:15"}]}, {"calcul": "11:40 − 10:55", "image": "📚", "fond": "#EAF1FF", "texte": "Ton cours finit à 11:40. Il a commencé à 10:55. Combien de temps a-t-il duré ?", "reponses": [{"type": "duree", "minutes": 45}]}, {"calcul": "16:20 + 35 min", "image": "🚲", "fond": "#FFFBE6", "texte": "Il est 16:20. Tu fais du vélo pendant 35 min. À quelle heure rentres-tu ?", "reponses": [{"type": "heure", "attendu": "16:55"}]}, {"calcul": "18:00 − 25 min", "image": "🏒", "fond": "#FFE8F0", "texte": "Tu dois être à l'aréna à 18:00. Il te faut 25 min pour y aller. À quelle heure dois-tu partir ?", "reponses": [{"type": "heure", "attendu": "17:35"}]}, {"calcul": "13:10 + 50 min", "image": "🎧", "fond": "#E8F7FF", "texte": "Il est 13:10. Tu écoutes un balado de 50 min. À quelle heure finit-il ?", "reponses": [{"type": "heure", "attendu": "14:00"}]}, {"calcul": "9:20 − 8:55", "image": "🚌", "fond": "#EDE9FF", "texte": "Il est 8:55. Ton autobus passe à 9:20. Dans combien de temps arrive-t-il ?", "reponses": [{"type": "duree", "minutes": 25}]}, {"calcul": "15:35 + 20 min", "image": "🍎", "fond": "#E6FFF4", "texte": "Il est 15:35. Ta collation et tes vidéos durent 20 min. Quelle heure sera-t-il après ?", "reponses": [{"type": "heure", "attendu": "15:55"}]}, {"calcul": "17:50 − 1 h 10", "image": "⚽", "fond": "#F0E8FF", "texte": "Ta partie de soccer finit à 17:50. Elle a duré 1 h 10. À quelle heure a-t-elle commencé ?", "reponses": [{"type": "heure", "attendu": "16:40"}]}, {"calcul": "6:40 + 35 min", "image": "🥣", "fond": "#FFF0E0", "texte": "Il est 6:40. Tu déjeunes pendant 15 min, puis tu marches 20 min jusqu'à l'école. À quelle heure arrives-tu ?", "reponses": [{"type": "heure", "attendu": "7:15"}]}, {"calcul": "21:05 − 20:10", "image": "🛋️", "fond": "#FFEFE8", "texte": "Il est 20:10. Tu dois te coucher à 21:05. Combien de temps te reste-t-il pour relaxer ?", "reponses": [{"type": "duree", "minutes": 55}]}, {"calcul": "9:25 + 55 min", "image": "📝", "fond": "#E8FFF0", "texte": "Il est 9:25. Ton examen dure 55 min. À quelle heure finit-il ?", "reponses": [{"type": "heure", "attendu": "10:20"}]}, {"calcul": "14:10 − 13:35", "image": "🚶", "fond": "#E8F2FF", "texte": "Tu arrives chez ton ami à 14:10. Tu es parti à 13:35. Combien de temps a duré ton trajet ?", "reponses": [{"type": "duree", "minutes": 35}]}, {"calcul": "12:05 + 65 min", "image": "🍽️", "fond": "#E0F8FF", "texte": "Il est 12:05. Tu dînes pendant 25 min, puis tu joues dehors 40 min. À quelle heure rentres-tu ?", "reponses": [{"type": "heure", "attendu": "13:10"}]}, {"calcul": "19:35 − 19:10", "image": "🎬", "fond": "#FFF4E0", "texte": "Le film commence à 19:35. Il est 19:10. Dans combien de temps commence-t-il ?", "reponses": [{"type": "duree", "minutes": 25}]}, {"calcul": "10:05 + 1 h 25", "image": "🎨", "fond": "#FFF9E0", "texte": "Il est 10:05. Tu fais un dessin pendant 1 h 25. À quelle heure finis-tu ?", "reponses": [{"type": "heure", "attendu": "11:30"}]}, {"calcul": "16:30 − 15:45", "image": "📒", "fond": "#FFE8E8", "texte": "Tu dois remettre ton devoir à 16:30. Il est 15:45. Combien de temps te reste-t-il ?", "reponses": [{"type": "duree", "minutes": 45}]}, {"calcul": "18:20 + 55 min", "image": "🍝", "fond": "#FFF0F5", "texte": "Il est 18:20. Tu soupes pendant 35 min, puis tu fais la vaisselle 20 min. Quelle heure est-il après ?", "reponses": [{"type": "heure", "attendu": "19:15"}]}, {"calcul": "8:10 − 7:50", "image": "🏫", "fond": "#E6F0FF", "texte": "Il est 7:50. L'école commence à 8:10. Combien de temps te reste-t-il ?", "reponses": [{"type": "duree", "minutes": 20}]}, {"calcul": "14:55 + 1 h 35", "image": "📱", "fond": "#E8EFFF", "texte": "Il est 14:55. Tu fais un direct de 1 h 35. À quelle heure finit-il ?", "reponses": [{"type": "heure", "attendu": "16:30"}]}, {"calcul": "21:40 → 6:55", "image": "🌙", "fond": "#EDE7FF", "texte": "Tu t'es couché à 21:40 et tu t'es réveillé à 6:55. Combien de temps as-tu dormi ?", "reponses": [{"type": "duree", "minutes": 555}]}];
+  const etatInitial = (function(){ try{ return JSON.parse(new URLSearchParams(location.search).get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};
+  const reussis = new Set((etatInitial && etatInitial.ok) || []);
+  const derniereErreur = {};
+
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+
+  // « 13:00 », « 13h00 », « 13 h », « 13.00 », « 1300 » → { h, m } (ou null)
+  function lireHeure(txt){
+    let t = String(txt || '').trim().toLowerCase().replace(/\s+/g, '').replace(/min$/, '');
+    if(!t) return null;
+    let m = t.match(/^(\d{1,2})(?:[:h.,](\d{1,2})?)?$/) || t.match(/^(\d{1,2})(\d{2})$/);
+    if(!m) return null;
+    const h = parseInt(m[1], 10), mn = m[2] ? parseInt(m[2], 10) : 0;
+    if(h > 24 || mn > 59) return null;
+    return { h: h % 24, m: mn };
+  }
+  function heureCorrecte(txt, attendu){
+    const r = lireHeure(txt);
+    if(!r) return false;
+    const [H, M] = attendu.split(':').map(Number);
+    if(r.m !== M) return false;
+    if(r.h === H) return true;
+    return r.h >= 1 && r.h <= 12 && (r.h % 12) === (H % 12);   // 1:00 accepté pour 13:00
+  }
+  function nombre(txt){
+    const t = String(txt || '').trim().replace(',', '.').replace(/[^0-9.]/g, '');
+    if(!t) return null;
+    const x = parseFloat(t);
+    return isNaN(x) ? null : x;
+  }
+  function dureeCorrecte(h, m, attendu){
+    const H = nombre(h), M = nombre(m);
+    if(H === null && M === null) return false;
+    if(H !== null && !Number.isInteger(H)) return false;
+    if(M !== null && !Number.isInteger(M)) return false;
+    return (H || 0) * 60 + (M || 0) === attendu;
+  }
+
+  function champ(i, cle, ph, cls){
+    return '<input id="c' + i + '_' + cle + '" data-q="' + i + '" data-cle="' + cle + '" placeholder="' + ph + '"' +
+      (cls ? ' class="' + cls + '"' : '') + ' inputmode="decimal" autocomplete="off">';
+  }
+  function reponse(r, i, k){
+    const cle = 'r' + k;
+    const lib = r.libelle ? '<span class="etiquette">' + r.libelle + '</span>' : '';
+    if(r.type === 'heure'){
+      return '<div class="rangee">' + lib + '<span class="champ">' + champ(i, cle, 'h:min') +
+        (r.suffixe ? '<span class="unite">' + r.suffixe + '</span>' : '') + '</span></div>';
+    }
+    return '<div class="rangee">' + lib +
+      '<span class="champ">' + champ(i, cle + 'h', 'h', 'court') + '<span class="unite">h</span></span>' +
+      '<span class="champ">' + champ(i, cle + 'm', 'min', 'court') + '<span class="unite">min</span></span></div>';
+  }
+  const v = (i, cle) => { const el = document.getElementById('c' + i + '_' + cle); return el ? el.value : ''; };
+  function estVide(i){ return [...document.querySelectorAll('input[data-q="' + i + '"]')].every(el => !el.value.trim()); }
+  function signature(i){ return [...document.querySelectorAll('input[data-q="' + i + '"]')].map(el => el.value.trim().toLowerCase()).join('|'); }
+  function correct(q, i){
+    return q.reponses.every((r, k) => r.type === 'heure'
+      ? heureCorrecte(v(i, 'r' + k), r.attendu)
+      : dureeCorrecte(v(i, 'r' + k + 'h'), v(i, 'r' + k + 'm'), r.minutes));
+  }
+  function calcul(q){
+    if(!q.depart && !q.calcul) return '';
+    if(q.calcul) return '<div class="calcul"><span class="ecart">' + q.calcul + '</span></div>';
+    return '<div class="calcul"><span class="ecran">' + q.depart + '</span><span class="ecart">' + q.ecart + '</span><span class="ecran">??:??</span></div>';
+  }
+
+  const liste = document.getElementById('liste');
+  liste.style.display = 'flex'; liste.style.flexDirection = 'column'; liste.style.gap = '14px';
+  liste.innerHTML = QUESTIONS.map((q, i) =>
+    '<div class="carte" id="carte' + i + '">' +
+      '<div class="gauche"><div class="image" style="background:' + q.fond + '">' + q.image + '</div><div class="num">' + (i + 1) + '</div></div>' +
+      '<div class="corps">' +
+        '<p class="enonce">' + q.texte + '</p>' + calcul(q) +
+        q.reponses.map((r, k) => reponse(r, i, k)).join('<div style="height:8px"></div>') +
+        '<div class="actions"><button type="button" data-verifier="' + i + '">Vérifier</button><span class="msg" id="msg' + i + '"></span></div>' +
+      '</div></div>').join('');
+
+  document.querySelectorAll('input[data-q]').forEach(el => {
+    const k = el.dataset.q + ':' + el.dataset.cle;
+    if(valeurs[k] != null) el.value = valeurs[k];
+    el.addEventListener('input', () => { valeurs[k] = el.value; envoyerEtat(); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter') verifier(+el.dataset.q); });
+  });
+  reussis.forEach(i => marquer(i, false));
+  document.querySelectorAll('[data-verifier]').forEach(b => b.addEventListener('click', () => verifier(+b.dataset.verifier)));
+
+  function marquer(i, annoncer){
+    const carte = document.getElementById('carte' + i);
+    if(!carte) return;
+    carte.classList.add('ok');
+    carte.querySelector('.num').textContent = '✓';
+    carte.querySelectorAll('input').forEach(el => el.disabled = true);
+    const b = carte.querySelector('button'); b.disabled = true; b.textContent = '✓ Réussi';
+    if(annoncer){ const m = document.getElementById('msg' + i); m.textContent = 'Bonne réponse !'; m.className = 'msg bon'; }
+  }
+  function verifier(i){
+    if(reussis.has(i)) return;
+    if(estVide(i)) return;                                  // une réponse vide n'est pas une tentative
+    const ok = correct(QUESTIONS[i], i);
+    const sig = signature(i);
+    if(ok || derniereErreur[i] !== sig){
+      parent({ type:'tentative', numero:String(i + 1), correcte:ok });
+      if(!ok) derniereErreur[i] = sig;
+    }
+    const m = document.getElementById('msg' + i);
+    if(ok){ reussis.add(i); marquer(i, true); maj(); }
+    else{
+      m.textContent = 'Pas tout à fait, réessaie !'; m.className = 'msg faux';
+      const carte = document.getElementById('carte' + i);
+      carte.classList.remove('secoue'); void carte.offsetWidth; carte.classList.add('secoue');
+    }
+    envoyerEtat();
+  }
+  function envoyerEtat(){
+    const vide = reussis.size === 0 && Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: (vide || reussis.size === QUESTIONS.length) ? null : { v: valeurs, ok: [...reussis] } });
+  }
+  function maj(){
+    const n = reussis.size;
+    document.getElementById('score').textContent = n + ' / ' + QUESTIONS.length + ' réussis';
+    document.getElementById('barre').style.width = (100 * n / QUESTIONS.length) + '%';
+    parent({ type:'progress', vus:n, total:QUESTIONS.length });
+    if(n === QUESTIONS.length) parent({ type:'termine' });
+  }
+  maj();
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

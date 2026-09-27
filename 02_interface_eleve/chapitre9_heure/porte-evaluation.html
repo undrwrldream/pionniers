@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La porte de l'évaluation</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<script src="../rapporteur.js" data-manuel></script>
+<script src="../sorts-outils.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:880px; margin:0 auto; padding:22px 16px 110px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:linear-gradient(90deg, rgba(255,244,214,.95), rgba(255,250,236,.88)); border:2px solid #b45309; border-radius:16px; padding:14px 18px; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; display:flex; align-items:center; gap:10px; }
+  .entete p{ margin:5px 0 0; font-size:14.5px; line-height:1.45; }
+  .epreuves{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .epreuves span{ font-size:12.5px; font-weight:800; padding:3px 10px; border-radius:999px; border:1.5px solid #d9c49a; background:#fff; opacity:.6; }
+  .epreuves span.ici{ opacity:1; border-color:#b45309; background:#fff3dc; }
+  .compteur{ margin-top:8px; font-weight:800; font-size:14px; }
+  .outils{ display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+  .outils button{ font-size:14px; padding:7px 14px; background:#2563eb; }
+  .outils button:hover:not(:disabled){ background:#1d4ed8; }
+  .carte{ background:rgba(255,252,244,0.92); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; display:flex; gap:14px; }
+  .carte.repondu{ border-color:#c9b27a; }
+  .gauche{ flex:0 0 58px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .image{ width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; line-height:1; box-shadow:inset 0 0 0 1px rgba(59,42,26,.08); }
+  .num{ width:30px; height:30px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .corps{ flex:1; min-width:0; }
+  .enonce{ margin:4px 0 10px; font-size:17px; line-height:1.45; font-weight:700; }
+  .dessin{ margin:4px 0 10px; overflow-x:auto; background:#fbf6ea; border:1px dashed #e7d7b1; border-radius:12px; }
+  .dessin svg{ display:block; margin:0 auto; }
+  .rangee{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .champ{ display:flex; align-items:center; gap:6px; }
+  input[type=text]{ font:inherit; font-size:17px; width:110px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input.court{ width:84px; }
+  input[type=text]:focus{ outline:none; border-color:#b45309; }
+  input:disabled{ background:#f4efe3; color:#5b4a36; }
+  .unite{ font-weight:800; opacity:.7; }
+  .remise{ background:rgba(255,250,236,0.9); border:2px solid #b45309; border-radius:16px; padding:16px 18px; text-align:center; }
+  .remise p{ margin:0 0 10px; font-weight:700; }
+  button{ font:inherit; font-weight:800; font-size:17px; padding:11px 22px; border-radius:12px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button.secondaire{ background:#fff; color:#4a2c0a; border:2px solid #4a2c0a; }
+  .confirmation{ display:none; margin-top:12px; padding:12px; border-radius:12px; background:#fff3dc; border:1px solid #e8c98a; }
+  .confirmation.visible{ display:block; }
+  .confirmation .boutons{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+  .remise.faite{ border-color:#16a34a; background:rgba(240,253,244,0.95); }
+  .remise.faite p{ color:#14532d; font-size:18px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <h1><span>🏰</span><span id="titre">La porte de l'évaluation</span></h1>
+    <p>Ces 3 épreuves gardent la porte de l'évaluation. Réponds à tous les numéros, puis remets l'épreuve. <b>Rien n'est corrigé maintenant</b> : tout sera corrigé d'un seul coup quand tu auras remis les 3 épreuves. Il faut <b>24 bonnes réponses sur 36</b> pour ouvrir l'évaluation.</p>
+    <p>Heures en heure digitale (ex. 14:35). Pour une durée, écris les heures et les minutes.</p>
+    <div class="epreuves" id="epreuves"></div>
+    <div class="outils">
+      <button type="button" id="btnRegle">📏 Règle</button>
+      <button type="button" id="btnRapporteur">📐 Rapporteur</button>
+    </div>
+    <div class="compteur" id="compteur"></div>
+  </div>
+  <div id="liste" style="display:flex;flex-direction:column;gap:14px"></div>
+  <div class="remise" id="remise">
+    <p>Quand tu as terminé, remets cette épreuve.</p>
+    <button type="button" id="btnRemettre">📨 Remettre l'épreuve</button>
+    <div class="confirmation" id="confirmation">
+      <div id="texteConfirmation"></div>
+      <div class="boutons">
+        <button type="button" class="secondaire" id="btnAnnuler">Je retourne vérifier</button>
+        <button type="button" id="btnConfirmer">Oui, je remets l'épreuve</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+(function(){
+  /* =====================================================================
+     LA PORTE DE L'ÉVALUATION (le « gauntlet ») — chapitre IX, fin de la Consolidation.
+     3 épreuves de 12 numéros : chacune prend 2 numéros de chacune des 6 notions des Bases :
+       tarte    = Exercices : l'heure en pointe de tarte (Bases 2)
+       mesures  = Formes et mesures 2 (Bases 6)
+       bmx      = Exercices : l'heure en saut de BMX 2 (Bases 8)
+       durees   = Notions : calculer une durée (Bases 9)
+       vraievie = Exercices : l'heure dans la vraie vie (Bases 11)
+       angles   = Les angles sportifs 1 (Bases 15)
+     Adresse : porte-evaluation.html?p=1|2|3&essai=N
+       • les nombres dépendent de l'essai : un nouvel essai = de nouveaux nombres;
+       • aucune correction ici : à la remise, la page envoie sa copie (avec la notion de chaque
+         numéro) au Grimoire { type:'copie', score, total, details } puis { type:'termine' }.
+         Le Grimoire corrige les 3 épreuves ensemble et fait le diagnostic.
+     ===================================================================== */
+  const params = new URLSearchParams(location.search);
+  const P = Math.min(3, Math.max(1, parseInt(params.get('p'), 10) || 1));
+  const ESSAI = Math.max(1, parseInt(params.get('essai'), 10) || 1);
+  const etatInitial = (function(){ try{ return JSON.parse(params.get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};
+  let remise = false;
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+
+  document.getElementById('titre').textContent = "La porte de l'évaluation — épreuve " + P + ' / 3';
+  document.getElementById('epreuves').innerHTML = [1, 2, 3].map(n => '<span class="' + (n === P ? 'ici' : '') + '">Épreuve ' + n + '</span>').join('');
+
+  /* ---------- hasard reproductible : mêmes nombres pour le même essai et la même épreuve ---------- */
+  function hasard(graine){
+    let a = graine >>> 0;
+    return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  const deux = n => (n < 10 ? '0' : '') + n;
+  const hm = t => { t = ((t % 1440) + 1440) % 1440; return Math.floor(t / 60) + ':' + deux(t % 60); };
+  const dureeTxt = m => Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + deux(m % 60) : '');
+
+  /* ---------- les 6 notions : 6 modèles chacune (v = 0..5), 2 par épreuve ---------- */
+  const NOTIONS = {
+    tarte(v, R){
+      const h = 1 + Math.floor(R() * 11);
+      if(v === 0) return { type:'nombre', image:'🥧', texte:'Il est ' + h + ' h et quart. Combien de pointes de tarte la grande aiguille a-t-elle coupées depuis ' + h + ' h ?', court:h + ' h et quart : pointes', attendu:1, unite:'pointe(s)' };
+      if(v === 1) return { type:'horloge', image:'🕰️', texte:"Quelle heure indique l'horloge ? Écris-la en heure digitale.", court:'Lire l\'horloge (' + h + ':30)', attendu:h + ':30', h:h, m:30 };
+      if(v === 2) return { type:'nombre', image:'🥧', texte:'Il est ' + h + ' h et trois quarts. Combien de pointes de tarte la grande aiguille a-t-elle coupées depuis ' + h + ' h ?', court:h + ' h et trois quarts : pointes', attendu:3, unite:'pointe(s)' };
+      if(v === 3) return { type:'horloge', image:'🕰️', texte:"Quelle heure indique l'horloge ? Écris-la en heure digitale.", court:'Lire l\'horloge (' + h + ':45)', attendu:h + ':45', h:h, m:45 };
+      if(v === 4){ const n = 1 + Math.floor(R() * 3); return { type:'nombre', image:'🍰', texte:'Combien de minutes valent ' + n + ' pointe' + (n > 1 ? 's' : '') + ' de tarte sur l\'horloge ?', court:n + ' pointe(s) en minutes', attendu:n * 15, unite:'min' }; }
+      return { type:'horloge', image:'🕰️', texte:"Quelle heure indique l'horloge ? Écris-la en heure digitale.", court:'Lire l\'horloge (' + h + ':15)', attendu:h + ':15', h:h, m:15 };
+    },
+    mesures(v, R){
+      if(v === 0){ const L = 3 + Math.floor(R() * 5); return { type:'mesure', image:'📏', texte:'Mesure ce segment debout avec la règle.', court:'Segment debout', attendu:L, unite:'cm', forme:{ type:'segment', points:[[0, L], [0, 0]] } }; }
+      if(v === 1){ const L = 4 + Math.floor(R() * 5), a = (25 + Math.floor(R() * 30)) * Math.PI / 180;
+        return { type:'mesure', image:'📏', texte:'Mesure ce segment penché avec la règle.', court:'Segment penché', attendu:L, unite:'cm', forme:{ type:'segment', points:[[0, L * Math.sin(a)], [L * Math.cos(a), 0]] } }; }
+      if(v === 2){ const c = 3 + Math.floor(R() * 3); return { type:'mesure', image:'🟧', texte:'Trouve le périmètre de ce carré.', court:'Périmètre du carré (côté ' + c + ' cm)', attendu:4 * c, unite:'cm', forme:{ type:'poly', points:[[0, 0], [c, 0], [c, c], [0, c]] } }; }
+      if(v === 3){ const L = 5 + Math.floor(R() * 4), l = 2 + Math.floor(R() * 3); return { type:'mesure', image:'🟩', texte:'Trouve le périmètre de ce rectangle.', court:'Périmètre du rectangle (' + L + ' × ' + l + ' cm)', attendu:2 * (L + l), unite:'cm', forme:{ type:'poly', points:[[0, 0], [L, 0], [L, l], [0, l]] } }; }
+      if(v === 4){ const a = 2 + Math.floor(R() * 3), b = 2 + Math.floor(R() * 3), c = 2 + Math.floor(R() * 3);
+        return { type:'mesure', image:'〰️', texte:'Mesure la longueur totale de la ligne brisée : mesure chaque morceau, puis additionne.', court:'Ligne brisée (' + a + ' + ' + b + ' + ' + c + ' cm)', attendu:a + b + c, unite:'cm', forme:{ type:'ligne', points:[[0, b], [a, b], [a, 0], [a + c, 0]] } }; }
+      const inv = R() < 0.5;
+      return { type:'mesure', image:'🔺', texte:'Trouve le périmètre de ce triangle. Un de ses côtés est penché.', court:'Périmètre du triangle 3-4-5', attendu:12, unite:'cm',
+        forme:{ type:'poly', points: inv ? [[0, 0], [4, 0], [0, 3]] : [[0, 3], [4, 3], [4, 0]] } };
+    },
+    bmx(v, R){
+      if(v === 0){ const n = 2 + Math.floor(R() * 10); return { type:'nombre', image:'🚲', texte:'Au BMX, tu fais ' + n + ' quarts de tour. Combien de degrés as-tu tourné ?', court:n + ' quarts de tour en degrés', attendu:90 * n, unite:'°' }; }
+      if(v === 1){ const n = 3 + Math.floor(R() * 9); return { type:'nombre', image:'🌀', texte:'Un saut de BMX fait une rotation de ' + (90 * n) + '°. Combien de quarts de tour est-ce ?', court:(90 * n) + '° en quarts de tour', attendu:n, unite:'quarts' }; }
+      if(v === 2){ const t = 1 + Math.floor(R() * 3); return { type:'nombre', image:'🚲', texte:'Tu fais ' + t + ' tour' + (t > 1 ? 's' : '') + ' complet' + (t > 1 ? 's' : '') + ' en BMX. Combien de degrés est-ce ?', court:t + ' tour(s) en degrés', attendu:360 * t, unite:'°' }; }
+      if(v === 3){ const t = 2 + Math.floor(R() * 2); return { type:'nombre', image:'🌀', texte:'Un saut de BMX fait une rotation de ' + (360 * t) + '°. Combien de tours complets est-ce ?', court:(360 * t) + '° en tours', attendu:t, unite:'tours' }; }
+      if(v === 4){ const t = 1 + Math.floor(R() * 2), q = 1 + Math.floor(R() * 3); return { type:'nombre', image:'🚲', texte:'Tu fais ' + t + ' tour' + (t > 1 ? 's' : '') + ' et ' + q + ' quart' + (q > 1 ? 's' : '') + ' de tour. Combien de degrés en tout ?', court:t + ' tour(s) + ' + q + ' quart(s) en degrés', attendu:360 * t + 90 * q, unite:'°' }; }
+      const n = 5 + Math.floor(R() * 6);
+      return { type:'nombre', image:'🏆', texte:'Tu as déjà tourné ' + (90 * n) + '°. Combien de degrés te manque-t-il pour faire 3 tours complets ?', court:'De ' + (90 * n) + '° à 3 tours', attendu:1080 - 90 * n, unite:'°' };
+    },
+    durees(v, R){
+      const m5 = () => 5 * Math.floor(R() * 12);
+      if(v === 0){ const d = 13 * 60 + 35 + 5 * Math.floor(R() * 5), f = d + 60 + 20 + 5 * Math.floor(R() * 8);
+        return { type:'duree', image:'🎮', texte:'Ton match commence à ' + hm(f) + '. Il est ' + hm(d) + '. Combien de temps reste-t-il ?', court:'De ' + hm(d) + ' à ' + hm(f), minutes:f - d }; }
+      if(v === 1){ const d = (8 + Math.floor(R() * 3)) * 60 + 20 + 5 * Math.floor(R() * 7), du = 2 * 60 + 40 + 5 * Math.floor(R() * 4);
+        return { type:'heure', image:'🛹', texte:'Il est ' + hm(d) + '. Tu fais de la planche pendant ' + dureeTxt(du) + '. À quelle heure finis-tu ?', court:hm(d) + ' + ' + dureeTxt(du), attendu:hm(d + du) }; }
+      if(v === 2){ const c = 20 * 60 + 35 + 5 * Math.floor(R() * 12), l = 6 * 60 + 5 + 5 * Math.floor(R() * 12);
+        return { type:'duree', image:'😴', texte:'Tu t\'es couché à ' + hm(c) + ' et tu t\'es levé à ' + hm(l) + '. Combien de temps as-tu dormi ?', court:'Nuit de ' + hm(c) + ' à ' + hm(l), minutes:(1440 - c) + l }; }
+      if(v === 3){ const d = (15 + Math.floor(R() * 3)) * 60 + 25 + 5 * Math.floor(R() * 6), du = 30 + 5 * Math.floor(R() * 5);
+        return { type:'duree', image:'⚽', texte:'L\'entraînement commence à ' + hm(d) + ' et finit à ' + hm(d + du) + '. Combien de temps dure-t-il ?', court:'De ' + hm(d) + ' à ' + hm(d + du), minutes:du }; }
+      if(v === 4){ const d = (11 + Math.floor(R() * 2)) * 60 + 40 + 5 * Math.floor(R() * 4), du = 20 + 5 * Math.floor(R() * 5);
+        return { type:'heure', image:'🍝', texte:'Il est ' + hm(d) + '. Le dîner est prêt dans ' + du + ' min. À quelle heure sera-t-il prêt ?', court:hm(d) + ' + ' + du + ' min', attendu:hm(d + du) }; }
+      const e = 8 * 60 + 5 + 5 * Math.floor(R() * 3), du = 25 + 5 * Math.floor(R() * 4);
+      return { type:'heure', image:'🏫', texte:'L\'école commence à ' + hm(e) + '. Le trajet dure ' + du + ' min. À quelle heure dois-tu partir ?', court:hm(e) + ' − ' + du + ' min', attendu:hm(e - du) };
+    },
+    vraievie(v, R){
+      const q = () => 15 * (1 + Math.floor(R() * 3));    // 15, 30 ou 45 min
+      if(v === 0){ const lit = (20 + Math.floor(R() * 2)) * 60 + 30 * Math.floor(R() * 2), reste = q();
+        return { type:'duree', image:'🛏️', texte:'Tu dois être au lit à ' + hm(lit) + '. Il est ' + hm(lit - reste) + '. Combien de temps te reste-t-il ?', court:'De ' + hm(lit - reste) + ' à ' + hm(lit), minutes:reste }; }
+      if(v === 1){ const d = (17 + Math.floor(R() * 2)) * 60 + 15 * Math.floor(R() * 4), du = 60 + q();
+        return { type:'heure', image:'🏒', texte:'Ta pratique de hockey commence à ' + hm(d) + ' et dure ' + dureeTxt(du) + '. À quelle heure finit-elle ?', court:hm(d) + ' + ' + dureeTxt(du), attendu:hm(d + du) }; }
+      if(v === 2){ const f = (20 + Math.floor(R() * 2)) * 60 + 15 * Math.floor(R() * 4), du = 60 + q();
+        return { type:'heure', image:'🎬', texte:'Le film finit à ' + hm(f) + '. Il dure ' + dureeTxt(du) + '. À quelle heure a-t-il commencé ?', court:hm(f) + ' − ' + dureeTxt(du), attendu:hm(f - du) }; }
+      if(v === 3){ const f = (18 + Math.floor(R() * 2)) * 60 + 15 * Math.floor(R() * 4), du = q() + (R() < 0.4 ? 60 : 0);
+        return { type:'duree', image:'🍲', texte:'Le souper est prêt à ' + hm(f) + '. Il a commencé à cuire à ' + hm(f - du) + '. Pendant combien de temps a-t-il cuit ?', court:'De ' + hm(f - du) + ' à ' + hm(f), minutes:du }; }
+      if(v === 4){ const d = (12 + Math.floor(R() * 2)) * 60 + 15 * Math.floor(R() * 4), un = 60 + 15 * (1 + Math.floor(R() * 2));
+        return { type:'heure', image:'🍿', texte:'Il est ' + hm(d) + '. Tu écoutes 2 films de ' + dureeTxt(un) + ' chacun. À quelle heure finis-tu ?', court:hm(d) + ' + 2 × ' + dureeTxt(un), attendu:hm(d + 2 * un) }; }
+      const lever = 6 * 60 + 15 * (1 + Math.floor(R() * 3)), dodo = 9 * 60 + q();
+      return { type:'heure', image:'🌙', texte:'Tu dois te lever à ' + hm(lever) + ' et tu veux dormir ' + dureeTxt(dodo) + '. À quelle heure dois-tu te coucher la veille ?', court:'Lever ' + hm(lever) + ', dormir ' + dureeTxt(dodo), attendu:hm(lever - dodo) };
+    },
+    angles(v, R){
+      const SPORTS = [['🏒', 'du bâton de hockey'], ['🏸', 'du smash de badminton'], ['⚽', 'du tir au but de soccer'], ['🏀', 'du lancer franc au basket'],
+        ['🎾', 'du service au tennis'], ['⛷️', 'du saut à ski'], ['🏹', 'du tir à l\'arc'], ['🎳', 'du lancer au bowling'], ['🏐', 'du smash au volley'], ['🥌', 'du lancer au curling']];
+      const s = SPORTS[(v + ESSAI * 3) % SPORTS.length];   // 6 sports différents par essai (un par modèle)
+      const aigu = v % 2 === 0;
+      const attendu = aigu ? 25 + 5 * Math.floor(R() * 12) : 100 + 5 * Math.floor(R() * 12);   // aigu 25–80°, obtus 100–155°
+      const rotation = 5 * Math.floor(R() * 7);
+      const COUL = [['#1d4ed8', '#b91c1c'], ['#15803d', '#7c3aed'], ['#b45309', '#0e7490']][v % 3];
+      return { type:'angle', image:s[0], objet:s[0], texte:'Mesure l\'angle ' + s[1] + ' avec le rapporteur.', court:'Angle ' + s[1] + ' (rapporteur)', attendu, unite:'°', tolerance:3,
+        rotation, sommet: attendu + rotation > 110 ? [300, 250] : [130, 260], couleurs:COUL };
+    }
+  };
+  const FONDS = { tarte:'#FFF3E8', mesures:'#E8F7FF', bmx:'#FFE8F0', durees:'#E6FFF4', vraievie:'#EAF1FF', angles:'#FFFBE6' };
+  const ORDRE = ['tarte', 'mesures', 'bmx', 'durees', 'vraievie', 'angles'];
+
+  // 12 numéros : 2 par notion (modèles 2P-2 et 2P-1), dans un ordre mélangé propre à l'épreuve.
+  const QUESTIONS = [];
+  ORDRE.forEach((n, k) => {
+    for(let j = 0; j < 2; j++){
+      const v = 2 * (P - 1) + j;
+      const R = hasard(ESSAI * 1000 + P * 100 + k * 10 + j + 7);
+      const q = NOTIONS[n](v, R);
+      q.notion = n; q.fond = FONDS[n];
+      QUESTIONS.push(q);
+    }
+  });
+  (function melanger(){ const R = hasard(ESSAI * 31 + P * 7); for(let i = QUESTIONS.length - 1; i > 0; i--){ const j = Math.floor(R() * (i + 1)); [QUESTIONS[i], QUESTIONS[j]] = [QUESTIONS[j], QUESTIONS[i]]; } })();
+
+  /* ---------- lecture et correction (la correction n'est montrée que par le Grimoire, après les 3 épreuves) ---------- */
+  function lireNombre(txt){
+    const t = String(txt || '').trim().toLowerCase().replace(/\s+/g, '').replace(',', '.').replace(/[°$a-zé\/()]+$/g, '');
+    if(!/^-?\d+(\.\d+)?$/.test(t)) return null;
+    return parseFloat(t);
+  }
+  function lireHeure(txt){
+    const t = String(txt || '').trim().toLowerCase().replace(/\s+/g, '');
+    const m = t.match(/^(\d{1,2})(?:[:h.,](\d{1,2})?)?$/) || t.match(/^(\d{1,2})(\d{2})$/);
+    if(!m) return null;
+    const h = parseInt(m[1], 10), mn = m[2] ? parseInt(m[2], 10) : 0;
+    if(h > 24 || mn > 59) return null;
+    return { h: h % 24, m: mn };
+  }
+  function corriger(q, i){
+    const v = k => (valeurs[i + ':' + k] || '').trim();
+    if(q.type === 'heure' || q.type === 'horloge'){
+      const r = lireHeure(v('r')); if(!r) return false;
+      const [H, M] = q.attendu.split(':').map(Number);
+      return r.m === M && (r.h === H || r.h % 12 === H % 12);
+    }
+    if(q.type === 'duree'){
+      if(!v('h') && !v('m')) return false;
+      const H = v('h') ? lireNombre(v('h')) : 0, M = v('m') ? lireNombre(v('m')) : 0;
+      if(H === null || M === null) return false;
+      return Math.abs(H * 60 + M - q.minutes) < 0.01;
+    }
+    const x = lireNombre(v('r')); if(x === null) return false;
+    return Math.abs(x - q.attendu) <= (q.tolerance || 0) + 1e-9;
+  }
+  function reponseDonnee(q, i){
+    const v = k => (valeurs[i + ':' + k] || '').trim();
+    if(q.type === 'duree') return (v('h') || v('m')) ? (v('h') || '0') + ' h ' + (v('m') || '0') + ' min' : '';
+    return v('r') ? v('r') + (q.unite && !/[a-z°$]/i.test(v('r')) ? ' ' + q.unite : '') : '';
+  }
+  function reponseAttendue(q){
+    if(q.type === 'heure' || q.type === 'horloge') return q.attendu;
+    if(q.type === 'duree') return Math.floor(q.minutes / 60) + ' h ' + (q.minutes % 60) + ' min';
+    return q.attendu + (q.unite ? ' ' + q.unite : '') + (q.tolerance ? ' (± ' + q.tolerance + ')' : '');
+  }
+  function estRepondu(q, i){
+    if(q.type === 'duree') return !!((valeurs[i + ':h'] || '').trim() || (valeurs[i + ':m'] || '').trim());
+    return !!(valeurs[i + ':r'] || '').trim();
+  }
+
+  /* ---------- dessins ---------- */
+  function dessinAngle(q){
+    const W = 520, H = 300, L = 205;
+    const cx = q.sommet[0], cy = q.sommet[1];
+    const a0 = -q.rotation * Math.PI / 180, a1 = -(q.rotation + q.attendu) * Math.PI / 180;
+    const p = a => [cx + L * Math.cos(a), cy + L * Math.sin(a)];
+    const [x0, y0] = p(a0), [x1, y1] = p(a1);
+    const r = 38, [ax0, ay0] = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)], [ax1, ay1] = [cx + r * Math.cos(a1), cy + r * Math.sin(a1)];
+    return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
+      '<path d="M' + ax0.toFixed(1) + ',' + ay0.toFixed(1) + ' A' + r + ',' + r + ' 0 0 0 ' + ax1.toFixed(1) + ',' + ay1.toFixed(1) + '" fill="none" stroke="#b45309" stroke-width="3"/>' +
+      '<line x1="' + cx + '" y1="' + cy + '" x2="' + x0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" stroke="' + q.couleurs[0] + '" stroke-width="7" stroke-linecap="round"/>' +
+      '<line x1="' + cx + '" y1="' + cy + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '" stroke="' + q.couleurs[1] + '" stroke-width="7" stroke-linecap="round"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#1f160d"/>' +
+      '<text x="' + (x1 + 6 * Math.cos(a1)).toFixed(1) + '" y="' + (y1 + 6 * Math.sin(a1)).toFixed(1) + '" font-size="30" text-anchor="middle" dominant-baseline="middle">' + q.objet + '</text></svg>';
+  }
+  // Formes à l'échelle de la règle : 1 cm = 38 px (comme « Formes et mesures »).
+  const CM = 38, PAD = 26;
+  function dessinForme(q){
+    const pts = q.forme.points;
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+    const W = (maxX - minX) * CM + 2 * PAD, H = (maxY - minY) * CM + 2 * PAD;
+    const X = x => ((x - minX) * CM + PAD).toFixed(1), Y = y => ((y - minY) * CM + PAD).toFixed(1);
+    const liste = pts.map(p => X(p[0]) + ',' + Y(p[1])).join(' ');
+    let s = '<svg width="' + W.toFixed(0) + '" height="' + H.toFixed(0) + '">';
+    if(q.forme.type === 'poly') s += '<polygon points="' + liste + '" fill="rgba(59,130,246,.12)" stroke="#2563eb" stroke-width="3.5" stroke-linejoin="round"/>';
+    else s += '<polyline points="' + liste + '" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>';
+    pts.forEach(p => { s += '<circle cx="' + X(p[0]) + '" cy="' + Y(p[1]) + '" r="5" fill="#dc2626" stroke="#fff" stroke-width="1.5"/>'; });
+    return s + '</svg>';
+  }
+  function dessinHorloge(q){
+    let s = '<svg width="200" height="200" viewBox="-60 -60 120 120"><circle r="56" fill="#fff" stroke="#3b2a1a" stroke-width="3"/>';
+    for(let i = 0; i < 60; i++){ const a = i * 6 * Math.PI / 180, g = i % 5 === 0, r1 = g ? 46 : 50;
+      s += '<line x1="' + (Math.sin(a) * r1).toFixed(1) + '" y1="' + (-Math.cos(a) * r1).toFixed(1) + '" x2="' + (Math.sin(a) * 54).toFixed(1) + '" y2="' + (-Math.cos(a) * 54).toFixed(1) + '" stroke="#3b2a1a" stroke-width="' + (g ? 2.2 : 0.8) + '"/>'; }
+    for(let n = 1; n <= 12; n++){ const a = n * 30 * Math.PI / 180; s += '<text x="' + (Math.sin(a) * 37).toFixed(1) + '" y="' + (-Math.cos(a) * 37 + 4.5).toFixed(1) + '" text-anchor="middle" font-size="12" font-weight="800" fill="#3b2a1a" font-family="Nunito, sans-serif">' + n + '</text>'; }
+    s += '<line x1="0" y1="0" x2="0" y2="-27" stroke="#3b2a1a" stroke-width="6" stroke-linecap="round" transform="rotate(' + ((q.h % 12) * 30 + q.m * 0.5) + ')"/>';
+    s += '<line x1="0" y1="0" x2="0" y2="-44" stroke="#dc2626" stroke-width="3.5" stroke-linecap="round" transform="rotate(' + (q.m * 6) + ')"/>';
+    return s + '<circle r="4" fill="#3b2a1a"/></svg>';
+  }
+
+  /* ---------- affichage ---------- */
+  function champ(i, cle, ph, cls){
+    return '<input type="text" id="c' + i + '_' + cle + '" data-q="' + i + '" data-cle="' + cle + '" placeholder="' + ph + '"' + (cls ? ' class="' + cls + '"' : '') + ' inputmode="decimal" autocomplete="off">';
+  }
+  function zoneReponse(q, i){
+    if(q.type === 'heure' || q.type === 'horloge') return '<div class="rangee"><span class="champ">' + champ(i, 'r', 'h:min') + '</span></div>';
+    if(q.type === 'duree') return '<div class="rangee"><span class="champ">' + champ(i, 'h', 'h', 'court') + '<span class="unite">h</span></span>' +
+      '<span class="champ">' + champ(i, 'm', 'min', 'court') + '<span class="unite">min</span></span></div>';
+    return '<div class="rangee"><span class="champ">' + champ(i, 'r', '?') + (q.unite ? '<span class="unite">' + q.unite + '</span>' : '') + '</span></div>';
+  }
+  function dessin(q){
+    if(q.type === 'angle') return '<div class="dessin">' + dessinAngle(q) + '</div>';
+    if(q.type === 'mesure') return '<div class="dessin">' + dessinForme(q) + '</div>';
+    if(q.type === 'horloge') return '<div class="dessin">' + dessinHorloge(q) + '</div>';
+    return '';
+  }
+  document.getElementById('liste').innerHTML = QUESTIONS.map((q, i) =>
+    '<div class="carte" id="carte' + i + '">' +
+      '<div class="gauche"><div class="image" style="background:' + q.fond + '">' + q.image + '</div><div class="num">' + (i + 1) + '</div></div>' +
+      '<div class="corps"><p class="enonce">' + q.texte + '</p>' + dessin(q) + zoneReponse(q, i) + '</div></div>').join('');
+
+  document.querySelectorAll('[data-q]').forEach(el => {
+    const i = el.dataset.q, cle = i + ':' + el.dataset.cle;
+    if(valeurs[cle] != null) el.value = valeurs[cle];
+    el.addEventListener('input', () => { valeurs[cle] = el.value; majCompteur(); envoyerEtat(); });
+  });
+
+  function nbRepondus(){ return QUESTIONS.filter((q, i) => estRepondu(q, i)).length; }
+  function majCompteur(){
+    const n = nbRepondus();
+    document.getElementById('compteur').textContent = n + ' / ' + QUESTIONS.length + ' numéros répondus';
+    QUESTIONS.forEach((q, i) => document.getElementById('carte' + i).classList.toggle('repondu', estRepondu(q, i)));
+    parent({ type:'progress', vus:n, total:QUESTIONS.length });
+  }
+  function envoyerEtat(){
+    if(remise) return;
+    const vide = Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: vide ? null : { v: valeurs } });
+  }
+
+  // Outils : la règle et le rapporteur (les mêmes que les sorts).
+  document.getElementById('btnRegle').addEventListener('click', e => SortsOutils.basculer('regle', e.currentTarget));
+  document.getElementById('btnRapporteur').addEventListener('click', e => SortsOutils.basculer('rapporteur', e.currentTarget));
+
+  /* ---------- remise ---------- */
+  const conf = document.getElementById('confirmation');
+  document.getElementById('btnRemettre').addEventListener('click', () => {
+    const manque = QUESTIONS.length - nbRepondus();
+    document.getElementById('texteConfirmation').textContent = manque
+      ? 'Attention : ' + manque + (manque > 1 ? ' numéros n\'ont' : ' numéro n\'a') + ' pas de réponse. Une fois remise, l\'épreuve ne peut plus être changée.'
+      : 'Une fois remise, l\'épreuve ne peut plus être changée. As-tu bien vérifié tes réponses ?';
+    conf.classList.add('visible');
+  });
+  document.getElementById('btnAnnuler').addEventListener('click', () => conf.classList.remove('visible'));
+  document.getElementById('btnConfirmer').addEventListener('click', () => {
+    if(remise) return;
+    remise = true;
+    const details = QUESTIONS.map((q, i) => ({
+      numero: i + 1, notion: q.notion, question: q.court,
+      given: reponseDonnee(q, i), expected: reponseAttendue(q), isCorrect: corriger(q, i)
+    }));
+    parent({ type:'copie', score: details.filter(d => d.isCorrect).length, total: QUESTIONS.length, details, essai: ESSAI, epreuve: P });
+    parent({ type:'termine' });
+    document.querySelectorAll('input, .outils button').forEach(el => el.disabled = true);
+    SortsOutils.toutFermer();
+    const r = document.getElementById('remise');
+    r.classList.add('faite');
+    r.innerHTML = '<p>📨 Épreuve ' + P + ' remise.' + (P < 3 ? ' Passe à l\'épreuve suivante.' : ' Le Grimoire corrige maintenant tes 3 épreuves…') + '</p>';
+  });
+  majCompteur();
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

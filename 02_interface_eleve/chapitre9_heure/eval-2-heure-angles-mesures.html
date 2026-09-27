@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Évaluation — série 2</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<script src="../rapporteur.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:880px; margin:0 auto; padding:22px 16px 110px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:rgba(255,250,236,0.82); border:1px solid #d9c49a; border-radius:16px; padding:14px 18px; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; }
+  .entete p{ margin:4px 0 0; font-size:14px; opacity:.85; line-height:1.45; }
+  .compteur{ margin-top:8px; font-weight:800; font-size:14px; }
+  .carte{ background:rgba(255,252,244,0.92); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; display:flex; gap:14px; }
+  .carte.repondu{ border-color:#c9b27a; }
+  .gauche{ flex:0 0 58px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .image{ width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; line-height:1; box-shadow:inset 0 0 0 1px rgba(59,42,26,.08); }
+  .num{ width:30px; height:30px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .corps{ flex:1; min-width:0; }
+  .enonce{ margin:4px 0 10px; font-size:17px; line-height:1.45; font-weight:700; }
+  .dessin{ margin:4px 0 10px; overflow-x:auto; background:#fbf6ea; border:1px dashed #e7d7b1; border-radius:12px; }
+  .dessin svg{ display:block; margin:0 auto; }
+  .rangee{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .champ{ display:flex; align-items:center; gap:6px; }
+  input[type=text]{ font:inherit; font-size:17px; width:110px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input.court{ width:84px; }
+  input[type=text]:focus{ outline:none; border-color:#b45309; }
+  input:disabled{ background:#f4efe3; color:#5b4a36; }
+  .unite{ font-weight:800; opacity:.7; }
+  .choix{ display:flex; gap:8px; flex-wrap:wrap; }
+  .choix label{ display:flex; align-items:center; gap:6px; padding:8px 14px; border-radius:10px; border:2px solid #d9c49a; background:#fff; font-weight:800; cursor:pointer; }
+  .choix input{ accent-color:#4a2c0a; width:18px; height:18px; }
+  .choix label.coche{ border-color:#4a2c0a; background:#fff6e0; }
+  .remise{ background:rgba(255,250,236,0.9); border:2px solid #b45309; border-radius:16px; padding:16px 18px; text-align:center; }
+  .remise p{ margin:0 0 10px; font-weight:700; }
+  button{ font:inherit; font-weight:800; font-size:17px; padding:11px 22px; border-radius:12px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button.secondaire{ background:#fff; color:#4a2c0a; border:2px solid #4a2c0a; }
+  .confirmation{ display:none; margin-top:12px; padding:12px; border-radius:12px; background:#fff3dc; border:1px solid #e8c98a; }
+  .confirmation.visible{ display:block; }
+  .confirmation .boutons{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:10px; }
+  .remise.faite{ border-color:#16a34a; background:rgba(240,253,244,0.95); }
+  .remise.faite p{ color:#14532d; font-size:18px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <h1>Évaluation — série 2</h1>
+    <p>Réponds à tous les numéros, puis remets ta copie à ton enseignant. Rien n'est corrigé avant la remise : prends le temps de vérifier. Heures en heure digitale (ex. 14:35) ; pour mesurer un angle, utilise le rapporteur (bouton 📐 en bas à droite).</p>
+    <div class="compteur" id="compteur"></div>
+  </div>
+  <div id="liste" style="display:flex;flex-direction:column;gap:14px"></div>
+  <div class="remise" id="remise">
+    <p>Quand tu as terminé, remets ta copie à ton enseignant.</p>
+    <button type="button" id="btnRemettre">📨 Remettre ma copie</button>
+    <div class="confirmation" id="confirmation">
+      <div id="texteConfirmation"></div>
+      <div class="boutons">
+        <button type="button" class="secondaire" id="btnAnnuler">Je retourne vérifier</button>
+        <button type="button" id="btnConfirmer">Oui, je remets ma copie</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+(function(){
+  /* =====================================================================
+     ÉVALUATION — l'élève répond à tout, puis remet sa copie.
+     • Aucune correction pendant l'évaluation (pas de vert/rouge).
+     • À la remise : la page corrige avec SA clé (QUESTIONS ci-dessous), envoie la copie
+       au Grimoire { type:'copie', score, total, details } puis { type:'termine' }.
+       Le Grimoire la range dans le journal des copies de l'enseignant, qui la retourne
+       à l'élève avec un commentaire.
+     • Réponses en cours conservées si l'élève quitte avant de remettre ({ type:'etat' }).
+     Types : heure (13:00, 1:00 accepté), duree (h + min), nombre (avec tolérance),
+             angle (dessin + rapporteur, tolérance ±3°), choix (estimation).
+     ===================================================================== */
+  const QUESTIONS = [{"type": "heure", "image": "🚶", "texte": "Il est 9:45. Tu marches pendant 35 min. À quelle heure arrives-tu ?", "court": "9:45 + 35 min", "attendu": "10:20", "fond": "#FFF3E8"}, {"type": "nombre", "image": "🚲", "texte": "Au BMX, tu fais 7 quarts de tour. Combien de degrés as-tu tourné ?", "court": "7 quarts de tour en degrés", "attendu": 630, "unite": "°", "tolerance": 0, "fond": "#EAF1FF"}, {"type": "choix", "image": "🚌", "texte": "Estime la longueur d'un autobus scolaire.", "court": "Estimation : longueur d'un autobus scolaire", "options": ["12 m", "12 cm", "12 km"], "bonne": 0, "fond": "#FFFBE6"}, {"type": "nombre", "image": "💰", "texte": "Olivier a reçu 45 $ pour 3 heures de travail. Quel est son taux horaire ?", "court": "45 $ pour 3 h, taux horaire", "attendu": 15, "unite": "$/h", "tolerance": 0, "fond": "#FFE8F0"}, {"type": "angle", "image": "⚽", "objet": "⚽", "texte": "Mesure l'angle de la jambe du joueur de soccer avec le rapporteur (bouton 📐).", "court": "Angle du tir au soccer (rapporteur)", "attendu": 65, "unite": "°", "tolerance": 3, "rotation": -20, "sommet": [120, 170], "couleurs": ["#0f766e", "#c2410c"], "fond": "#E8F7FF"}, {"type": "nombre", "image": "🥧", "texte": "Un triangle a un angle de 35° et un angle droit. Quelle est la mesure de son troisième angle ?", "court": "Triangle : 35° et 90°, troisième angle", "attendu": 55, "unite": "°", "tolerance": 0, "fond": "#EDE9FF"}, {"type": "duree", "image": "😴", "texte": "Tu t'es couché à 20:55 et tu t'es levé à 7:10. Combien de temps as-tu dormi ?", "court": "Sommeil de 20:55 à 7:10", "minutes": 615, "fond": "#E6FFF4"}, {"type": "nombre", "image": "🌀", "texte": "Un saut de BMX fait une rotation de 540°. Combien de quarts de tour est-ce ?", "court": "540° en quarts de tour", "attendu": 6, "unite": "quarts", "tolerance": 0, "fond": "#F0E8FF"}, {"type": "angle", "image": "⛷️", "objet": "⛷️", "texte": "Mesure l'angle entre les deux bâtons du skieur avec le rapporteur.", "court": "Angle des bâtons de ski (rapporteur)", "attendu": 150, "unite": "°", "tolerance": 3, "rotation": 15, "sommet": [260, 250], "couleurs": ["#1d4ed8", "#be185d"], "fond": "#FFF0E0"}, {"type": "nombre", "image": "🧰", "texte": "Léa garde des enfants de 9:00 à 11:30. Elle est payée 14 $ de l'heure. Combien gagne-t-elle ?", "court": "9:00 à 11:30 à 14 $/h", "attendu": 35, "unite": "$", "tolerance": 0, "fond": "#FFEFE8"}, {"type": "nombre", "image": "🥧", "texte": "Combien de degrés valent 3 quarts de tarte ?", "court": "3 quarts de tarte en degrés", "attendu": 270, "unite": "°", "tolerance": 0, "fond": "#E8FFF0"}, {"type": "choix", "image": "📚", "texte": "Estime l'épaisseur d'un livre de 100 pages.", "court": "Estimation : épaisseur d'un livre de 100 pages", "options": ["1 m", "1 mm", "1 cm"], "bonne": 2, "fond": "#E8F2FF"}];
+  const etatInitial = (function(){ try{ return JSON.parse(new URLSearchParams(location.search).get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};
+  let remise = false;
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+
+  /* ---------- lecture des réponses ---------- */
+  function lireNombre(txt){
+    const t = String(txt || '').trim().toLowerCase().replace(/\s+/g, '').replace(',', '.').replace(/[°$a-zé\/]+$/g, '');
+    if(!/^-?\d+(\.\d+)?$/.test(t)) return null;
+    return parseFloat(t);
+  }
+  function lireHeure(txt){
+    const t = String(txt || '').trim().toLowerCase().replace(/\s+/g, '');
+    const m = t.match(/^(\d{1,2})(?:[:h.,](\d{1,2})?)?$/) || t.match(/^(\d{1,2})(\d{2})$/);
+    if(!m) return null;
+    const h = parseInt(m[1], 10), mn = m[2] ? parseInt(m[2], 10) : 0;
+    if(h > 24 || mn > 59) return null;
+    return { h: h % 24, m: mn };
+  }
+  function corriger(q, i){
+    const v = k => (valeurs[i + ':' + k] || '').trim();
+    if(q.type === 'heure'){
+      const r = lireHeure(v('r')); if(!r) return false;
+      const [H, M] = q.attendu.split(':').map(Number);
+      return r.m === M && (r.h === H || (r.h >= 1 && r.h <= 12 && r.h % 12 === H % 12));
+    }
+    if(q.type === 'duree'){
+      if(!v('h') && !v('m')) return false;
+      const H = v('h') ? lireNombre(v('h')) : 0, M = v('m') ? lireNombre(v('m')) : 0;
+      if(H === null || M === null) return false;
+      return Math.abs(H * 60 + M - q.minutes) < 0.01;
+    }
+    if(q.type === 'nombre' || q.type === 'angle'){
+      const x = lireNombre(v('r')); if(x === null) return false;
+      return Math.abs(x - q.attendu) <= (q.tolerance || 0) + 1e-9;
+    }
+    if(q.type === 'choix') return v('r') === String(q.bonne);
+    return false;
+  }
+  function reponseDonnee(q, i){
+    const v = k => (valeurs[i + ':' + k] || '').trim();
+    if(q.type === 'duree') return (v('h') || v('m')) ? (v('h') || '0') + ' h ' + (v('m') || '0') + ' min' : '';
+    if(q.type === 'choix') return v('r') !== '' ? q.options[+v('r')] : '';
+    return v('r') ? v('r') + (q.unite && !/[a-z°$]/i.test(v('r')) ? ' ' + q.unite : '') : '';
+  }
+  function reponseAttendue(q){
+    if(q.type === 'heure') return q.attendu;
+    if(q.type === 'duree') return Math.floor(q.minutes / 60) + ' h ' + (q.minutes % 60) + ' min';
+    if(q.type === 'choix') return q.options[q.bonne];
+    return q.attendu + (q.unite ? ' ' + q.unite : '') + (q.tolerance ? ' (± ' + q.tolerance + ')' : '');
+  }
+  function estRepondu(q, i){
+    if(q.type === 'duree') return !!((valeurs[i + ':h'] || '').trim() || (valeurs[i + ':m'] || '').trim());
+    return !!(valeurs[i + ':r'] || '').trim();
+  }
+
+  /* ---------- dessins ---------- */
+  function dessinAngle(q){
+    // Un angle de q.attendu degrés, tourné de q.rotation, avec des rayons assez longs pour le rapporteur.
+    const W = 520, H = 300, L = 205;
+    const cx = q.sommet ? q.sommet[0] : 260, cy = q.sommet ? q.sommet[1] : 230;
+    const a0 = -q.rotation * Math.PI / 180, a1 = -(q.rotation + q.attendu) * Math.PI / 180;
+    const p = a => [cx + L * Math.cos(a), cy + L * Math.sin(a)];
+    const [x0, y0] = p(a0), [x1, y1] = p(a1);
+    const r = 38, [ax0, ay0] = [cx + r * Math.cos(a0), cy + r * Math.sin(a0)], [ax1, ay1] = [cx + r * Math.cos(a1), cy + r * Math.sin(a1)];
+    const grand = q.attendu > 180 ? 1 : 0;
+    return '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">' +
+      '<path d="M' + ax0.toFixed(1) + ',' + ay0.toFixed(1) + ' A' + r + ',' + r + ' 0 ' + grand + ' 0 ' + ax1.toFixed(1) + ',' + ay1.toFixed(1) + '" fill="none" stroke="#b45309" stroke-width="3"/>' +
+      '<line x1="' + cx + '" y1="' + cy + '" x2="' + x0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" stroke="' + q.couleurs[0] + '" stroke-width="7" stroke-linecap="round"/>' +
+      '<line x1="' + cx + '" y1="' + cy + '" x2="' + x1.toFixed(1) + '" y2="' + y1.toFixed(1) + '" stroke="' + q.couleurs[1] + '" stroke-width="7" stroke-linecap="round"/>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="6" fill="#1f160d"/>' +
+      '<text x="' + (x1 + 6 * Math.cos(a1)).toFixed(1) + '" y="' + (y1 + 6 * Math.sin(a1)).toFixed(1) + '" font-size="30" text-anchor="middle" dominant-baseline="middle">' + q.objet + '</text>' +
+      '</svg>';
+  }
+
+  /* ---------- affichage ---------- */
+  function champ(i, cle, ph, cls){
+    return '<input type="text" id="c' + i + '_' + cle + '" data-q="' + i + '" data-cle="' + cle + '" placeholder="' + ph + '"' + (cls ? ' class="' + cls + '"' : '') + ' inputmode="decimal" autocomplete="off">';
+  }
+  function zoneReponse(q, i){
+    if(q.type === 'heure') return '<div class="rangee"><span class="champ">' + champ(i, 'r', 'h:min') + '</span></div>';
+    if(q.type === 'duree') return '<div class="rangee"><span class="champ">' + champ(i, 'h', 'h', 'court') + '<span class="unite">h</span></span>' +
+      '<span class="champ">' + champ(i, 'm', 'min', 'court') + '<span class="unite">min</span></span></div>';
+    if(q.type === 'choix') return '<div class="choix">' + q.options.map((o, k) =>
+      '<label><input type="radio" name="q' + i + '" value="' + k + '" data-q="' + i + '" data-cle="r">' + o + '</label>').join('') + '</div>';
+    return '<div class="rangee"><span class="champ">' + champ(i, 'r', '?') + (q.unite ? '<span class="unite">' + q.unite + '</span>' : '') + '</span></div>';
+  }
+  const liste = document.getElementById('liste');
+  liste.innerHTML = QUESTIONS.map((q, i) =>
+    '<div class="carte" id="carte' + i + '">' +
+      '<div class="gauche"><div class="image" style="background:' + q.fond + '">' + q.image + '</div><div class="num">' + (i + 1) + '</div></div>' +
+      '<div class="corps"><p class="enonce">' + q.texte + '</p>' +
+        (q.type === 'angle' ? '<div class="dessin">' + dessinAngle(q) + '</div>' : '') +
+        zoneReponse(q, i) +
+      '</div></div>').join('');
+
+  document.querySelectorAll('[data-q]').forEach(el => {
+    const i = el.dataset.q, cle = i + ':' + el.dataset.cle;
+    if(el.type === 'radio'){
+      if(valeurs[cle] === el.value){ el.checked = true; el.parentElement.classList.add('coche'); }
+      el.addEventListener('change', () => {
+        valeurs[cle] = el.value;
+        document.querySelectorAll('input[name="q' + i + '"]').forEach(r => r.parentElement.classList.toggle('coche', r.checked));
+        majCompteur(); envoyerEtat();
+      });
+    } else {
+      if(valeurs[cle] != null) el.value = valeurs[cle];
+      el.addEventListener('input', () => { valeurs[cle] = el.value; majCompteur(); envoyerEtat(); });
+    }
+  });
+
+  function nbRepondus(){ return QUESTIONS.filter((q, i) => estRepondu(q, i)).length; }
+  function majCompteur(){
+    const n = nbRepondus();
+    document.getElementById('compteur').textContent = n + ' / ' + QUESTIONS.length + ' numéros répondus';
+    QUESTIONS.forEach((q, i) => document.getElementById('carte' + i).classList.toggle('repondu', estRepondu(q, i)));
+    parent({ type:'progress', vus:n, total:QUESTIONS.length });
+  }
+  function envoyerEtat(){
+    if(remise) return;
+    const vide = Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: vide ? null : { v: valeurs } });
+  }
+
+  /* ---------- remise ---------- */
+  const conf = document.getElementById('confirmation');
+  document.getElementById('btnRemettre').addEventListener('click', () => {
+    const manque = QUESTIONS.length - nbRepondus();
+    document.getElementById('texteConfirmation').textContent = manque
+      ? 'Attention : ' + manque + (manque > 1 ? ' numéros n\'ont' : ' numéro n\'a') + ' pas de réponse. Une fois remise, ta copie ne peut plus être changée.'
+      : 'Une fois remise, ta copie ne peut plus être changée. As-tu bien vérifié tes réponses ?';
+    conf.classList.add('visible');
+  });
+  document.getElementById('btnAnnuler').addEventListener('click', () => conf.classList.remove('visible'));
+  document.getElementById('btnConfirmer').addEventListener('click', remettre);
+
+  function remettre(){
+    if(remise) return;
+    remise = true;
+    const details = QUESTIONS.map((q, i) => ({
+      numero: i + 1,
+      question: q.court,
+      given: reponseDonnee(q, i),
+      expected: reponseAttendue(q),
+      isCorrect: corriger(q, i)
+    }));
+    const score = details.filter(d => d.isCorrect).length;
+    parent({ type:'copie', score, total: QUESTIONS.length, details });
+    parent({ type:'termine' });
+    document.querySelectorAll('input').forEach(el => el.disabled = true);
+    const r = document.getElementById('remise');
+    r.classList.add('faite');
+    r.innerHTML = '<p>📨 Ta copie est remise. Ton enseignant va la corriger et te la retourner.</p>';
+    if(window.Rapporteur && window.Rapporteur.cacher) window.Rapporteur.cacher();
+  }
+  majCompteur();
+  // Le rapporteur commence rangé (il cacherait les questions) : l'élève l'ouvre avec le bouton 📐.
+  document.addEventListener('DOMContentLoaded', () => { if(window.Rapporteur && window.Rapporteur.cacher) window.Rapporteur.cacher(); });
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

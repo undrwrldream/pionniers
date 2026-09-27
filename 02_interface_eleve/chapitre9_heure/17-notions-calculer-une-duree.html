@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notions : calculer une durée</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:880px; margin:0 auto; padding:22px 16px 40px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:rgba(255,250,236,0.78); border:1px solid #d9c49a; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; }
+  .entete p{ margin:2px 0 0; font-size:14px; opacity:.8; }
+  .puces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .puces span{ font-size:13px; font-weight:800; background:#fff; border:1px solid #e3d2ad; border-radius:999px; padding:3px 10px; }
+  .score{ font-weight:800; font-size:17px; background:#fff; border:1px solid #d9c49a; border-radius:999px; padding:6px 14px; white-space:nowrap; }
+  .barre{ height:8px; border-radius:99px; background:rgba(59,42,26,.12); overflow:hidden; margin-top:8px; width:100%; }
+  .barre i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#e8b86a,#b45309); transition:width .3s; }
+
+  .notion{ background:rgba(255,250,236,0.9); border:1px solid #d9c49a; border-radius:16px; padding:18px 20px; }
+  .notion h2{ margin:0 0 4px; font-size:20px; font-weight:800; display:flex; align-items:center; gap:10px; }
+  .notion h2 .rond{ width:32px; height:32px; border-radius:50%; background:#4a2c0a; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+  .notion .sous{ margin:0 0 12px 42px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; opacity:.65; font-weight:800; }
+  .notion p{ margin:8px 0; font-size:16.5px; line-height:1.5; }
+  .retiens{ margin-top:12px; background:#fff7e6; border:1px dashed #d9a441; border-radius:12px; padding:10px 14px; font-size:15.5px; font-weight:700; }
+  .piege{ margin-top:10px; background:#fdecec; border:1px solid #f1b4b4; border-radius:12px; padding:10px 14px; font-size:15.5px; }
+
+  .ligne-temps{ width:100%; height:auto; display:block; margin:8px 0 4px; }
+  .ligne-temps text{ font-family:'Nunito', system-ui, sans-serif; }
+
+  .jeu-tarte{ display:flex; gap:18px; align-items:center; flex-wrap:wrap; margin-top:10px; background:#fff; border:1px solid #ecdcb8; border-radius:14px; padding:12px 14px; }
+  .jeu-tarte .ecran{ font-family:ui-monospace, 'Courier New', monospace; font-weight:800; font-size:30px; letter-spacing:2px; background:#1f160d; color:#ffd88a; border-radius:10px; padding:6px 14px; }
+  .jeu-tarte .ecran.flash{ animation:flash .7s ease; }
+  @keyframes flash{ 0%{ background:#16a34a; color:#fff; } 100%{ background:#1f160d; color:#ffd88a; } }
+  .jeu-tarte .boutons{ display:flex; gap:8px; flex-wrap:wrap; }
+  .jeu-tarte .note{ flex-basis:100%; font-size:14.5px; font-weight:700; min-height:20px; color:#15803d; }
+  .petit{ font-size:15px !important; padding:7px 14px !important; }
+  .clair{ background:#fff !important; color:#4a2c0a !important; border:2px solid #4a2c0a !important; }
+
+  .carte{ background:rgba(255,252,244,0.93); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; display:flex; gap:14px; }
+  .carte.ok{ border-color:#86c79a; background:rgba(240,253,244,0.94); }
+  .gauche{ flex:0 0 58px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .image{ width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; line-height:1; box-shadow:inset 0 0 0 1px rgba(59,42,26,.08); background:#FFF3E8; }
+  .num{ width:30px; height:30px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .carte.ok .num{ background:#16a34a; }
+  .corps{ flex:1; min-width:0; }
+  .enonce{ margin:4px 0 10px; font-size:17px; line-height:1.45; font-weight:700; }
+  .etape{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0; }
+  .etape .lib{ font-weight:800; font-size:15.5px; min-width:250px; flex:1; }
+  .champ{ display:flex; align-items:center; gap:6px; }
+  input{ font:inherit; font-size:17px; width:104px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input.court{ width:70px; }
+  input:focus{ outline:none; border-color:#b45309; }
+  input.bon, input:disabled{ background:#f0fdf4; border-color:#86c79a; color:#14532d; }
+  input.faux{ border-color:#dc2626; background:#fff5f5; }
+  .unite{ font-weight:800; opacity:.7; }
+  .actions{ display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
+  button{ font:inherit; font-weight:800; font-size:16px; padding:9px 18px; border-radius:10px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button:disabled{ background:#16a34a; cursor:default; }
+  .msg{ font-weight:800; font-size:15px; }
+  .msg.bon{ color:#15803d; } .msg.faux{ color:#b91c1c; }
+  .conseil{ margin-top:8px; font-size:15px; font-weight:700; color:#8a4b08; background:#fff7e6; border-left:4px solid #d9a441; border-radius:8px; padding:8px 12px; }
+  @keyframes secoue{ 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+  .secoue{ animation:secoue .35s ease; }
+  .titre-section{ margin:8px 4px 0; font-size:19px; font-weight:800; }
+  @media (max-width:520px){ .gauche{ flex-basis:44px; } .image{ width:44px; height:44px; font-size:24px; border-radius:12px; } .etape .lib{ min-width:0; flex-basis:100%; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <div style="flex:1;min-width:220px">
+      <h1>Notions : calculer une durée</h1>
+      <p>Finis la tarte jusqu'à l'heure juste, puis compte le reste.</p>
+      <div class="puces"><span>60 min = 1 h = 1 tarte</span><span>Heure juste = :00</span><span>Minuit = 24:00 = 0:00</span></div>
+      <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div class="score" id="score">0 / 9 réussis</div>
+  </div>
+
+  <!-- ───────── 1. Durée entre deux heures ───────── -->
+  <section class="notion">
+    <h2><span class="rond">A</span>Combien de temps entre deux heures ?</h2>
+    <p class="sous">On avance par bonds</p>
+    <p>Ta partie commence à <b>19:30</b>. Il est <b>18:45</b>. Combien de temps dois-tu attendre ?</p>
+    <p>On ne fait pas 30 − 45 : ça ne marche pas ! On avance plutôt par <b>bonds</b> sur la ligne du temps.</p>
+    <svg class="ligne-temps" id="demo1" viewBox="0 0 800 150" aria-label="Ligne du temps de 18:45 à 19:30"></svg>
+    <div class="actions" style="margin-top:0">
+      <button type="button" class="petit" id="demo1Btn">Faire le bond suivant ▶</button>
+      <button type="button" class="petit clair" id="demo1Reset">Recommencer</button>
+    </div>
+    <div class="retiens">💡 <b>Bond 1 :</b> finis la tarte jusqu'à l'heure juste. <b>Bond 2 :</b> compte les heures entières. <b>Bond 3 :</b> ajoute les minutes qui restent. Puis additionne les bonds.</div>
+  </section>
+  <div id="groupe1"></div>
+
+  <!-- ───────── 2. Ajouter une durée ───────── -->
+  <section class="notion">
+    <h2><span class="rond">B</span>Ajouter une durée</h2>
+    <p class="sous">Quand les minutes font une tarte pleine</p>
+    <p>Il est <b>10:15</b>. Tu joues pendant <b>2 h 45</b>. À quelle heure finis-tu ?</p>
+    <p>Ajoute d'abord les heures : 10:15 + 2 h = <b>12:15</b>. Puis les minutes : 15 + 45 = <b>60 min</b>. Mais 60 minutes, c'est une tarte pleine, donc <b>1 heure</b> ! La réponse est <b>13:00</b>, pas « 12:60 ».</p>
+    <p><b>Essaie :</b> ajoute des minutes et regarde ce qui arrive quand la tarte est pleine.</p>
+    <div class="jeu-tarte">
+      <svg id="tarteSvg" width="92" height="92" viewBox="0 0 100 100" aria-label="Tarte des minutes"></svg>
+      <div class="ecran" id="tarteEcran">12:15</div>
+      <div class="boutons">
+        <button type="button" class="petit" data-plus="5">+ 5 min</button>
+        <button type="button" class="petit" data-plus="15">+ 15 min</button>
+        <button type="button" class="petit" data-plus="45">+ 45 min</button>
+        <button type="button" class="petit clair" id="tarteReset">Remettre à 12:15</button>
+      </div>
+      <div class="note" id="tarteNote"></div>
+    </div>
+    <div class="piege">⚠️ <b>Piège :</b> une heure ne peut jamais avoir 60 minutes ou plus. Si tes minutes dépassent 59, enlève 60 minutes et ajoute 1 heure.</div>
+  </section>
+  <div id="groupe2"></div>
+
+  <!-- ───────── 3. Passer minuit ───────── -->
+  <section class="notion">
+    <h2><span class="rond">C</span>Passer minuit</h2>
+    <p class="sous">Un bond jusqu'à minuit, puis on repart de 0:00</p>
+    <p>Tu t'es couché à <b>21:40</b> et tu t'es levé à <b>6:55</b>. Combien de temps as-tu dormi ?</p>
+    <p>La nuit traverse minuit. Fais d'abord un bond jusqu'à <b>minuit</b> (24:00), puis repars de <b>0:00</b>.</p>
+    <svg class="ligne-temps" id="demo3" viewBox="0 0 800 150" aria-label="Ligne du temps de 21:40 à 6:55 en passant par minuit"></svg>
+    <div class="retiens">💡 Jusqu'à minuit : 21:40 → 24:00 = <b>2 h 20</b>. Après minuit : 0:00 → 6:55 = <b>6 h 55</b>. Total : 2 h 20 + 6 h 55 = 8 h 75 min = <b>9 h 15</b> (75 min = 1 h 15).</div>
+  </section>
+  <div id="groupe3"></div>
+
+  <h3 class="titre-section">À toi !</h3>
+  <div id="groupe4"></div>
+</main>
+<script>
+(function(){
+  /* ───────── outils sur les heures ───────── */
+  const enMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const heureTxt = n => { n = ((n % 1440) + 1440) % 1440; return Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0'); };
+  const dureeTxt = n => { const h = Math.floor(n / 60), m = n % 60; return h ? (m ? h + ' h ' + String(m).padStart(2, '0') : h + ' h') : m + ' min'; };
+  // « 13:05 », « 13h05 », « 13 h 5 », « 12:65 » → { h, m } ; les minutes peuvent dépasser 59 (pour repérer l'erreur)
+  function lireHeureBrute(txt){
+    const t = String(txt || '').trim().toLowerCase().replace(/\s+/g, '').replace(/min$/, '');
+    const m = t.match(/^(\d{1,2})(?:[:h.,](\d{1,3}))?$/) || t.match(/^(\d{1,2})(\d{2})$/);
+    if(!m) return null;
+    return { h: parseInt(m[1], 10), m: m[2] ? parseInt(m[2], 10) : 0 };
+  }
+  const nombre = txt => { const t = String(txt || '').trim().replace(',', '.').replace(/[^0-9.]/g, ''); if(!t) return null; const x = parseFloat(t); return isNaN(x) ? null : x; };
+
+  /* ───────── les numéros (3 guidés + 6 à toi) ─────────
+     Un numéro a une ou plusieurs étapes. Types :
+       duree   : heures + minutes (attendu en minutes)
+       minutes : un nombre de minutes (attendu en minutes)
+       heure   : une heure digitale (attendu « h:mm »)
+     ctx : de / a (durée entre deux heures) ou de / plus (heure d'arrivée), pour les conseils ciblés. */
+  const NUMEROS = [
+    { groupe:1, image:'🎮', texte:"Ton match commence à 16:10. Il est 14:40. Fais les bonds pour trouver combien de temps il reste.",
+      ligne:['14:40','15:00','16:00','16:10'],
+      etapes:[
+        { lib:"Bond 1 : de 14:40 jusqu'à l'heure juste (15:00)", type:'minutes', attendu:20, bond:0 },
+        { lib:"Bond 2 : de 15:00 à 16:00", type:'duree', attendu:60, bond:1 },
+        { lib:"Bond 3 : de 16:00 à 16:10", type:'minutes', attendu:10, bond:2 },
+        { lib:"Total : additionne les bonds", type:'duree', attendu:90, ctx:{de:'14:40', a:'16:10'} } ] },
+    { groupe:2, image:'🛹', texte:"Il est 9:20. Tu fais de la planche pendant 3 h 45. À quelle heure finis-tu ?",
+      etapes:[
+        { lib:"a) Ajoute d'abord les heures : 9:20 + 3 h", type:'heure', attendu:'12:20' },
+        { lib:"b) Ajoute les minutes : 20 min + 45 min", type:'minutes', attendu:65, conseil65:true },
+        { lib:"c) 65 min = 1 h 05. Quelle heure est-il à la fin ?", type:'heure', attendu:'13:05', ctx:{de:'9:20', plus:225} } ] },
+    { groupe:3, image:'😴', texte:"Tu t'es couché à 20:55 et tu t'es levé à 7:10. Combien de temps as-tu dormi ?",
+      ligne:['20:55','24:00','7:10'], minuit:true,
+      etapes:[
+        { lib:"Bond 1 : de 20:55 jusqu'à minuit (24:00)", type:'duree', attendu:185, bond:0 },
+        { lib:"Bond 2 : de minuit (0:00) jusqu'à 7:10", type:'duree', attendu:430, bond:1 },
+        { lib:"Total : additionne les bonds", type:'duree', attendu:615, ctx:{de:'20:55', a:'7:10'} } ] },
+    { groupe:4, image:'🎬', texte:"Le film commence à 18:40 et finit à 20:15. Combien de temps dure-t-il ?",
+      etapes:[{ type:'duree', attendu:95, ctx:{de:'18:40', a:'20:15'} }], indice:"Bond 1 : de 18:40 à 19:00. Puis de 19:00 à 20:00, puis de 20:00 à 20:15." },
+    { groupe:4, image:'🍝', texte:"Il est 11:50. Le dîner est prêt dans 25 min. À quelle heure sera-t-il prêt ?",
+      etapes:[{ type:'heure', attendu:'12:15', ctx:{de:'11:50', plus:25} }], indice:"De 11:50, il faut 10 min pour finir la tarte (12:00). Il reste encore 15 min." },
+    { groupe:4, image:'🚌', texte:"Il est 7:35. Le trajet en autobus dure 1 h 40. À quelle heure arrives-tu ?",
+      etapes:[{ type:'heure', attendu:'9:15', ctx:{de:'7:35', plus:100} }], indice:"Ajoute d'abord 1 h : 8:35. Puis 40 min : 35 + 40 = 75 min, et 75 min = 1 h 15." },
+    { groupe:4, image:'⚽', texte:"L'entraînement commence à 16:20 et finit à 17:05. Combien de temps dure-t-il ?",
+      etapes:[{ type:'duree', attendu:45, ctx:{de:'16:20', a:'17:05'} }], indice:"Bond 1 : de 16:20 jusqu'à 17:00. Puis de 17:00 à 17:05." },
+    { groupe:4, image:'🏫', texte:"L'école commence à 8:10. Le trajet dure 35 min. À quelle heure dois-tu partir ?",
+      etapes:[{ type:'heure', attendu:'7:35', ctx:{de:'8:10', plus:-35} }], indice:"Recule par bonds : de 8:10 à 8:00, ça fait 10 min. Il te reste encore 25 min à reculer." },
+    { groupe:4, image:'🌙', texte:"Tu t'es couché à 22:30 et tu t'es levé à 6:45. Combien de temps as-tu dormi ?",
+      etapes:[{ type:'duree', attendu:495, ctx:{de:'22:30', a:'6:45'} }], indice:"Fais d'abord un bond jusqu'à minuit (24:00), puis de 0:00 jusqu'à 6:45." }
+  ];
+
+  /* ───────── état (repris là où l'élève s'était arrêté) ───────── */
+  const etatInitial = (function(){ try{ return JSON.parse(new URLSearchParams(location.search).get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};                 // 'i:k:h' → texte
+  const etapesOk = new Set((etatInitial && etatInitial.e) || []);       // 'i:k'
+  const reussis = new Set((etatInitial && etatInitial.ok) || []);       // i
+  const derniereErreur = {};
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+
+  /* ───────── ligne du temps (SVG) ───────── */
+  function dessinerLigne(svg, points, montres, minuit){
+    // points : heures « h:mm » dans l'ordre; montres : nombre de bonds dont l'étiquette est visible
+    const vals = [], W = 800, x0 = 60, x1 = 740;
+    let cumul = 0;
+    points.forEach((p, i) => { if(i === 0){ vals.push(0); return; }
+      let d = enMin(p === '24:00' ? '24:00' : p) - enMin(points[i-1] === '24:00' ? '0:00' : points[i-1]);
+      if(d < 0) d += 1440; cumul += d; vals.push(cumul); });
+    const X = v => x0 + (x1 - x0) * v / cumul;
+    let s = '<line x1="' + (x0 - 20) + '" y1="110" x2="' + (x1 + 20) + '" y2="110" stroke="#4a2c0a" stroke-width="3" stroke-linecap="round"/>';
+    const couleurs = ['#f59e0b', '#3b82f6', '#10b981', '#ec4899'];
+    for(let i = 1; i < points.length; i++){
+      const a = X(vals[i-1]), b = X(vals[i]), mid = (a + b) / 2, haut = Math.max(28, Math.min(80, (b - a) * 0.45));
+      const visible = i <= montres, d = vals[i] - vals[i-1];
+      s += '<path d="M' + a + ' 106 Q ' + mid + ' ' + (106 - haut * 1.6) + ' ' + b + ' 106" fill="none" stroke="' + couleurs[(i-1) % 4] + '" stroke-width="4" stroke-dasharray="' + (visible ? '0' : '7 7') + '" opacity="' + (visible ? 1 : .45) + '"/>';
+      s += '<text x="' + mid + '" y="' + (100 - haut * .8 - 6) + '" text-anchor="middle" font-size="19" font-weight="800" fill="' + (visible ? couleurs[(i-1) % 4] : '#b59b73') + '">' + (visible ? dureeTxt(d) : '?') + '</text>';
+    }
+    points.forEach((p, i) => {
+      const x = X(vals[i]), lab = (p === '24:00' && minuit) ? 'minuit' : p;
+      s += '<circle cx="' + x + '" cy="110" r="7" fill="#fff" stroke="#4a2c0a" stroke-width="3"/>';
+      s += '<text x="' + x + '" y="140" text-anchor="middle" font-size="18" font-weight="800" fill="#3b2a1a">' + lab + '</text>';
+    });
+    svg.innerHTML = s;
+  }
+
+  // Démo 1 : bonds un à un
+  const demo1 = document.getElementById('demo1'); let demo1n = 0;
+  const demo1Points = ['18:45', '19:00', '19:30'];
+  const majDemo1 = () => { dessinerLigne(demo1, demo1Points, demo1n);
+    document.getElementById('demo1Btn').textContent = demo1n >= 2 ? 'Total : 15 min + 30 min = 45 min ✓' : 'Faire le bond suivant ▶'; };
+  document.getElementById('demo1Btn').addEventListener('click', () => { if(demo1n < 2){ demo1n++; majDemo1(); } });
+  document.getElementById('demo1Reset').addEventListener('click', () => { demo1n = 0; majDemo1(); });
+  majDemo1();
+  dessinerLigne(document.getElementById('demo3'), ['21:40', '24:00', '6:55'], 2, true);
+
+  /* ───────── la tarte des minutes ───────── */
+  let tarte = enMin('12:15');
+  function dessinerTarte(){
+    const m = tarte % 60, a = m / 60 * 2 * Math.PI, x = 50 + 42 * Math.sin(a), y = 50 - 42 * Math.cos(a);
+    let s = '<circle cx="50" cy="50" r="44" fill="#fdf1d8" stroke="#c9924a" stroke-width="4"/>';
+    if(m > 0) s += '<path d="M50 50 L50 8 A42 42 0 ' + (m > 30 ? 1 : 0) + ' 1 ' + x.toFixed(2) + ' ' + y.toFixed(2) + ' Z" fill="#f4b860"/>';
+    for(let q = 0; q < 4; q++){ const b = q * Math.PI / 2; s += '<line x1="50" y1="50" x2="' + (50 + 44 * Math.sin(b)).toFixed(1) + '" y2="' + (50 - 44 * Math.cos(b)).toFixed(1) + '" stroke="#c9924a" stroke-width="1.5" stroke-dasharray="3 3"/>'; }
+    s += '<circle cx="50" cy="50" r="3" fill="#4a2c0a"/>';
+    document.getElementById('tarteSvg').innerHTML = s;
+    document.getElementById('tarteEcran').textContent = heureTxt(tarte);
+  }
+  document.querySelectorAll('[data-plus]').forEach(b => b.addEventListener('click', () => {
+    const avant = Math.floor(tarte / 60), mAvant = tarte % 60, plus = +b.dataset.plus;
+    tarte += plus;
+    const note = document.getElementById('tarteNote');
+    if(Math.floor(tarte / 60) > avant){
+      note.textContent = mAvant + ' + ' + plus + ' = ' + (mAvant + plus) + ' min : la tarte est pleine ! +1 heure, et il reste ' + (tarte % 60) + ' min.';
+      const e = document.getElementById('tarteEcran'); e.classList.remove('flash'); void e.offsetWidth; e.classList.add('flash');
+    } else note.textContent = '';
+    dessinerTarte();
+  }));
+  document.getElementById('tarteReset').addEventListener('click', () => { tarte = enMin('12:15'); document.getElementById('tarteNote').textContent = ''; dessinerTarte(); });
+  dessinerTarte();
+
+  /* ───────── cartes des numéros ───────── */
+  function champs(i, k, e){
+    const id = 'c' + i + '_' + k;
+    if(e.type === 'duree') return '<span class="champ"><input class="court" id="' + id + '_h" data-i="' + i + '" data-k="' + k + '" data-c="h" inputmode="numeric" placeholder="h"><span class="unite">h</span></span>' +
+                                  '<span class="champ"><input class="court" id="' + id + '_m" data-i="' + i + '" data-k="' + k + '" data-c="m" inputmode="numeric" placeholder="min"><span class="unite">min</span></span>';
+    if(e.type === 'minutes') return '<span class="champ"><input class="court" id="' + id + '_m" data-i="' + i + '" data-k="' + k + '" data-c="m" inputmode="numeric" placeholder="min"><span class="unite">min</span></span>';
+    return '<span class="champ"><input id="' + id + '_t" data-i="' + i + '" data-k="' + k + '" data-c="t" placeholder="h:min"></span>';
+  }
+  let numero = 0;
+  NUMEROS.forEach((q, i) => {
+    q.numero = ++numero;
+    const html = '<div class="carte" id="carte' + i + '"><div class="gauche"><div class="image">' + q.image + '</div><div class="num">' + q.numero + '</div></div><div class="corps">' +
+      '<p class="enonce">' + q.texte + '</p>' +
+      (q.ligne ? '<svg class="ligne-temps" id="ligne' + i + '" viewBox="0 0 800 150"></svg>' : '') +
+      q.etapes.map((e, k) => '<div class="etape">' + (e.lib ? '<span class="lib">' + e.lib + '</span>' : '') + champs(i, k, e) + '</div>').join('') +
+      '<div class="actions"><button type="button" data-verifier="' + i + '">Vérifier</button><span class="msg" id="msg' + i + '"></span></div>' +
+      '<div id="conseil' + i + '"></div></div></div>';
+    document.getElementById('groupe' + q.groupe).insertAdjacentHTML('beforeend', html);
+  });
+
+  const valeur = (i, k, c) => { const el = document.getElementById('c' + i + '_' + k + '_' + c); return el ? el.value : ''; };
+  function minutesSaisies(i, k, e){
+    if(e.type === 'minutes'){ const m = nombre(valeur(i, k, 'm')); return (m === null || !Number.isInteger(m)) ? null : m; }
+    const h = nombre(valeur(i, k, 'h')), m = nombre(valeur(i, k, 'm'));
+    if(h === null && m === null) return null;
+    if((h !== null && !Number.isInteger(h)) || (m !== null && !Number.isInteger(m))) return null;
+    return (h || 0) * 60 + (m || 0);
+  }
+  function heureJuste(txt, attendu){
+    const r = lireHeureBrute(txt); if(!r || r.m > 59 || r.h > 24) return false;
+    const A = enMin(attendu), R = (r.h % 24) * 60 + r.m;
+    return R === A || (r.h >= 1 && r.h <= 12 && (R + 720) % 1440 === A) || (R === 0 && A === 0);
+  }
+  function etapeCorrecte(i, k, e){
+    if(e.type === 'heure') return heureJuste(valeur(i, k, 't'), e.attendu);
+    return minutesSaisies(i, k, e) === e.attendu;
+  }
+  // Conseil ciblé selon l'erreur (sans jamais donner la réponse)
+  function conseil(i, k, e, q){
+    if(e.type === 'heure'){
+      const r = lireHeureBrute(valeur(i, k, 't'));
+      if(!r) return "Écris ton heure comme sur un cadran numérique, par exemple 13:05.";
+      if(r.m > 59) return "Tes minutes dépassent 59 : " + r.m + " min, c'est plus qu'une tarte pleine. Enlève 60 min et ajoute 1 heure.";
+      if(e.ctx){ const R = (r.h % 24) * 60 + r.m, A = enMin(e.attendu);
+        if(Math.abs(((R - A) % 720 + 720) % 720) === 60 || Math.abs(((R - A) % 720 + 720) % 720) === 660) return "Tes minutes sont bonnes, mais tu es à 1 heure près. Recompte : est-ce que tes minutes ont fait une tarte pleine ?";
+        if(e.ctx.plus < 0 && R > enMin(e.ctx.de)) return "Tu dois partir AVANT " + e.ctx.de + " : recule sur la ligne du temps.";
+      }
+      return q.indice || null;
+    }
+    const n = minutesSaisies(i, k, e);
+    if(n === null) return e.type === 'minutes' ? "Écris un nombre de minutes." : "Écris les heures dans la première case et les minutes dans la deuxième.";
+    if(e.conseil65 && n !== 65) return "Additionne simplement 20 + 45. Oui, ça peut dépasser 60 !";
+    if(e.ctx && e.ctx.a){
+      const D = enMin(e.ctx.de), A = enMin(e.ctx.a);
+      const hD = Math.floor(D / 60), mD = D % 60, hA = Math.floor(A / 60), mA = A % 60;
+      if(A < D){                                  // la nuit passe minuit
+        if(n === D - A || n === ((hD - hA) * 60 + Math.abs(mD - mA))) return "La nuit passe minuit : fais d'abord un bond jusqu'à minuit (24:00), puis repars de 0:00.";
+      } else if(mA < mD && n === (hA - hD) * 60 + (mD - mA)) return "On ne soustrait pas les minutes à l'envers ! Fais un bond jusqu'à l'heure juste, puis compte le reste.";
+      if(Math.abs(n - e.attendu) === 60) return "Tu es à 1 heure près. Recompte tes bonds.";
+    }
+    if(e.bond !== undefined && q.ligne){ return "Regarde les deux heures de ce bond sur la ligne du temps, et compte le temps entre les deux."; }
+    return q.indice || "Refais tes bonds sur la ligne du temps.";
+  }
+
+  function majLigne(i){
+    const q = NUMEROS[i]; if(!q.ligne) return;
+    let montres = 0; q.etapes.forEach((e, k) => { if(e.bond !== undefined && etapesOk.has(i + ':' + k)) montres = Math.max(montres, e.bond + 1); });
+    // un bond est affiché seulement si tous ceux d'avant le sont aussi
+    let n = 0; while(n < q.ligne.length - 1 && q.etapes.some((e, k) => e.bond === n && etapesOk.has(i + ':' + k))) n++;
+    dessinerLigne(document.getElementById('ligne' + i), q.ligne, n, q.minuit);
+  }
+  function verrouiller(i, k){
+    document.querySelectorAll('input[data-i="' + i + '"][data-k="' + k + '"]').forEach(el => { el.disabled = true; el.classList.remove('faux'); el.classList.add('bon'); });
+  }
+  function marquer(i, annoncer){
+    const carte = document.getElementById('carte' + i); carte.classList.add('ok');
+    carte.querySelectorAll('input').forEach(el => { el.disabled = true; });
+    const b = carte.querySelector('[data-verifier]'); b.disabled = true; b.textContent = '✓ Réussi';
+    if(annoncer){ const m = document.getElementById('msg' + i); m.textContent = 'Bonne réponse !'; m.className = 'msg bon'; }
+    document.getElementById('conseil' + i).innerHTML = '';
+  }
+
+  function verifier(i){
+    if(reussis.has(i)) return;
+    const q = NUMEROS[i];
+    const vide = [...document.querySelectorAll('input[data-i="' + i + '"]')].filter(el => !el.disabled).every(el => !el.value.trim());
+    if(vide) return;                                          // rien d'écrit : ce n'est pas une tentative
+    let premierConseil = null, toutBon = true;
+    q.etapes.forEach((e, k) => {
+      const cle = i + ':' + k;
+      if(etapesOk.has(cle)) return;
+      const champsEtape = [...document.querySelectorAll('input[data-i="' + i + '"][data-k="' + k + '"]')];
+      if(etapeCorrecte(i, k, e)){ etapesOk.add(cle); verrouiller(i, k); }
+      else if(champsEtape.every(el => !el.value.trim())){ toutBon = false; }   // étape pas encore remplie : ni rouge ni conseil
+      else {
+        toutBon = false;
+        document.querySelectorAll('input[data-i="' + i + '"][data-k="' + k + '"]').forEach(el => el.classList.add('faux'));
+        if(premierConseil === null) premierConseil = conseil(i, k, e, q);
+      }
+    });
+    majLigne(i);
+    const signature = [...document.querySelectorAll('input[data-i="' + i + '"]')].map(el => el.value.trim()).join('|');
+    if(toutBon || derniereErreur[i] !== signature){
+      parent({ type:'tentative', numero:String(q.numero), correcte:toutBon });
+      if(!toutBon) derniereErreur[i] = signature;
+    }
+    const m = document.getElementById('msg' + i);
+    if(toutBon){ reussis.add(i); marquer(i, true); maj(); }
+    else {
+      m.textContent = 'Pas tout à fait, réessaie !'; m.className = 'msg faux';
+      document.getElementById('conseil' + i).innerHTML = premierConseil ? '<div class="conseil">💡 ' + premierConseil + '</div>' : '';
+      const carte = document.getElementById('carte' + i); carte.classList.remove('secoue'); void carte.offsetWidth; carte.classList.add('secoue');
+    }
+    envoyerEtat();
+  }
+
+  document.querySelectorAll('input[data-i]').forEach(el => {
+    const cle = el.dataset.i + ':' + el.dataset.k + ':' + el.dataset.c;
+    if(valeurs[cle] != null) el.value = valeurs[cle];
+    el.addEventListener('input', () => { valeurs[cle] = el.value; el.classList.remove('faux'); envoyerEtat(); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter') verifier(+el.dataset.i); });
+  });
+  etapesOk.forEach(c => { const [i, k] = c.split(':').map(Number); verrouiller(i, k); });
+  NUMEROS.forEach((q, i) => majLigne(i));
+  reussis.forEach(i => marquer(i, false));
+  document.querySelectorAll('[data-verifier]').forEach(b => b.addEventListener('click', () => verifier(+b.dataset.verifier)));
+
+  function envoyerEtat(){
+    const vide = reussis.size === 0 && etapesOk.size === 0 && Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: (vide || reussis.size === NUMEROS.length) ? null : { v: valeurs, e: [...etapesOk], ok: [...reussis] } });
+  }
+  function maj(){
+    const n = reussis.size;
+    document.getElementById('score').textContent = n + ' / ' + NUMEROS.length + ' réussis';
+    document.getElementById('barre').style.width = (100 * n / NUMEROS.length) + '%';
+    parent({ type:'progress', vus:n, total:NUMEROS.length });
+    if(n === NUMEROS.length) parent({ type:'termine' });
+  }
+  maj();
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>
