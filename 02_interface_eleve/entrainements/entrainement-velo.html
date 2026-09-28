@@ -28,7 +28,9 @@
   window.addEventListener('resize', () => { if(V.visible()) placerVelo(); });
 
   const est = n => () => V.visible() && V.lire() === n;
-  V.surChangement(() => Entrainement.reverifier());
+  // Le défi n'est vérifié que quand le vélo reste immobile 0,4 s : passer par-dessus le bon angle ne suffit pas.
+  let minuterieImmobile = null;
+  V.surChangement(() => { clearTimeout(minuterieImmobile); minuterieImmobile = setTimeout(() => Entrainement.reverifier(), 400); });
 
   Entrainement.demarrer({
     icone: '🚲',

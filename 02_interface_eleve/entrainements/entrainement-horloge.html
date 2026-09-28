@@ -38,7 +38,11 @@
     return s + '<circle r="4" fill="#3b2a1a"/></svg>';
   }
   const est = (h, m, jour) => () => { if(!H.visible()) return false; const t = H.lire(); return (jour ? t.h === h : t.h % 12 === h % 12) && t.m === m; };
-  const surveiller = () => Entrainement.reverifier();
+  // Le défi n'est vérifié que quand les aiguilles restent immobiles un moment : passer par-dessus la bonne heure
+  // en tournant ne suffit pas, il faut s'y ARRÊTER.
+  const IMMOBILE_MS = 400;
+  let minuterieImmobile = null;
+  const surveiller = () => { clearTimeout(minuterieImmobile); minuterieImmobile = setTimeout(() => Entrainement.reverifier(), IMMOBILE_MS); };
   H.surChangement(surveiller);
 
   Entrainement.demarrer({

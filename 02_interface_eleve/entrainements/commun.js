@@ -70,6 +70,8 @@
   let cfg = null, faits = 0, courant = 0, cartes = [];
 
   function demarrer(c){
+    // Pendant l'entraînement, l'outil reste à l'écran : ses boutons ✕ disparaissent (sinon la réussite se brisait).
+    try{ if(window.SortsOutils && window.SortsOutils.bloquerFermeture) window.SortsOutils.bloquerFermeture(true); }catch(e){}
     cfg = c;
     const main = document.createElement('main');
     main.innerHTML =

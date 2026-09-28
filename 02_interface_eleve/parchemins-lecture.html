@@ -850,6 +850,19 @@ footer.note{ color:#b89a6a; opacity:.8; }
 .conjuration .conj-halo{ left:25%; right:25%; }
 
 
+/* === Chapitres scellés : sceau + verrou violet qui zigzague (le même que le Grimoire) === */
+.chapter-row.sealed{ position:relative; overflow:hidden; padding-right:66px; --verrou:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 60' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='g' x='-5%25' y='-40%25' width='110%25' height='180%25'%3E%3CfeGaussianBlur stdDeviation='1.8'/%3E%3C/filter%3E%3C/defs%3E%3Cpolyline points='0%2C30 24%2C8 48%2C52 72%2C8 96%2C52 120%2C8 144%2C52 168%2C8 192%2C52 216%2C8 240%2C52 264%2C8 288%2C52 300%2C30' fill='none' stroke='%237c3aed' stroke-width='6' stroke-linejoin='round' stroke-linecap='round' vector-effect='non-scaling-stroke' opacity='.45' filter='url%28%23g%29'%3E%3Canimate attributeName='opacity' values='.3%3B.6%3B.3' dur='2.6s' repeatCount='indefinite'/%3E%3C/polyline%3E%3Cpolyline points='0%2C30 24%2C8 48%2C52 72%2C8 96%2C52 120%2C8 144%2C52 168%2C8 192%2C52 216%2C8 240%2C52 264%2C8 288%2C52 300%2C30' fill='none' stroke='%23a855f7' stroke-width='2.2' stroke-linejoin='round' stroke-linecap='round' vector-effect='non-scaling-stroke'/%3E%3Cpolyline points='0%2C30 24%2C8 48%2C52 72%2C8 96%2C52 120%2C8 144%2C52 168%2C8 192%2C52 216%2C8 240%2C52 264%2C8 288%2C52 300%2C30' fill='none' stroke='%23f3e8ff' stroke-width='1.1' stroke-linejoin='round' stroke-linecap='round' stroke-dasharray='1 8' vector-effect='non-scaling-stroke'%3E%3Canimate attributeName='stroke-dashoffset' from='0' to='-20' dur='1.4s' repeatCount='indefinite'/%3E%3C/polyline%3E%3C/svg%3E"); }
+.chapter-row.sealed:hover{ transform:none; }
+.chapter-row.sealed .chapter-num, .chapter-row.sealed .chapter-info{ opacity:.5; filter:none; }
+.chapter-row.sealed::before{ content:""; position:absolute; left:0; right:0; top:2px; bottom:2px; z-index:1; pointer-events:none;
+  background:var(--verrou) center / 100% 100% no-repeat; filter:drop-shadow(0 0 2px rgba(168,85,247,0.45)); }
+.chapter-row.sealed::after{ content:""; position:absolute; right:8px; top:50%; width:50px; height:50px; transform:translateY(-50%); z-index:2; pointer-events:none;
+  background:url('livre_assets/sceau_verrouillage.png') center / contain no-repeat; filter:drop-shadow(0 2px 5px rgba(0,0,0,0.5)); }
+/* === Guide bleu : le chapitre et la section à faire (comme dans le Grimoire) === */
+.chapter-row.a-suivre, .evoc-liste-item.a-suivre{ border-color:#3b82f6 !important; box-shadow:0 0 0 2px #60a5fa, 0 0 18px rgba(59,130,246,.65);
+  animation:guide-bleu 2.4s ease-in-out infinite; }
+@keyframes guide-bleu{ 0%,100%{ box-shadow:0 0 0 2px #60a5fa, 0 0 12px rgba(59,130,246,.45); } 50%{ box-shadow:0 0 0 3px #3b82f6, 0 0 26px rgba(59,130,246,.85); } }
+
 /* === Boutons de retour et de fermeture plus gros (28 sept. 2026) === */
 .back-link, .evoc-barre .back-link, .conj-barre .back-link{ top:58px; font-size:16px; padding:8px 16px; border-radius:8px; }
 .retour-bas{ font-size:17px; padding:12px 24px; border-radius:8px; }
@@ -906,9 +919,9 @@ footer.note{ color:#b89a6a; opacity:.8; }
    DONNÉES
    ============================================================ */
 const DATA = [
-  { title: "Chapitre 1: Invocations", isInvocations: true,
+  { title: "Chapitre 1: Invocations", isInvocations: true, id: "invocations",
     texts: [ { kind: "promotion", title: "Épreuve de promotion", paireIndex: 0 } ] },
-  { title:"Chapitre 2: Conjurations", isConjurations: true,
+  { title:"Chapitre 2: Conjurations", isConjurations: true, id: "conjurations",
     texts: [
       { kind:"conjugaison", themeId:1, slug:"chrono-bot", title:"Conjure Chrono-Bot !", emoji:"🤖", sousTitre:"ÊTRE & AVOIR — présent, imparfait, futur",
         serie1:"chapitre2_conjugaison/chapitre2-theme1-chrono-bot-serie1.html",
@@ -1898,16 +1911,21 @@ function itemDone(ci, ti, t){
   return !!(textState[ci] && textState[ci][ti] && textState[ci][ti].status === "reussi");
 }
 
+/* CHAPITRES OUVERTS — comme dans le Grimoire : seuls ceux-ci sont ouverts à tous ; les autres sont scellés
+   (sceau + verrou violet), sauf pour un élève à qui l'enseignant les ouvre, dans l'atelier et dans le livre de l'enseignant. */
+const CHAPITRES_LECTURE_OUVERTS = ['invocations', 'conjurations'];   // chapitres 1 et 2
 function chapterUnlocked(ci){
   if(window.__toutDebarre) return true;    // panneau enseignant : « Débarrer tous les chapitres »
   if(toutOuvertAtelier) return true;       // atelier : tout est ouvert
   if(DATA[ci] && DATA[ci].id && chapitresLectureEleve.includes(DATA[ci].id)) return true;   // ouvert à cet élève par l'enseignant
-  if(ci === 0 || ci === 1) return true;    // le chapitre 2 (Conjurations) est ouvert d'emblée
-  const prev = DATA[ci - 1];
-  if(!prev) return false;
-  if(prev.isInvocations) return invocationsToutesTerminees && prev.texts.every((t, ti) => itemDone(ci-1, ti, t));
-  if(prev.placeholder) return false;
-  return prev.texts.every((t, ti) => itemDone(ci-1, ti, t));
+  return !!(DATA[ci] && DATA[ci].id && CHAPITRES_LECTURE_OUVERTS.includes(DATA[ci].id));
+}
+const TEXTE_SCELLE = "Ce chapitre est scellé pour le moment.";
+function ligneScellee(ci, titre){
+  return `<div class="chapter-row locked sealed" title="${TEXTE_SCELLE}" aria-disabled="true">
+    <div class="chapter-num">${ci + 1}</div>
+    <div class="chapter-info"><div class="chapter-name">${titre}</div><div class="chapter-sub">${TEXTE_SCELLE}</div></div>
+  </div>`;
 }
 
 // Un chapitre est terminé quand toutes ses sections ET son épreuve de promotion sont réussies.
@@ -2082,6 +2100,7 @@ async function renderTOC(){
     <p style="text-align:center;color:var(--ink-soft);margin-bottom:16px;">Chaque section terminée rapporte de l'expérience (XP). Rangs : Novice 1 000 · Invocateur 2 500 · Magicien 5 000 · Sorcier 10 000 XP.</p>`;
   DATA.forEach((ch, ci) => {
     const level = LEVELS[ci] || "?";
+    if((ch.isInvocations || ch.isConjurations) && !chapterUnlocked(ci)){ html += ligneScellee(ci, ch.title); return; }
     if(ch.isInvocations){
       html += `<div class="chapter-row" data-invocations="1">
         <div class="chapter-num">${ci+1}</div>
@@ -2108,6 +2127,7 @@ async function renderTOC(){
       </div>`;
       return;
     }
+    if((ch.placeholder || ch.special || ch.texts) && !chapterUnlocked(ci)){ html += ligneScellee(ci, ch.title); return; }
     if(ch.placeholder){
       const debloque = chapterUnlocked(ci);
       html += `<div class="chapter-row ${debloque ? "" : "locked"}"><div class="chapter-num">${debloque ? "📜" : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</div><div class="chapter-info"><div class="chapter-name">${ch.title}</div><div class="chapter-sub">${debloque ? "Contenu à venir" : "Termine le chapitre précédent pour débarrer celui-ci"}</div></div><div class="rank-badge ${debloque?"":"locked"}">${level}</div></div>`;
@@ -2138,10 +2158,12 @@ async function renderTOC(){
         <div class="chapter-name">${ch.title}</div>
         <div class="chapter-sub">${unlocked ? countableDone + "/" + countableTotal + " terminé(s)" : "Termine le chapitre précédent pour débarrer celui-ci"}</div>
       </div>
+      ${unlocked && chapitreTermine(ci) ? BANDEROLE_HTML : ""}
       <div class="rank-badge ${unlocked ? "" : "locked"}">${level}</div>
     </div>`;
   });
   app.innerHTML = html;
+  guideBleu(app, ".chapter-row");
   app.querySelectorAll(".chapter-row[data-invocations]").forEach(row => {
     row.addEventListener("click", () => { view = {mode:"evoc-liste"}; render(); });
   });
@@ -2166,6 +2188,14 @@ async function renderTOC(){
 
 /* ---------------- Chapter view (list of texts) ---------------- */
 /* ---------------- Évocations : liste des 10 sections ---------------- */
+/* ---------------- Guide bleu (comme dans le Grimoire) ----------------
+   La première ligne ni verrouillée, ni scellée, ni terminée (banderole) : c'est là que l'élève doit cliquer. */
+function guideBleu(conteneur, selecteur){
+  const ligne = [...conteneur.querySelectorAll(selecteur)].find(l =>
+    !l.classList.contains("locked") && !l.classList.contains("complete") && !l.classList.contains("promo-done") && !l.querySelector("img.banderole-ligne"));
+  if(ligne) ligne.classList.add("a-suivre");
+}
+
 /* ---------------- Banderole « section complétée » ---------------- */
 const BANDEROLE_HTML = '<img class="banderole-ligne" src="livre_assets/banderole_completee.webp" alt="Section complétée" draggable="false">';
 // Fenêtre au centre de l'écran, à la première réussite d'une section.
@@ -2234,6 +2264,7 @@ async function renderEvocationsListe(){
     <span class="evoc-liste-score">${bossStatus}</span>
   </div>`;
   zone.innerHTML = html;
+  guideBleu(zone, ".evoc-liste-item");
   zone.querySelectorAll(".evoc-liste-item[data-id]").forEach(item => {
     item.addEventListener("click", () => {
       view = {mode:"evoc-section", id: parseInt(item.dataset.id,10)};
@@ -2298,7 +2329,8 @@ window.MotsCherchesVocab = function(){
   const tous = section.exercices.map((ex, i) => pasReussie(i) ? ex.reponse : null).filter(Boolean);
   const i = evocQuestionCourante;
   const courant = (i !== null && section.exercices[i] && pasReussie(i)) ? section.exercices[i].reponse : null;
-  return { courant, tous };
+  // toutes : tous les mots à trouver de la section, en tout temps (c'est ce que la loupe montre, depuis le 28 sept.)
+  return { courant, tous, toutes: section.exercices.map(ex => ex.reponse) };
 };
 
 function corrigerEvocations(section){
@@ -2842,6 +2874,7 @@ function renderConjurationsListe(){
   }
   html += `</div>`;
   app.innerHTML = html;
+  guideBleu(app, ".evoc-liste-item");
   document.getElementById("backToTocFromConj").addEventListener("click", () => { view = {mode:"toc"}; render(); });
   app.querySelectorAll(".evoc-liste-item[data-theme]").forEach(item => {
     item.addEventListener("click", () => { view = {mode:"conj-section", themeId: parseInt(item.dataset.theme, 10), serie: 1}; render(); });

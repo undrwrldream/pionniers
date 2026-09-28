@@ -52,12 +52,12 @@
   .rap-barre button[data-a="fermer"]{ background:#b91c1c; }
   /* Verre étoilé des images fournies (bande graduée effacée) : rose pour les filles (rapporteur_fille.webp),
      bleu pour les garçons (rapporteur_garcon.webp). Les graduations restent celles dessinées ici, justes au degré. */
-  .rap-cadre.verre .rap-corps{ background:none; overflow:hidden; border-color:rgba(224,242,254,.95); border-bottom-color:rgba(224,242,254,1);
+  .rap-cadre.verre .rap-corps{ background:none; backdrop-filter:none; -webkit-backdrop-filter:none; overflow:hidden; border-color:rgba(224,242,254,.95); border-bottom-color:rgba(224,242,254,1);
     box-shadow:0 2px 14px rgba(0,0,0,.18), 0 0 14px rgba(96,165,250,.5), inset 0 1px 0 rgba(255,255,255,.7); }
   .rap-cadre.verre.fille .rap-corps{ border-color:rgba(255,220,245,.95); border-bottom-color:rgba(255,220,245,1);
     box-shadow:0 2px 14px rgba(0,0,0,.18), 0 0 14px rgba(244,114,182,.5), inset 0 1px 0 rgba(255,255,255,.7); }
-  .rap-cadre.verre .rap-corps::before{ content:""; position:absolute; inset:0; background:var(--rap-img) center / 100% 100% no-repeat; opacity:.9; }
-  .rap-cadre.verre .rap-corps::after{ content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0) 40%); pointer-events:none; }
+  .rap-cadre.verre .rap-corps::before{ content:""; position:absolute; inset:0; background:var(--rap-img) center / 100% 100% no-repeat; opacity:.22; }   /* verre plus transparent */
+  .rap-cadre.verre .rap-corps::after{ content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0) 40%); pointer-events:none; }
   .rap-cadre.verre .rap-corps svg{ z-index:1; }
   .rap-cadre.fille .rap-poignee, .rap-cadre.fille .rap-barre button{ background:#a21caf; }
   .rap-cadre.fille .rap-barre button[data-a="fermer"]{ background:#b91c1c; }

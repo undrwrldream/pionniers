@@ -40,6 +40,8 @@
   const ecouteurs = [];
   function signaler(nom, visible){ ecouteurs.forEach(f => { try{ f(nom, visible); }catch(e){} }); }
 
+  // Entraînement en cours : les outils ne se ferment pas (voir bloquerFermeture, plus bas).
+  let fermetureBloquee = false;
   function styles(id, css){
     if(document.getElementById(id)) return;
     const s = document.createElement('style'); s.id = id; s.textContent = css;
@@ -207,7 +209,7 @@
       ecran = el.querySelector('.so-calc-valeur'); badge = el.querySelector('.so-calc-badge');
       el.querySelector('.so-calc-touches').addEventListener('click', e => { const b = e.target.closest('button'); if(b) touche(b.dataset.k); });
       el.querySelectorAll('.so-calc-couleurs button').forEach((b, i) => b.addEventListener('click', () => theme(i)));
-      el.querySelector('.so-calc-x').addEventListener('click', () => fermer());
+      el.querySelector('.so-calc-x').addEventListener('click', () => { if(!fermetureBloquee) fermer(); });
       deplacable(el, el.querySelector('.so-calc-tete'));
       theme(0);
       // Clavier : seulement si la calculatrice est visible et que l'élève n'écrit pas dans une case réponse.
@@ -269,7 +271,7 @@
         '<stop offset=".55" stop-color="#eef5ff" stop-opacity=".78"/><stop offset="1" stop-color="#dbe8f8" stop-opacity=".85"/></linearGradient>' +
         '<linearGradient id="so-reflet" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".45"/><stop offset=".35" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity=".18"/></linearGradient>' +
         '<clipPath id="so-regle-clip"><rect x="0.5" y="0.5" width="' + (LARG - 1) + '" height="' + (HAUT - 1) + '" rx="8"/></clipPath></defs>' +
-        '<g clip-path="url(#so-regle-clip)"><image href="' + BASE + 'livre_assets/regle_' + (fille ? 'fille' : 'garcon') + '.webp" x="0" y="0" width="' + LARG + '" height="' + HAUT + '" preserveAspectRatio="none" opacity=".93"/>' +
+        '<g clip-path="url(#so-regle-clip)"><image href="' + BASE + 'livre_assets/regle_' + (fille ? 'fille' : 'garcon') + '.webp" x="0" y="0" width="' + LARG + '" height="' + HAUT + '" preserveAspectRatio="none" opacity=".32"/>' +   // verre plus transparent : on voit au travers
           '<rect width="' + LARG + '" height="' + HAUT + '" fill="url(#so-reflet)"/></g>' +
         '<rect x="0.5" y="0.5" width="' + (LARG - 1) + '" height="' + (HAUT - 1) + '" rx="8" fill="none" stroke="' + (fille ? 'rgba(255,230,250,.9)' : 'rgba(224,242,254,.95)') + '" stroke-width="1.4"/>';
       for(let mm = 0; mm <= 100; mm++){
@@ -318,7 +320,7 @@
       el.querySelector('.so-regle-barre').addEventListener('click', e => {
         const b = e.target.closest('button'); if(!b) return;
         if(b.dataset.a === 'droit'){ pos.rot = 0; placer(); }
-        if(b.dataset.a === 'fermer') fermer();
+        if(b.dataset.a === 'fermer' && !fermetureBloquee) fermer();
       });
       window.addEventListener('resize', () => { pos.x = Math.min(pos.x, window.innerWidth - 10); pos.y = Math.min(pos.y, window.innerHeight - 20); placer(); });
     }
@@ -398,6 +400,28 @@
         @keyframes so-horl-tourbillon{ 0%{ opacity:0; transform:translate(-50%,-50%) rotate(-40deg) scale(.6); filter:brightness(2.5) blur(4px); } 100%{ opacity:1; transform:translate(-50%,-50%); } }
         .so-horl svg{ position:relative; display:block; margin:0 auto; overflow:visible; touch-action:none; }
         .so-horl .aig{ cursor:grab; }
+        /* Calculer la durée : bouton à gauche, début / fin à droite, temps écoulé en haut */
+        .so-horl-duree-btn{ position:absolute; left:-150px; top:50%; transform:translateY(-50%); width:128px; z-index:3;
+          font:700 15px/1.2 'Cinzel', Georgia, serif; padding:12px 10px; border-radius:14px; cursor:pointer; color:#fdf4dc;
+          background:linear-gradient(180deg, rgba(76,29,149,.95), rgba(46,16,101,.95)); border:2px solid #f5d67a; box-shadow:0 0 16px rgba(168,85,247,.55); }
+        .so-horl-duree-btn:hover{ filter:brightness(1.15); }
+        .so-horl-duree-btn.actif{ background:linear-gradient(180deg, #7f1d1d, #4c0519); border-color:#fca5a5; }
+        .so-horl-form{ position:absolute; left:-190px; top:calc(50% + 50px); width:200px; z-index:4; display:none; text-align:center;
+          background:rgba(20,10,40,.96); border:2px solid #f5d67a; border-radius:12px; padding:10px; color:#fdf4dc; box-shadow:0 8px 22px rgba(0,0,0,.5); }
+        .so-horl-form.ouvert{ display:block; }
+        .so-horl-form p{ margin:0 0 8px; font:italic 700 15px Georgia, serif; }
+        .so-horl-form input{ width:52px; font:700 22px Georgia, serif; text-align:center; border-radius:8px; border:2px solid #d8b4fe; padding:4px 2px; }
+        .so-horl-form .deux-pts{ font:700 24px Georgia, serif; margin:0 3px; }
+        .so-horl-form button{ margin-top:8px; font:700 14px system-ui, sans-serif; padding:8px 14px; border-radius:999px; border:2px solid #f5d67a;
+          background:#6d28d9; color:#fff; cursor:pointer; }
+        .so-horl-form .erreur{ min-height:16px; margin:6px 0 0; font-size:13px; color:#fca5a5; font-style:normal; }
+        .so-horl-bornes{ position:absolute; right:-160px; top:50%; transform:translateY(-50%); width:140px; display:none; text-align:center; z-index:3; }
+        .so-horl.en-duree .so-horl-bornes{ display:block; }
+        .so-horl-borne{ margin:10px 0; }
+        .so-horl-borne b{ display:block; font-family:'Cinzel Decorative', 'Cinzel', Georgia, serif; font-size:38px; line-height:1.05; color:#fff7d6;
+          text-shadow:0 0 6px #fde68a, 0 0 16px #f59e0b, 0 0 30px #a855f7; }
+        .so-horl-borne span{ font-size:15px; font-style:italic; font-weight:700; color:#f5e7ff; text-shadow:0 0 8px #a855f7, 0 0 2px #000; }
+        .so-horl.en-duree .so-horl-num{ font-size:52px; }
         .so-horl-outils{ display:flex; justify-content:center; gap:6px; margin-top:12px; flex-wrap:wrap; }
         .so-horl-outils button{ font:700 13px/1 system-ui, sans-serif; height:32px; padding:0 11px; border-radius:999px; border:2px solid #f5d67a;
           background:rgba(30,16,52,.88); color:#fdf4dc; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.4); }
@@ -434,6 +458,10 @@
       const etoile = (x, y, t, c) => '<path d="M' + P(x) + ' ' + P(y - t) + ' L' + P(x + t * .28) + ' ' + P(y - t * .28) + ' L' + P(x + t) + ' ' + P(y) + ' L' + P(x + t * .28) + ' ' + P(y + t * .28) + ' L' + P(x) + ' ' + P(y + t) + ' L' + P(x - t * .28) + ' ' + P(y + t * .28) + ' L' + P(x - t) + ' ' + P(y) + ' L' + P(x - t * .28) + ' ' + P(y - t * .28) + 'Z" fill="' + c + '"/>';
       for(let k = 0; k < 16; k++){ const a = hasard() * Math.PI * 2, r = 14 + hasard() * (rc - 22); s += etoile(Math.cos(a) * r, Math.sin(a) * r, 2.5 + hasard() * 4, k % 3 ? '#ffffff' : '#6f7c90'); }
       for(let k = 0; k < 22; k++){ const a = hasard() * Math.PI * 2, r = rc + 8 + hasard() * (R - rc - 50); s += '<circle cx="' + P(Math.cos(a) * r) + '" cy="' + P(Math.sin(a) * r) + '" r="' + P(.8 + hasard() * 1.2) + '" fill="#7d889a" opacity=".7"/>'; }
+      // les deux axes (12-6 et 9-3) : on voit mieux les quarts d'heure
+      const ax = R - 56;
+      s += '<g stroke="#6d28d9" stroke-width="2.4" stroke-linecap="round" opacity=".75">' +
+        '<line x1="0" y1="' + P(-ax) + '" x2="0" y2="' + P(ax) + '"/><line x1="' + P(-ax) + '" y1="0" x2="' + P(ax) + '" y2="0"/></g>';
       // graduations
       for(let i = 0; i < 60; i++){
         const a = i * 6 * Math.PI / 180, grand = i % 5 === 0;
@@ -462,7 +490,15 @@
       css();
       el = document.createElement('div'); el.className = 'so-horl'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Horloge magique');
       el.innerHTML = '<div class="so-horl-air" title="Glisse ici pour déplacer l\'horloge"><div class="so-horl-num">3:00</div><div class="so-horl-mots"></div></div>' +
-        '<div class="so-horl-cadran"><img class="so-horl-art" src="' + IMG_HORLOGE + '" alt="" draggable="false">' + svg() + '</div>' +
+        '<div class="so-horl-cadran"><img class="so-horl-art" src="' + IMG_HORLOGE + '" alt="" draggable="false">' + svg() +
+          '<button type="button" class="so-horl-duree-btn" title="Calculer le temps écoulé entre deux heures">⏱ Calculer la durée</button>' +
+          '<div class="so-horl-form" role="dialog" aria-label="Heure de début"><p>À quelle heure ça commence ?</p>' +
+            '<input type="number" min="0" max="23" inputmode="numeric" class="duree-h" aria-label="Heure"><span class="deux-pts">:</span>' +
+            '<input type="number" min="0" max="59" inputmode="numeric" class="duree-m" aria-label="Minutes"><br>' +
+            '<button type="button" class="duree-ok">Commencer ✨</button><p class="erreur"></p></div>' +
+          '<div class="so-horl-bornes"><div class="so-horl-borne"><b class="borne-debut">0:00</b><span>début</span></div>' +
+            '<div class="so-horl-borne"><b class="borne-fin">0:00</b><span>fin</span></div></div>' +
+        '</div>' +
         '<div class="so-horl-outils">' +
           '<button type="button" data-a="-1" title="Reculer d\'une minute">− 1 min</button>' +
           '<button type="button" data-a="+1" title="Avancer d\'une minute">+ 1 min</button>' +
@@ -508,8 +544,28 @@
         if(a === '+1') regler(null, null, totalMin + 1);
         if(a === 'matin' && h24() >= 12) regler(null, null, totalMin - 720);
         if(a === 'soir' && h24() < 12) regler(null, null, totalMin + 720);
-        if(a === 'fermer') fermer();
+        if(a === 'fermer' && !fermetureBloquee) fermer();
       });
+      // ---- Calculer la durée ----
+      const btnDuree = el.querySelector('.so-horl-duree-btn'), form = el.querySelector('.so-horl-form');
+      const champH = form.querySelector('.duree-h'), champM = form.querySelector('.duree-m'), erreurForm = form.querySelector('.erreur');
+      btnDuree.addEventListener('click', () => {
+        if(duree){ arreterDuree(); return; }
+        if(form.classList.contains('ouvert')){ form.classList.remove('ouvert'); return; }
+        champH.value = h24(); champM.value = deux(mm()); erreurForm.textContent = '';
+        form.classList.add('ouvert'); setTimeout(() => { champH.focus(); champH.select(); }, 30);
+      });
+      function commencerDuree(){
+        const h = parseInt(champH.value, 10), m = parseInt(champM.value, 10);
+        if(!(h >= 0 && h <= 23) || !(m >= 0 && m <= 59)){ erreurForm.textContent = 'Heure de 0 à 23, minutes de 0 à 59.'; return; }
+        form.classList.remove('ouvert');
+        duree = null; regler(h, m);                     // l'horloge se place à l'heure du début
+        duree = { debut: h * 60 + m, ecoule: 0 };
+        el.classList.add('en-duree'); btnDuree.classList.add('actif'); btnDuree.textContent = '✕ Terminer le calcul';
+        dessiner();
+      }
+      form.querySelector('.duree-ok').addEventListener('click', commencerDuree);
+      form.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); commencerDuree(); } e.stopPropagation(); });
       // déplacer l'horloge en la tenant par son heure magique
       const air = el.querySelector('.so-horl-air');
       let d = null;
@@ -538,15 +594,28 @@
       }, 260);
     }
     let dernierTexte = '';
+    let duree = null;   // mode « Calculer la durée » : { debut: minutes depuis minuit, ecoule: minutes écoulées (≥ 0) }
+    function texteDuree(n){ const h = Math.floor(n / 60), m = n % 60; return h ? h + ' h' + (m ? ' ' + deux(m) : '') : m + ' min'; }
+    function arreterDuree(){
+      duree = null;
+      if(!el) return;
+      el.classList.remove('en-duree');
+      const b = el.querySelector('.so-horl-duree-btn'); b.classList.remove('actif'); b.textContent = '⏱ Calculer la durée';
+      dessiner();
+    }
     function dessiner(silence){
       if(!el) return;
       const h = h24(), m = mm();
       el.querySelector('.aig-m').setAttribute('transform', 'rotate(' + (m * 6) + ')');
       el.querySelector('.aig-h').setAttribute('transform', 'rotate(' + ((h % 12) * 30 + m * 0.5) + ')');
-      const texte = h + ':' + deux(m);
+      const texte = duree ? texteDuree(duree.ecoule) : h + ':' + deux(m);
       const num = el.querySelector('.so-horl-num');
       num.textContent = texte;
-      el.querySelector('.so-horl-mots').textContent = motsHeure();
+      el.querySelector('.so-horl-mots').textContent = duree ? 'de temps écoulé' : motsHeure();
+      if(duree){
+        el.querySelector('.borne-debut').textContent = Math.floor(duree.debut / 60) + ':' + deux(duree.debut % 60);
+        el.querySelector('.borne-fin').textContent = h + ':' + deux(m);
+      }
       el.querySelector('[data-a="matin"]').classList.toggle('actif', h < 12);
       el.querySelector('[data-a="soir"]').classList.toggle('actif', h >= 12);
       if(!silence && texte !== dernierTexte){ num.classList.remove('change'); void num.offsetWidth; num.classList.add('change'); }
@@ -554,7 +623,15 @@
     }
     function regler(h, m, total){
       const avant = totalMin;
-      if(total === undefined || total === null) total = (+h || 0) * 60 + (+m || 0);
+      let ecart;   // de combien de minutes les aiguilles ont tourné (pour le temps écoulé)
+      if(total === undefined || total === null){
+        total = (+h || 0) * 60 + (+m || 0);
+        ecart = ((total - avant) % 1440 + 1440) % 1440; if(ecart > 720) ecart -= 1440;   // le chemin le plus court
+      } else ecart = Math.round(total) - avant;
+      if(duree){
+        if(duree.ecoule + ecart < 0){ ecart = -duree.ecoule; total = duree.debut; }   // on ne recule pas avant le début
+        duree.ecoule += ecart;
+      }
       totalMin = ((Math.round(total) % 1440) + 1440) % 1440;
       dessiner();
       if(totalMin !== avant) abonnes.forEach(f => { try{ f({ h: h24(), m: mm() }); }catch(e){} });
@@ -565,7 +642,7 @@
       montre = true; void el.offsetWidth; el.classList.add('visible'); dessiner(true); signaler('horloge', true);
       const art = el.querySelector('.so-horl-art'); if(art){ art.style.animation = 'none'; void art.offsetWidth; art.style.animation = ''; }
     }
-    function fermer(){ if(!el || !montre) return; montre = false; el.classList.remove('visible'); signaler('horloge', false); }
+    function fermer(){ if(!el || !montre) return; montre = false; el.classList.remove('visible'); arreterDuree(); signaler('horloge', false); }
     let placeFixe = null;   // position choisie par la page : { left, top, echelle }
     function placer(p){
       placeFixe = p;
@@ -629,6 +706,10 @@
         .so-velo-roue:active{ cursor:grabbing; }
         .so-velo-cercle{ position:absolute; inset:2%; border-radius:50%; border:2px dashed rgba(216,180,254,.45);
           background:radial-gradient(circle, rgba(88,28,135,.35), rgba(30,10,50,.15) 60%, transparent 72%); box-shadow:0 0 30px rgba(168,85,247,.35) inset; }
+        /* plan cartésien : les deux axes seulement, centrés sur l'axe de rotation du vélo (le centre de la roue) */
+        .so-velo-axes{ position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+        .so-velo-axes line{ stroke:#e9d5ff; stroke-width:1.6; vector-effect:non-scaling-stroke; opacity:.9; filter:drop-shadow(0 0 3px #a855f7); }
+        .so-velo-axes path{ fill:#e9d5ff; opacity:.9; }
         .so-velo-img{ position:absolute; left:50%; top:50%; width:96%; height:auto; transform:translate(-50%,-50%) rotate(0deg); pointer-events:none;
           filter:drop-shadow(0 10px 18px rgba(0,0,0,.45)) drop-shadow(0 0 14px rgba(192,132,252,.55)); }
         .so-velo-img.apparait{ animation:so-velo-apparait 1.1s cubic-bezier(.2,.9,.3,1.15); }
@@ -653,7 +734,12 @@
       el.innerHTML =
         '<div class="so-velo-scene">' +
           '<div class="so-velo-col gauche" title="Glisse ici pour déplacer le vélo"><div class="so-velo-bloc"><div class="so-velo-grand" data-v="deg">0°</div><div class="so-velo-etiq">degrés</div></div></div>' +
-          '<div class="so-velo-roue" title="Fais tourner le vélo avec ta souris"><div class="so-velo-cercle"></div><img class="so-velo-img" alt="Vélo magique" draggable="false"><div class="so-velo-sens" aria-hidden="true">↻</div></div>' +
+          '<div class="so-velo-roue" title="Fais tourner le vélo avec ta souris"><div class="so-velo-cercle"></div>' +
+            '<svg class="so-velo-axes" viewBox="-100 -100 200 200" aria-hidden="true">' +
+              '<line x1="-100" y1="0" x2="100" y2="0"/><line x1="0" y1="-100" x2="0" y2="100"/>' +
+              '<path d="M100 0 L91 -4.5 L91 4.5 Z"/><path d="M0 -100 L-4.5 -91 L4.5 -91 Z"/>' +
+            '</svg>' +
+            '<img class="so-velo-img" alt="Vélo magique" draggable="false"><div class="so-velo-sens" aria-hidden="true">↻</div></div>' +
           '<div class="so-velo-col droite" title="Glisse ici pour déplacer le vélo">' +
             '<div class="so-velo-bloc"><div class="so-velo-moyen" data-v="quarts">0</div><div class="so-velo-etiq" data-v="quarts-mot">quart de tour</div></div>' +
             '<div class="so-velo-bloc"><div class="so-velo-moyen" data-v="demis">0</div><div class="so-velo-etiq" data-v="demis-mot">demi-tour</div></div>' +
@@ -692,7 +778,7 @@
       el.querySelector('.so-velo-outils').addEventListener('click', e => {
         const b = e.target.closest('button'); if(!b) return;
         const a = b.dataset.a;
-        if(a === 'fermer'){ fermer(); return; }
+        if(a === 'fermer'){ if(!fermetureBloquee) fermer(); return; }
         if(a === 'zero'){ regler(0); return; }
         const n = deg + parseInt(a, 10);
         if(n < 0) indice('Tu es à 0° : impossible de reculer encore.'); else if(n > MAX) indice('1080°, c\'est le maximum !'); else indice('');
@@ -724,7 +810,7 @@
     function eclat(sel){ const n = el.querySelector(sel); n.classList.remove('eclat'); void n.offsetWidth; n.classList.add('eclat'); }
     function dessiner(){
       if(!el) return;
-      const q = deg / 90, dm = deg / 180;
+      const q = Math.floor(deg / 90), dm = Math.floor(deg / 180);   // quarts et demi-tours COMPLETS : jamais de décimales
       el.querySelector('.so-velo-img').style.transform = 'translate(-50%,-50%) rotate(' + deg + 'deg)';
       el.querySelector('[data-v="deg"]').textContent = deg + '°';
       el.querySelector('[data-v="quarts"]').textContent = fr(q);
@@ -789,6 +875,14 @@
     basculer(nom, depuis){ if(this.visible(nom)) this.fermer(nom); else this.ouvrir(nom, depuis); },
     visible(nom){ const o = OUTILS[nom]; return !!(o && o.visible()); },
     toutFermer(){ Object.keys(OUTILS).forEach(n => this.fermer(n)); },
+    // Entraînement : true = plus aucun bouton ✕ sur les outils, et l'élève ne peut pas les faire disparaître.
+    bloquerFermeture(oui){
+      fermetureBloquee = !!oui;
+      styles('so-sans-fermer', 'body.so-fermeture-bloquee [data-a="fermer"], body.so-fermeture-bloquee .so-calc-x{ display:none !important; }');
+      document.documentElement.classList.toggle('so-fermeture-bloquee', fermetureBloquee);
+      if(document.body) document.body.classList.toggle('so-fermeture-bloquee', fermetureBloquee);
+      else document.addEventListener('DOMContentLoaded', () => document.body.classList.toggle('so-fermeture-bloquee', fermetureBloquee));
+    },
     genre(g){ if(g) GENRE = String(g).toLowerCase() === 'fille' ? 'fille' : 'garcon'; return GENRE; },
     surChangement(f){ ecouteurs.push(f); },
     etincelles

@@ -36,9 +36,11 @@ window.Ouvertures = (function(){
   };
 
   // Chapitres des Parchemins de lecture qu'on peut ouvrir à un élève.
-  // Les chapitres 1 (Invocations) et 2 (Conjurations) sont ouverts à tous d'emblée.
+  // Ouverts à tous : CHAPITRES_LECTURE_OUVERTS dans parchemins-lecture.html (1 et 2 pour l'instant).
   // L'id doit être le même que le champ « id » du chapitre dans DATA (parchemins-lecture.html).
   const CHAPITRES_LECTURE = [
+    { id:'invocations', court:'1', titre:'Chapitre 1 : Invocations' },
+    { id:'conjurations', court:'2', titre:'Chapitre 2 : Conjurations' },
     { id:'lecture3', court:'3', titre:'Chapitre 3' },
     { id:'lecture4', court:'4', titre:'Chapitre 4' },
     { id:'lecture5', court:'5', titre:'Chapitre 5' },

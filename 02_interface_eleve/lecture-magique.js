@@ -162,6 +162,7 @@ window.LectureMagique = (function(){
   }
   const sansAccents = t => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   let index = null;   // [{ m, s }] : mot, mot sans accents (dans l'ordre de fréquence)
+  const MOTS_PRIORITAIRES = 400;   // les 400 mots les plus fréquents passent avant les mots de la page
   function indexDico(){
     if(index || !window.MOTS_FR) return index;
     index = window.MOTS_FR.map(m => ({ m, s: sansAccents(m) }));
@@ -189,6 +190,9 @@ window.LectureMagique = (function(){
     if(!mot) return { liste: [], indice: 'Commence un mot…' };
     const p = sansAccents(mot), vus = new Set(), res = [];
     const ajouter = e => { if(res.length < 5 && e.s.startsWith(p) && e.m.length > mot.length && !vus.has(e.m)){ vus.add(e.m); res.push(e.m); } };
+    // 1) Les mots les plus courants de la langue d'abord (es, ai, avons, sont, était…) : jusqu'à 3 places.
+    if(indexDico()) for(let i = 0; i < MOTS_PRIORITAIRES && i < index.length && res.length < 3; i++) ajouter(index[i]);
+    // 2) Puis les mots du texte à l'écran (souvent ceux de l'exercice), 3) puis le reste du dictionnaire.
     motsDeLaPage(champ.ownerDocument).forEach(ajouter);
     if(res.length < 5 && indexDico()) for(const e of index){ ajouter(e); if(res.length >= 5) break; }
     const maj = /^[A-ZÀ-ÖØ-Þ]/.test(mot);
@@ -555,7 +559,8 @@ window.LectureMagique = (function(){
     const v = vocabDispo();
     if(!v || !loupe.calque){ desactiverLoupe(); return; }
     const c = v.w.MotsCherchesVocab();
-    const cibles = c.courant ? [c.courant] : c.tous;
+    // Tous les mots à trouver de la section, en tout temps (réussis ou non, case réponse choisie ou pas).
+    const cibles = c.toutes || (c.courant ? [c.courant] : c.tous);
     const rc = v.corps.getBoundingClientRect();
     loupe.calque.style.width = v.corps.scrollWidth + 'px'; loupe.calque.style.height = v.corps.scrollHeight + 'px';
     const cellules = [...v.grid.children];

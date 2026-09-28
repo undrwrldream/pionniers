@@ -92,10 +92,10 @@
   const LARG = 10 * CM + 2 * MARGE, HAUT = 58;
   (function dessinerRegle(){
     let s = '<svg width="' + LARG + '" height="' + HAUT + '" viewBox="0 0 ' + LARG + ' ' + HAUT + '">' +
-      '<defs><linearGradient id="plast" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".92"/>' +
-      '<stop offset=".55" stop-color="#eef5ff" stop-opacity=".78"/><stop offset="1" stop-color="#dbe8f8" stop-opacity=".85"/></linearGradient></defs>' +
+      '<defs><linearGradient id="plast" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".40"/>' +
+      '<stop offset=".55" stop-color="#eef5ff" stop-opacity=".28"/><stop offset="1" stop-color="#dbe8f8" stop-opacity=".36"/></linearGradient></defs>' +
       '<rect x="0.5" y="0.5" width="' + (LARG - 1) + '" height="' + (HAUT - 1) + '" rx="8" fill="url(#plast)" stroke="rgba(30,41,59,.35)"/>' +
-      '<rect x="3" y="' + (HAUT - 9) + '" width="' + (LARG - 6) + '" height="5" rx="2.5" fill="rgba(255,255,255,.6)"/>';
+      '<rect x="3" y="' + (HAUT - 9) + '" width="' + (LARG - 6) + '" height="5" rx="2.5" fill="rgba(255,255,255,.35)"/>';
     for(let mm = 0; mm <= 100; mm++){
       const x = MARGE + mm * CM / 10;
       const cmPile = mm % 10 === 0, demi = mm % 5 === 0;
