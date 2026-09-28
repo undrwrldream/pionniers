@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="config-classe.js"></script>
+<script src="mode-enseignant.js"></script>
 <script src="garde-classe.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Parchemins de Lecture</title>
@@ -477,6 +478,29 @@
 .evoc-liste-num img.seal-icon{ width:26px; height:26px; }
 .evoc-liste-titre{ flex:1; font-weight:600; }
 .evoc-liste-score{ font-size:13px; color:var(--ink-soft); flex:none; }
+/* Section complétée : la banderole prend la place du score, le score passe sous le titre */
+.evoc-liste-item.complete{ background:linear-gradient(180deg, rgba(90,150,255,0.18), rgba(90,150,255,0.06)); border-color:#5b86d6; padding-top:8px; padding-bottom:8px; }
+.evoc-liste-titre .score-sous{ display:block; font-size:12px; font-weight:400; color:var(--ink-soft); margin-top:2px; }
+img.banderole-ligne{ height:48px; width:auto; flex:none; margin:-6px -6px -6px 0; transform:rotate(-2deg);
+  filter:drop-shadow(0 2px 4px rgba(20,40,120,0.35)); pointer-events:none; user-select:none; }
+.chapter-row img.banderole-ligne{ height:42px; margin:-4px 8px -4px 0; }
+@media (max-width:640px){ img.banderole-ligne{ height:34px; } }
+/* Fenêtre de fin de section, au centre de l'écran */
+.fin-section{ position:fixed; inset:0; z-index:9000; display:none; align-items:center; justify-content:center; background:rgba(8,10,24,0.62); padding:16px; }
+.fin-section.open{ display:flex; animation:finSectionFondu .3s ease-out; }
+.fin-section-carte{ width:min(94vw, 520px); text-align:center; color:#F3E9D2; background:radial-gradient(ellipse at top, #1d2a55, #0e1430 70%);
+  border:2px solid var(--gold, #c9a13b); border-radius:14px; padding:18px 22px 22px; box-shadow:0 14px 40px rgba(0,0,0,0.6);
+  animation:finSectionCarte .45s cubic-bezier(.2,1.4,.4,1); }
+.fin-section-carte img{ width:100%; max-width:440px; display:block; margin:-4px auto 6px; filter:drop-shadow(0 4px 10px rgba(40,120,255,0.45)); }
+.fin-section-titre{ font-family:'Cinzel Decorative', serif; font-size:1.35rem; color:#f5d77a; margin:2px 0 6px; }
+.fin-section-texte{ font-size:1.05rem; line-height:1.4; margin:0 0 16px; }
+.fin-section-btns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.fin-section-btns button{ font:inherit; font-size:1rem; border-radius:8px; padding:9px 18px; cursor:pointer; }
+.fin-section-btns .principal{ background:var(--gold, #c9a13b); border:none; color:#1b1408; font-weight:bold; }
+.fin-section-btns .secondaire{ background:transparent; border:1.5px solid rgba(243,233,210,0.5); color:#F3E9D2; }
+.deja-complete{ text-align:center; font-size:0.9rem; color:var(--ink-soft); margin-top:6px; font-style:italic; }
+@keyframes finSectionFondu{ from{ opacity:0; } to{ opacity:1; } }
+@keyframes finSectionCarte{ from{ transform:scale(.8); opacity:0; } to{ transform:none; opacity:1; } }
 
 /* Grand parchemin générique (bannière "PARCHEMINS") — fond de toutes les
    pages de cette section (table des matières, chapitres, textes,
@@ -825,6 +849,11 @@ footer.note{ color:#b89a6a; opacity:.8; }
 .conjuration img{ max-height:100%; max-width:min(90vw, 900px); }
 .conjuration .conj-halo{ left:25%; right:25%; }
 
+
+/* === Boutons de retour et de fermeture plus gros (28 sept. 2026) === */
+.back-link, .evoc-barre .back-link, .conj-barre .back-link{ top:58px; font-size:16px; padding:8px 16px; border-radius:8px; }
+.retour-bas{ font-size:17px; padding:12px 24px; border-radius:8px; }
+.vocab-panel-close{ font-size:16px; padding:6px 13px; }
 </style>
 </head>
 <body>
@@ -2060,6 +2089,7 @@ async function renderTOC(){
           <div class="chapter-name">${ch.title}</div>
           <div class="chapter-sub">${invocationsFaites}/${EVOCATIONS_DATA.length} terminé(s)</div>
         </div>
+        ${chapitreTermine(ci) ? BANDEROLE_HTML : ""}
         <div class="rank-badge">${xpChapitre(0)} / ${xpMaxChapitre(0)} XP</div>
       </div>`;
       return;
@@ -2073,6 +2103,7 @@ async function renderTOC(){
           <div class="chapter-name">${ch.title}</div>
           <div class="chapter-sub">${faits}/${themes.length} terminé(s)</div>
         </div>
+        ${chapitreTermine(ci) ? BANDEROLE_HTML : ""}
         <div class="rank-badge">${xpChapitre(1)} / ${xpMaxChapitre(1)} XP</div>
       </div>`;
       return;
@@ -2135,6 +2166,31 @@ async function renderTOC(){
 
 /* ---------------- Chapter view (list of texts) ---------------- */
 /* ---------------- Évocations : liste des 10 sections ---------------- */
+/* ---------------- Banderole « section complétée » ---------------- */
+const BANDEROLE_HTML = '<img class="banderole-ligne" src="livre_assets/banderole_completee.webp" alt="Section complétée" draggable="false">';
+// Fenêtre au centre de l'écran, à la première réussite d'une section.
+function afficherFinSection(texteHtml, libelleRetour, surRetour){
+  let f = document.getElementById("finSection");
+  if(!f){
+    f = document.createElement("div");
+    f.id = "finSection"; f.className = "fin-section"; f.setAttribute("role", "dialog"); f.setAttribute("aria-modal", "true");
+    document.body.appendChild(f);
+  }
+  f.innerHTML = `<div class="fin-section-carte">
+      <img src="livre_assets/banderole_completee.webp" alt="Section complétée" draggable="false">
+      <p class="fin-section-titre">Bravo !</p>
+      <p class="fin-section-texte">${texteHtml}</p>
+      <div class="fin-section-btns">
+        <button type="button" class="principal" id="finSectionRetour">${libelleRetour}</button>
+        <button type="button" class="secondaire" id="finSectionRevoir">Revoir mes réponses</button>
+      </div></div>`;
+  f.classList.add("open");
+  const fermer = () => f.classList.remove("open");
+  document.getElementById("finSectionRevoir").onclick = fermer;
+  document.getElementById("finSectionRetour").onclick = () => { fermer(); surRetour(); };
+  setTimeout(() => { try{ document.getElementById("finSectionRetour").focus(); }catch(e){} }, 50);
+}
+
 async function renderEvocationsListe(){
   app.innerHTML = `<div class="evoc-conteneur"><div class="evoc-contenu">
     <div class="back-link" id="backToTocFromEvoc">← Retour à la table des matières</div>
@@ -2153,10 +2209,11 @@ async function renderEvocationsListe(){
     const terminee = prog.meilleurScore != null;
     const debloquee = toutOuvertAtelier || precedenteTerminee;
     const scoreTxt = terminee ? `Meilleur score : ${prog.meilleurScore}/20` : (debloquee ? "Pas encore fait" : "Termine la section précédente");
-    html += `<div class="evoc-liste-item${debloquee ? "" : " locked"}" ${debloquee ? `data-id="${section.id}"` : ""}>
+    html += `<div class="evoc-liste-item${debloquee ? "" : " locked"}${terminee && debloquee ? " complete" : ""}" ${debloquee ? `data-id="${section.id}"` : ""}>
       <span class="evoc-liste-num">${debloquee ? section.id : '<img class="seal-icon" src="livre_assets/sceau_verrouillage.png" alt="Verrouillé">'}</span>
-      <span class="evoc-liste-titre">${section.titre}</span>
-      <span class="evoc-liste-score">${scoreTxt}</span>
+      ${terminee && debloquee
+        ? `<span class="evoc-liste-titre">${section.titre}<span class="score-sous">${scoreTxt}</span></span>${BANDEROLE_HTML}`
+        : `<span class="evoc-liste-titre">${section.titre}</span><span class="evoc-liste-score">${scoreTxt}</span>`}
     </div>`;
     precedenteTerminee = terminee;
   }
@@ -2269,7 +2326,13 @@ function corrigerEvocations(section){
     const meilleurScore = (prog.meilleurScore == null || score > prog.meilleurScore) ? score : prog.meilleurScore;
     await sauvegarderProgressionEvoc(section.id, { meilleurScore, derniereTentative: score });
     await calculerInvocationsTerminees();
-    if(premiere) afficherGainXP("evocScoreZone", XP_PAR_SECTION);
+    if(premiere){
+      afficherFinSection(`Tu as complété la section <b>${section.titre}</b>.<br><b>+${XP_PAR_SECTION} XP</b>`,
+        "← Retour aux Invocations", () => { fermerVocabPanel(); view = {mode:"evoc-liste"}; render(); });
+    } else {
+      const z = document.getElementById("evocScoreZone");
+      if(z) z.insertAdjacentHTML("beforeend", `<p class="deja-complete">Section déjà complétée : aucune nouvelle récompense.</p>`);
+    }
     await verifierPromotionRangInvocations();
   })();
 }
@@ -2752,10 +2815,11 @@ function renderConjurationsListe(){
     const p = conjProgression[t.themeId] || {};
     const scores = [1, 2].map(s => p[s] && p[s].meilleurScore).filter(x => x != null);
     const scoreTxt = scores.length ? `Meilleur score : ${Math.max(...scores)}/${CONJ_TOTAL_PAR_SERIE}` : (debloquee ? "Pas encore fait" : "Termine la section précédente");
-    html += `<div class="evoc-liste-item${debloquee ? "" : " locked"}" ${debloquee ? `data-theme="${t.themeId}"` : ""}>
+    html += `<div class="evoc-liste-item${debloquee ? "" : " locked"}${terminee && debloquee ? " complete" : ""}" ${debloquee ? `data-theme="${t.themeId}"` : ""}>
       <span class="evoc-liste-num">${debloquee ? miniOuEmoji(t) : SCEAU_HTML}</span>
-      <span class="evoc-liste-titre">${t.title}<small class="conj-sous">${t.sousTitre}</small></span>
-      <span class="evoc-liste-score">${scoreTxt}</span>
+      ${terminee && debloquee
+        ? `<span class="evoc-liste-titre">${t.title}<small class="conj-sous">${t.sousTitre}</small><span class="score-sous">${scoreTxt}</span></span>${BANDEROLE_HTML}`
+        : `<span class="evoc-liste-titre">${t.title}<small class="conj-sous">${t.sousTitre}</small></span><span class="evoc-liste-score">${scoreTxt}</span>`}
     </div>`;
     precedenteTerminee = terminee;
   });
@@ -2862,8 +2926,11 @@ function corrigerConj(){
     conjProgression[themeId][serie] = { meilleurScore, derniereTentative: score };
     const zone = document.getElementById("conjMessage");
     if(zone && !avant && conjThemeDone(themeId)){
-      zone.innerHTML = `<p class="conj-fin">✅ Section terminée ! Tu peux passer à la suivante.</p>`;
-      afficherGainXP("conjMessage", XP_PAR_CONJURATION);
+      const tt = DATA[1].texts.find(x => x.themeId === themeId);
+      afficherFinSection(`Tu as complété la section <b>${tt ? tt.title : ""}</b>.<br><b>+${XP_PAR_CONJURATION} XP</b>`,
+        "← Retour aux Conjurations", () => { view = {mode:"conj-liste"}; render(); });
+    } else if(zone && avant){
+      zone.innerHTML = `<p class="deja-complete">Section déjà complétée : aucune nouvelle récompense.</p>`;
     }
     await promouvoirRang();
   })();

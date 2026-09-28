@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="config-classe.js"></script>
+<script src="mode-enseignant.js"></script>
 <script src="garde-classe.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Le Grimoire des Mathématiques</title>
@@ -354,6 +355,9 @@
   }
   #retourAstrolabe:hover{ transform:translateY(-50%) translateX(-3px); box-shadow:0 0 14px rgba(232,184,106,0.7); }
   #retourAstrolabe.visible{ display:block; }
+  /* La flèche est posée sur le livre (hors de la page de droite qui défile) : elle reste toujours visible. */
+  @media (min-width: 861px){ #retourAstrolabe{ left:calc(54.6% + 6px); } }
+  @media (max-width: 860px){ #retourAstrolabe{ position:fixed; left:6px; top:50%; z-index:60; } }
   /* « L'astrolabe indique le chemin... » : 1,5 s avant l'ouverture d'un jeu secret */
   #astroMessage{
     position:fixed; z-index:140; pointer-events:none; display:flex; align-items:center; justify-content:center; text-align:center;
@@ -713,6 +717,25 @@
   #docOverlay .doc-stage-bg{ background-image: url('livre_assets/parchemin_maths_large.webp'); }
   #docOverlay .doc-zone{ left:6.38%; top:17.98%; width:87.37%; height:71.46%; }
   #docOverlay .doc-toast{ top:20%; }
+  /* Fin de lecture : fenêtre au centre de l'écran */
+  .fin-lecture{ position:fixed; inset:0; z-index:140; display:none; align-items:center; justify-content:center;
+    background:rgba(8,10,24,0.62); padding:16px; }
+  .fin-lecture.open{ display:flex; animation:finLectureFondu .3s ease-out; }
+  .fin-lecture-carte{ width:min(94vw, 520px); text-align:center; color:#F3E9D2;
+    background:radial-gradient(ellipse at top, #1d2a55, #0e1430 70%); border:2px solid var(--gold); border-radius:14px;
+    padding:18px 22px 22px; box-shadow:0 14px 40px rgba(0,0,0,0.6); font-family:'IM Fell English SC', serif;
+    animation:finLectureCarte .45s cubic-bezier(.2,1.4,.4,1); }
+  .fin-lecture-carte img{ width:100%; max-width:440px; display:block; margin:-4px auto 6px; filter:drop-shadow(0 4px 10px rgba(40,120,255,0.45)); }
+  .fin-lecture-titre{ font-size:1.5rem; color:var(--gold-bright, #f5d77a); margin:2px 0 6px; }
+  .fin-lecture-texte{ font-size:1.05rem; line-height:1.4; margin:0 0 16px; }
+  .fin-lecture-texte small{ display:block; font-size:0.9rem; opacity:0.85; margin-top:4px; }
+  .fin-lecture-btns{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .fin-lecture-btns button{ font-family:inherit; font-size:1.05rem; border-radius:8px; padding:9px 18px; cursor:pointer; }
+  #finLecturePoursuivre{ background:var(--gold); border:none; color:#1b1408; font-weight:bold; }
+  #finLecturePoursuivre:hover{ background:var(--gold-bright, #f5d77a); }
+  #finLectureRester{ background:transparent; border:1.5px solid rgba(243,233,210,0.5); color:#F3E9D2; }
+  @keyframes finLectureFondu{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes finLectureCarte{ from{ transform:scale(.8); opacity:0; } to{ transform:none; opacity:1; } }
   #docOverlay .doc-bar{
     position:absolute; z-index:6; left:0; right:0; bottom:1.4vh; margin:0 auto; width:max-content; max-width:92vw;
     padding:3px 16px; gap:12px; border:1px solid var(--gold); border-radius:999px;
@@ -814,6 +837,11 @@
   body:has(#docOverlay.open) .sorts-barre{ left:auto; right:12px; transform:none; }
   body:has(#docOverlay.open) .sorts-barre.cachee{ transform:translateY(30px); }
   .section-card.choisie{ border-color: var(--wax); box-shadow: 0 0 0 1px var(--wax); background: rgba(255,255,255,0.55); }
+  /* Guide bleu : la section à cliquer pour continuer (page de gauche) et le document où l'élève est rendu (page de droite). */
+  .section-card.vision.a-suivre, .section-card.a-suivre, .doc-row.a-suivre{ border-color:#3b82f6 !important; box-shadow:0 0 0 2px #60a5fa, 0 0 18px rgba(59,130,246,.65);
+    animation:guide-bleu 2.4s ease-in-out infinite; }
+  .doc-row.a-suivre{ background:rgba(219,234,254,0.55); }
+  @keyframes guide-bleu{ 0%,100%{ box-shadow:0 0 0 2px #60a5fa, 0 0 12px rgba(59,130,246,.45); } 50%{ box-shadow:0 0 0 3px #3b82f6, 0 0 26px rgba(59,130,246,.85); } }
   .sous-sections{ padding-top:88px; }   /* laisse la place aux boutons Punch-math!, Le Serpent des Mesures et Quêtes secondaires, en haut à droite */
   .sous-sections h3{ font-size:1.05rem; margin-bottom:4px; }
   .sous-sections > p{ margin:0 0 4px; font-size:0.9rem; }
@@ -850,6 +878,18 @@
   }
   .doc-stagewrap{ padding-left:var(--rg); padding-right:var(--rd); transition:padding .6s cubic-bezier(.3,.85,.25,1); }
   body:has(#docOverlay.open) .sorts-barre{ right:calc(12px + var(--rd)); transition:right .6s cubic-bezier(.3,.85,.25,1), opacity .25s, transform .25s; }
+
+  /* === Boutons de retour et de fermeture plus gros (28 sept. 2026) === */
+  .backlink, .quest-back{ font-size:1.25rem; padding:7px 16px; margin-bottom:12px; color:var(--ink);
+    background:rgba(255,248,225,0.65); border:1.5px solid var(--gold); border-radius:8px; }
+  .backlink:hover, .quest-back:hover{ background:rgba(255,240,200,0.95); }
+  #docCloseBtn, #punchCloseBtn, #serpentCloseBtn, #jeuCloseBtn{ font-size:1.25rem; padding:10px 20px; border-radius:8px; }
+  #docOverlay #docCloseBtn{ top:8px; right:10px; font-size:1.2rem; padding:9px 18px; }
+  .quest-parchment-close{ height:46px; padding:0 22px; font-size:19px; top:-22px; border-radius:23px; }
+  .quest-close-x{ font-size:2.3rem; padding:4px 8px; }
+  .copie-fermer{ font-size:32px; top:6px; right:12px; }
+  #closeTeacher{ font-size:1.6rem; }
+  #backTocBtn, #backTocBtnSupp{ font-size:1.15rem; padding:10px 20px; }
 </style>
 </head>
 <body>
@@ -859,7 +899,8 @@
       <div id="bookBandeau"></div>
       <div id="bookPages">
         <div class="page page-left"><div class="page-inner" id="pageLeft"></div></div>
-        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button><button id="retourAstrolabe" type="button" title="Refermer le chapitre et revenir à l'astrolabe" aria-label="Refermer le chapitre">❮</button></div>
+        <div class="page page-right"><div class="page-inner" id="pageRight"></div><button id="questTabBtn" type="button">⚔ Quêtes secondaires</button></div>
+        <button id="retourAstrolabe" type="button" title="Refermer le chapitre et revenir à l'astrolabe" aria-label="Refermer le chapitre">❮</button>
       </div>
       <div class="astro-couche" aria-hidden="true">
         <img class="astro-fond" src="livre_assets/astrolabe.jpg" alt="">
@@ -941,6 +982,17 @@
         <div class="doc-stage-bg"></div>
         <div class="doc-zone"><iframe id="docFrame" title="Document du chapitre" allowtransparency="true"></iframe></div>
         <div class="doc-toast" id="docToast"></div>
+      </div>
+    </div>
+    <div class="fin-lecture" id="finLecture" role="dialog" aria-modal="true" aria-labelledby="finLectureTitre">
+      <div class="fin-lecture-carte">
+        <img src="livre_assets/banderole_completee.webp" alt="Section complétée">
+        <p class="fin-lecture-titre" id="finLectureTitre">Lecture terminée !</p>
+        <p class="fin-lecture-texte" id="finLectureTexte"></p>
+        <div class="fin-lecture-btns">
+          <button type="button" id="finLecturePoursuivre">Poursuivre ➜</button>
+          <button type="button" id="finLectureRester">Rester sur le document</button>
+        </div>
       </div>
     </div>
   </div>
@@ -1246,7 +1298,7 @@
      matières (un sceau les barre et on ne peut pas les ouvrir). Pour
      ouvrir un chapitre, ajoute simplement son id à cette liste.
      =================================================================== */
-  const CHAPITRES_OUVERTS = ['mesure1', 'mesure2'];   // chapitres VIII et IX
+  const CHAPITRES_OUVERTS = ['mesure2'];   // chapitre IX seulement (le VIII est scellé pour l'instant)
 
   /* Ouvertures en plus de cette liste (atelier : tout ouvert ; par élève : Registre du Maître) :
      voir ouvertures-core.js. */
@@ -1493,7 +1545,7 @@
      =================================================================== */
   const ENTRAINEMENTS = {
     mesure2: [
-      { id:'entr-horloge', sort:'horloge', section:0, avantDoc:'exercices-fondamentaux', icone:'🕰️', titre:"Entraînement : l'horloge magique", total:6,
+      { id:'entr-horloge', sort:'horloge', section:0, avantDoc:'notions-durees', icone:'🕰️', titre:"Entraînement : l'horloge magique", total:6,
         fichier:'entrainements/entrainement-horloge.html',
         desc:"Apprends à tourner les aiguilles de l'horloge magique.",
         consigne:"Réussis les 6 défis pour apprendre le sort de l'horloge magique ✨" },
@@ -3272,6 +3324,9 @@
     $('pageLeft').innerHTML =
       '<button class="backlink" id="toTocBtn">‹ Retour à la table des matières</button>' + html;
     $('toTocBtn').addEventListener('click', () => { sectionChoisie = null; renderLeftPage(); renderTocView(); });
+    // Guide bleu : la première section ni verrouillée ni terminée (ou la carte du verdict).
+    { const suivante = [...$('pageLeft').querySelectorAll('.section-card')].find(c => c.dataset.verdict || (!c.classList.contains('locked') && !c.classList.contains('done')));
+      if(suivante) suivante.classList.add('a-suivre'); }
     $('pageLeft').querySelectorAll('.section-card').forEach(card => {
       card.addEventListener('click', () => {
         if(card.dataset.verdict){ jouerVerdict(currentChapter.id); return; }
@@ -3387,6 +3442,9 @@
         '<ul class="doc-list">' + rows + '</ul>' +
       '</div>'
     );
+    // Guide bleu : le premier document (ou entraînement) ouvert et pas encore fait = là où l'élève est rendu.
+    { const ici = [...$('pageRight').querySelectorAll('.doc-row')].find(r => !['doc-fait','doc-verrouille','doc-refait','appris'].some(c => r.classList.contains(c)));
+      if(ici) ici.classList.add('a-suivre'); }
     $('pageRight').querySelectorAll('.doc-row[data-doc]').forEach(row => {
       row.addEventListener('click', () => ouvrirDoc(idx, row.getAttribute('data-doc')));
     });
@@ -3474,6 +3532,7 @@
     $('docOverlay').classList.add('open');
   }
   function fermerDoc(){
+    $('finLecture').classList.remove('open');
     if(window.Rapports) window.Rapports.fin();
     viderSauvegardeEtatDoc();
     $('docOverlay').classList.remove('open');
@@ -3483,6 +3542,14 @@
     if(currentChapter) renderChapterMenu();   // rafraîchit les statuts, l'or et les déverrouillages
   }
   $('docCloseBtn').addEventListener('click', fermerDoc);
+  // Fin de lecture : « Poursuivre » ferme le document et ramène au menu de la section.
+  $('finLecturePoursuivre').addEventListener('click', fermerDoc);
+  $('finLectureRester').addEventListener('click', () => $('finLecture').classList.remove('open'));
+  function afficherFinLecture(html){
+    $('finLectureTexte').innerHTML = html;
+    $('finLecture').classList.add('open');
+    setTimeout(() => { try{ $('finLecturePoursuivre').focus(); }catch(e){} }, 50);
+  }
   $('copieFermer').addEventListener('click', () => { $('copieOverlay').classList.remove('open'); document.querySelector('#copieOverlay .copie-carte').classList.remove('large'); });
   $('copieOverlay').addEventListener('click', e => { if(e.target === $('copieOverlay')) $('copieOverlay').classList.remove('open'); });
 
@@ -3569,10 +3636,18 @@
       afficherToastDoc('📨 Copie remise !<br><span style="font-size:0.85rem;">Ton enseignant va la corriger et te la retourner.</span>');
       return;
     }
-    $('docBarEtat').textContent = a.doc.libelleFait + ' — +' + a.doc.recompense + ' 🪙';
-    $('docBarEtat').className = 'doc-bar-etat ok';
+    if(a.doc.mode !== 'lecture'){   // lecture : la fenêtre au centre suffit, rien de plus en bas
+      $('docBarEtat').textContent = a.doc.libelleFait + ' — +' + a.doc.recompense + ' 🪙';
+      $('docBarEtat').className = 'doc-bar-etat ok';
+    }
     const debloque = docExigePourSection(a.chapterId, a.sectionIdx + 1) === a.doc.id ||
       (sectionExigee(a.chapterId, a.sectionIdx + 1) === a.sectionIdx && !restantsSectionExigee(a.chapterId, a.sectionIdx + 1).length);
+    if(a.doc.mode === 'lecture'){
+      afficherFinLecture('Tu as lu le document jusqu\'à la fin. Tu peux poursuivre !' +
+        '<br><strong>+' + a.doc.recompense + ' 🪙</strong>' +
+        (debloque ? '<small>La ' + escapeHtml(SECTION_META[a.sectionIdx + 1].name.split('— ').pop()) + ' est débloquée !</small>' : ''));
+      return;
+    }
     afficherToastDoc('🎉 ' + (a.doc.mode === 'lecture' ? 'Document lu jusqu\'au bout !' : 'Bravo, tout est réussi !') +
       '<br><strong>+' + a.doc.recompense + ' 🪙</strong>' +
       (debloque ? '<br><span style="font-size:0.85rem;">La ' + escapeHtml(SECTION_META[a.sectionIdx + 1].name.split('— ').pop()) + ' est débloquée !</span>' : ''));

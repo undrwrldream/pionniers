@@ -276,7 +276,7 @@ window.LectureMagique = (function(){
     svg = boule.querySelector('svg');
     // Un clic sur un mot le met dans la case (mousedown : la case garde le focus).
     svg.addEventListener('mousedown', e => { const t = e.target.closest('.lm-mot'); if(t){ e.preventDefault(); inserer(t.dataset.mot); } });
-    boule.querySelector('.lm-fermer').addEventListener('click', () => basculerBoule(false));
+    boule.querySelector('.lm-fermer').addEventListener('click', () => { bouleVoulue = false; basculerBoule(false); });
     const socle = boule.querySelector('.lm-socle'); let g = null;
     socle.addEventListener('pointerdown', e => { const r = boule.getBoundingClientRect(); g = { dx: e.clientX - r.left, dy: e.clientY - r.top }; socle.setPointerCapture(e.pointerId); });
     socle.addEventListener('pointermove', e => { if(!g) return;
@@ -285,10 +285,12 @@ window.LectureMagique = (function(){
       boule.dataset.deplacee = '1'; scene.maj(); });
     socle.addEventListener('pointerup', () => { g = null; });
   }
-  function basculerBoule(forcer){
+  // L'élève a ouvert la boule : elle reste ouverte (changement de page, de document) jusqu'à ce qu'il la referme.
+  let bouleVoulue = false;
+  function basculerBoule(forcer, garderPlace){
     if(!boule) construireBoule();
     const montrer = forcer === undefined ? !boule.classList.contains('visible') : forcer;
-    if(montrer && !boule.classList.contains('visible')){ boule.style.left = boule.style.top = boule.style.bottom = ''; delete boule.dataset.deplacee; }   // elle revient à sa place
+    if(montrer && !boule.classList.contains('visible') && !garderPlace){ boule.style.left = boule.style.top = boule.style.bottom = ''; delete boule.dataset.deplacee; }   // elle revient à sa place
     boule.classList.toggle('visible', montrer);
     if(bouton) bouton.classList.toggle('actif', montrer);
     scene.maj();
@@ -642,7 +644,7 @@ window.LectureMagique = (function(){
     bouton = document.createElement('button'); bouton.type = 'button'; bouton.className = 'lm-boule-btn';
     bouton.title = 'Boule de cristal : elle devine les mots que tu écris'; bouton.setAttribute('aria-label', 'Boule de cristal');
     bouton.innerHTML = '<img src="' + IMG_BOULE + '" alt="">';
-    bouton.addEventListener('click', () => basculerBoule());
+    bouton.addEventListener('click', () => { bouleVoulue = !(boule && boule.classList.contains('visible')); basculerBoule(bouleVoulue); });
     document.body.appendChild(bouton);
   }
   // L'icône suit le compagnon : visible quand son cercle l'est.
@@ -654,11 +656,16 @@ window.LectureMagique = (function(){
     let casesAgents = false;
     // (chaque agent redit toutes les secondes s'il a des cases : une page partie se tait, et on l'oublie après 2,5 s)
     agentsChamps.forEach((x, w) => { try{ if(w.closed || Date.now() - x.t > 2500) agentsChamps.delete(w); else if(x.v) casesAgents = true; }catch(e){ agentsChamps.delete(w); } });
-    const bouleUtile = present && !!livreOuvert() && (casesAgents || champsVisibles());
-    if(bouleUtile && !bouton) construireBouton();
-    if(bouton) bouton.style.display = bouleUtile ? 'block' : 'none';
-    if(!bouleUtile && boule && boule.classList.contains('visible')) basculerBoule(false);
-    if(!present){ if(boule && boule.classList.contains('visible')) basculerBoule(false); if(narr.ecoute) arreterNarrateur(); }
+    const dansLivre = present && !!livreOuvert();
+    // L'icône : là où il y a une case réponse, ou partout dans les livres si l'élève a laissé la boule ouverte
+    // (il peut ainsi toujours la refermer en recliquant l'icône).
+    const iconeVisible = dansLivre && (bouleVoulue || casesAgents || champsVisibles());
+    if(iconeVisible && !bouton) construireBouton();
+    if(bouton) bouton.style.display = iconeVisible ? 'block' : 'none';
+    const bouleVisible = !!(boule && boule.classList.contains('visible'));
+    if(!dansLivre && bouleVisible) basculerBoule(false);                 // hors des livres : cachée (l'envie de l'élève est gardée)
+    if(dansLivre && bouleVoulue && !bouleVisible) basculerBoule(true, true);   // de retour dans un livre : elle revient
+    if(!present && narr.ecoute) arreterNarrateur();
     if(narr.ecoute && !livreOuvert()) arreterNarrateur();   // livre fermé : le narrateur se tait
     // La loupe : seulement quand une liste de vocabulaire est ouverte dans les Parchemins.
     const parcheminsOuverts = !!(document.getElementById('parcheminsModal') && document.getElementById('parcheminsModal').classList.contains('open'));

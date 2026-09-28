@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="config-classe.js"></script>
+<script src="mode-enseignant.js"></script>
 <script src="garde-classe.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Livre d'Histoire</title>
@@ -317,6 +318,12 @@ body{ padding-left:var(--rg); padding-right:var(--rd); transition:padding .6s cu
 .parchemin-conteneur{ width:min(calc(90vw - var(--rg) - var(--rd)), calc(97vh * 1.1807), 1568px); transition:width .6s cubic-bezier(.3,.85,.25,1); }
 body.compagnon-menu .lect-compagnon.visible{ opacity:0; transform:translateX(30px); pointer-events:none; }
 body.compagnon-menu .lect-compagnon.visible .lect-bulle{ pointer-events:none; }
+
+/* === Boutons de retour et de fermeture plus gros (28 sept. 2026) === */
+.retour{ font-size:max(1.7cqw,15px); padding:.6cqw 1.8cqw; }
+.echecs-modal-close{ font-size:18px; padding:11px 24px; }
+.zoom-x, .jeu-x{ font-size:30px; }
+@media (max-width:700px){ .retour{ font-size:max(1.8cqw,12px); } }
 </style>
 </head>
 <body>
@@ -1101,7 +1108,7 @@ window.GardeLecture = (function(){
     } else if(actif.doc === 'defiler'){
       actif.total = 1;
       const el = d.scrollingElement || d.documentElement, w = f.contentWindow;
-      if(el && w && el.scrollTop + w.innerHeight >= el.scrollHeight - 40) actif.vues.add(1);
+      if(el && w && el.scrollTop + w.innerHeight >= 0.9 * el.scrollHeight) actif.vues.add(1);   // 90 % suffit
     }
   }
   return { commencer, vue, enCours, demanderSortie, arreter, dansLecture: h => !!(actif && actif.prefixe && (h === actif.prefixe || h.indexOf(actif.prefixe + '/') === 0)), actif: () => actif };

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Livre de l'enseignant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<!--
+  LIVRE DE L'ENSEIGNANT — adresse à part : …/pionniers/enseignant.html
+  Le mot de passe est celui de la fenêtre d'aide (aide-core.js, EMPREINTE_MOT_DE_PASSE).
+  Une fois le mot de passe accepté, cet onglet passe en « mode enseignant » (voir mode-enseignant.js) :
+  tout est ouvert, rien ne va dans la feuille Google, et la fiche montre le panneau « Enseignant ».
+  Le mode s'éteint en fermant l'onglet ou avec « Quitter le mode enseignant ».
+-->
+<style>
+  :root{ --parchment:#F1E4C3; --ink:#2B2118; --burgundy:#7B2D26; --burgundy-dark:#5C201B; --gold-light:#D9A62E; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; min-height:100%; }
+  body{ font-family:'Crimson Text', serif; color:var(--parchment);
+    background:radial-gradient(ellipse at center, #241109 0%, #0d0704 75%) fixed;
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:28px 16px; }
+  main{ width:100%; max-width:520px; display:flex; flex-direction:column; align-items:center; gap:18px; text-align:center; }
+  h1{ font-family:'Cinzel', serif; font-weight:700; color:var(--gold-light); font-size:clamp(24px, 5vw, 32px); margin:0;
+    text-shadow:0 0 16px rgba(217,166,46,.5); }
+  p{ margin:0; line-height:1.5; font-size:18px; }
+  .consigne{ opacity:.85; font-style:italic; }
+  form{ display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; }
+  input{ width:min(100%, 320px); font:600 20px 'Crimson Text', serif; text-align:center; color:var(--ink);
+    background:var(--parchment); border:2px solid rgba(217,166,46,.7); border-radius:8px; padding:12px 14px; }
+  input:focus{ outline:3px solid var(--gold-light); outline-offset:2px; }
+  .bouton{ font-family:'Cinzel', serif; font-weight:700; font-size:16px; letter-spacing:.5px; padding:13px 28px; border-radius:6px;
+    cursor:pointer; min-height:48px; border:2px solid var(--gold-light); color:var(--parchment); background:var(--burgundy); }
+  .bouton:hover{ background:var(--burgundy-dark); }
+  .erreur{ color:#ffb4a8; min-height:1.5em; font-size:17px; }
+  .secouer{ animation:secouer .35s; }
+  @keyframes secouer{ 20%,60%{ transform:translateX(-8px); } 40%,80%{ transform:translateX(8px); } }
+  ul{ text-align:left; margin:4px 0 0; padding-left:22px; font-size:16px; opacity:.85; line-height:1.45; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Livre de l'enseignant</h1>
+  <p class="consigne">Tout est ouvert, et rien de ce que tu fais ici n'entre dans la feuille Google de la classe.</p>
+  <form id="formulaire" autocomplete="off">
+    <input id="motDePasse" type="password" placeholder="Mot de passe" aria-label="Mot de passe de l'enseignant" autofocus>
+    <button class="bouton" type="submit">Ouvrir mon livre</button>
+    <p class="erreur" id="erreur" role="alert"></p>
+  </form>
+  <ul>
+    <li>Ton or, ton XP et ta progression restent dans cet appareil.</li>
+    <li>Le panneau « 🎓 Enseignant », sur ta fiche, sert à remettre les verrous des élèves pour une démonstration, à te donner de l'or ou un rang, ou à tout recommencer.</li>
+    <li>Le mode enseignant s'éteint quand tu fermes cet onglet.</li>
+  </ul>
+</main>
+<script>
+(function(){
+  // Même mot de passe et même empreinte que la fenêtre d'aide (aide-core.js).
+  const EMPREINTE_MOT_DE_PASSE = 'h4_bd16ecde';
+  function empreinte(texte){
+    let h = 0x811c9dc5;
+    const t = String(texte || '').trim().toLowerCase();
+    for(let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return 'h4_' + h.toString(16);
+  }
+  const champ = document.getElementById('motDePasse');
+  const erreur = document.getElementById('erreur');
+  document.getElementById('formulaire').addEventListener('submit', e => {
+    e.preventDefault();
+    if(empreinte(champ.value) !== EMPREINTE_MOT_DE_PASSE){
+      erreur.textContent = 'Ce n\'est pas le bon mot de passe.';
+      champ.classList.remove('secouer'); void champ.offsetWidth; champ.classList.add('secouer');
+      champ.select();
+      return;
+    }
+    try{ sessionStorage.setItem('pionniers_mode_enseignant', '1'); }
+    catch(err){ erreur.textContent = 'Ce navigateur bloque le mode enseignant (stockage de session désactivé).'; return; }
+    location.href = '02_interface_eleve/interface_eleve.html?eleve=enseignant&nom=' + encodeURIComponent('Enseignant');
+  });
+})();
+</script>
+</body>
+</html>

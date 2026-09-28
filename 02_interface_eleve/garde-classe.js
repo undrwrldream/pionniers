@@ -33,6 +33,7 @@
 (function(){
   if(window.__gardeClasse) return;          // jamais deux fois dans la même page
   window.__gardeClasse = true;
+  if(window.MODE_ENSEIGNANT) return;        // livre de l'enseignant : ni gardien de sortie, ni rapporteur d'erreurs
 
   /* ------------------------------ Réglages ------------------------------ */
   const MAX_ACTIONS = 25;             // taille du fil des dernières actions

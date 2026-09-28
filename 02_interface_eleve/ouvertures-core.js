@@ -26,7 +26,8 @@
 
 window.Ouvertures = (function(){
 
-  const MODE_ATELIER = !(window.CONFIG_CLASSE || (window.storage && window.storage.__classe));
+  // Le livre de l'enseignant (mode-enseignant.js) se comporte comme l'atelier : tout ouvert, ou les vrais verrous au choix.
+  const MODE_ATELIER = !!window.MODE_ENSEIGNANT || !(window.CONFIG_CLASSE || (window.storage && window.storage.__classe));
   const CLE_ATELIER = 'atelier_tout_ouvert';
 
   const PREFIXES = {

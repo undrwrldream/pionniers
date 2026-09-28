@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="config-classe.js"></script>
+<script src="mode-enseignant.js"></script>
 <script src="garde-classe.js" data-garde="sortie"></script>
 <title>Mon Chevalier — Royaume des Savants</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -305,6 +306,10 @@
   .xp-niveaux li.actuel::after{ content:"◀ toi"; font-size:12px; color:var(--burgundy); align-self:center; }
   .xp-comment{ font-size:14px; line-height:1.4; margin:0 0 12px; color:var(--ink-soft, var(--ink)); }
   .xp-fermer{ display:block; margin:0 auto; font-family:'Cinzel', serif; font-size:13px; color:var(--parchment); background:var(--burgundy); border:none; border-radius:6px; padding:8px 18px; cursor:pointer; }
+
+  /* === Boutons de retour et de fermeture plus gros (28 sept. 2026) === */
+  .grimoire-modal-close{ font-size:16px; padding:8px 16px; border-radius:8px; opacity:.92; }
+  .xp-fermer{ font-size:16px; padding:10px 22px; }
 </style>
 </head>
 <body>
@@ -1547,6 +1552,109 @@ document.getElementById('cassiopeeCloseBtn').addEventListener('click', () => {
   }
 
   demarrer();
+})();
+</script>
+
+<!-- ================= LIVRE DE L'ENSEIGNANT : panneau (mode enseignant seulement, voir mode-enseignant.js) ================= -->
+<script>
+(function(){
+  if(!window.MODE_ENSEIGNANT) return;
+  const RANGS = ["Apprenti", "Novice", "Invocateur", "Magicien", "Sorcier", "Archimage"];
+  const style = document.createElement('style');
+  style.textContent = `
+    .ens-panneau{ position:fixed; top:10px; right:10px; z-index:9000; font-family:'Cinzel', serif; color:#F3E9D2; }
+    .ens-pastille{ display:block; margin-left:auto; cursor:pointer; font:700 15px 'Cinzel', serif; color:#1b1408;
+      background:linear-gradient(180deg,#f5d77a,#c9a13b); border:2px solid #7a5a1a; border-radius:20px; padding:8px 16px;
+      box-shadow:0 4px 12px rgba(0,0,0,.45); }
+    .ens-corps{ display:none; margin-top:8px; width:290px; background:rgba(14,20,48,.96); border:2px solid #c9a13b;
+      border-radius:12px; padding:12px 14px 14px; box-shadow:0 12px 30px rgba(0,0,0,.6); }
+    .ens-panneau.ouvert .ens-corps{ display:block; }
+    .ens-corps h4{ margin:10px 0 6px; font-size:13px; letter-spacing:.06em; color:#f5d77a; text-transform:uppercase; }
+    .ens-corps h4:first-child{ margin-top:0; }
+    .ens-corps p{ margin:0 0 6px; font:15px 'Crimson Text', serif; opacity:.9; }
+    .ens-corps button, .ens-corps select{ font:600 15px 'Crimson Text', serif; border-radius:7px; padding:7px 12px; cursor:pointer;
+      border:1.5px solid #c9a13b; background:#2a1d10; color:#F3E9D2; margin:0 6px 6px 0; }
+    .ens-corps button:hover{ background:#4a3218; }
+    .ens-corps .ens-verrous.ouvert{ background:#1f6b3f; border-color:#6fd39a; }
+    .ens-corps .ens-verrous.ferme{ background:#7b2d26; border-color:#e8a09a; }
+    .ens-corps .ens-quitter{ background:transparent; border-color:rgba(243,233,210,.45); }
+  `;
+  document.head.appendChild(style);
+  const racine = document.createElement('div');
+  racine.className = 'ens-panneau';
+  racine.innerHTML = `
+    <button type="button" class="ens-pastille" title="Livre de l'enseignant">🎓 Enseignant</button>
+    <div class="ens-corps">
+      <h4>Livres</h4>
+      <p id="ensVerrousTxt">…</p>
+      <button type="button" class="ens-verrous" id="ensVerrous">…</button>
+      <h4>Or</h4>
+      <button type="button" data-or="100">+100 🪙</button><button type="button" data-or="1000">+1000 🪙</button>
+      <h4>Rang de mage</h4>
+      <select id="ensRang">${RANGS.map((r, i) => `<option value="${i}">${r}</option>`).join('')}</select>
+      <h4>Arène</h4>
+      <button type="button" id="ensArene">⚔ Ouvrir l'arène (avec la classe)</button>
+      <h4>Tout recommencer</h4>
+      <button type="button" id="ensZero">⟲ Remettre mon livre à zéro</button>
+      <h4>Fin</h4>
+      <button type="button" class="ens-quitter" id="ensQuitter">Quitter le mode enseignant</button>
+    </div>`;
+  document.body.appendChild(racine);
+  racine.querySelector('.ens-pastille').addEventListener('click', () => racine.classList.toggle('ouvert'));
+
+  const CLE_VERROUS = 'atelier_tout_ouvert';   // la même clé que l'atelier (ouvertures-core.js)
+  let toutOuvert = true;
+  async function lireVerrous(){
+    try{ const r = await window.storage.get(CLE_VERROUS, true); toutOuvert = !(r && r.value === 'false'); }catch(e){ toutOuvert = true; }
+    const b = document.getElementById('ensVerrous');
+    b.textContent = toutOuvert ? '🔓 Tout est ouvert' : '🔒 Verrous des élèves';
+    b.className = 'ens-verrous ' + (toutOuvert ? 'ouvert' : 'ferme');
+    document.getElementById('ensVerrousTxt').textContent = toutOuvert
+      ? "Chapitres, sections et documents : tout s'ouvre. Clique pour remettre les verrous d'un élève (démonstration)."
+      : "Tu vois les livres comme un élève, avec ses verrous. Clique pour tout rouvrir.";
+  }
+  document.getElementById('ensVerrous').addEventListener('click', async () => {
+    await window.storage.set(CLE_VERROUS, String(!toutOuvert), true).catch(() => {});
+    location.reload();
+  });
+
+  function coffre(){ return window.Passerelle && window.Passerelle.coffre; }
+  async function sauver(){
+    const id = window.Passerelle && window.Passerelle.identite;
+    if(id && coffre()) await window.PasserelleCore.sauvegarderCoffre(id.slug, coffre());
+    location.reload();
+  }
+  racine.querySelectorAll('[data-or]').forEach(b => b.addEventListener('click', async () => {
+    const c = coffre(); if(!c) return;
+    const n = parseInt(b.dataset.or, 10);
+    c.or = (c.or || 0) + n; c.orGagne = (c.orGagne || 0) + n;
+    await sauver();
+  }));
+  const choixRang = document.getElementById('ensRang');
+  choixRang.addEventListener('change', async () => {
+    const c = coffre(); if(!c) return;
+    c.niveauLecture = parseInt(choixRang.value, 10) || 0;
+    await sauver();
+  });
+  document.getElementById('ensArene').addEventListener('click', () => {
+    window.open('../03_ecran_arene/arene_combat.html', '_blank');
+  });
+  document.getElementById('ensZero').addEventListener('click', () => {
+    if(!confirm("Effacer ton or, ton XP, ta progression et ta couverture dans ce livre de l'enseignant ?\n(La classe n'est pas touchée.)")) return;
+    if(window.ModeEnseignant) window.ModeEnseignant.effacerTout();
+    location.reload();
+  });
+  document.getElementById('ensQuitter').addEventListener('click', () => {
+    if(window.ModeEnseignant) window.ModeEnseignant.quitter();
+    location.href = '../enseignant.html';
+  });
+  // Le rang affiché suit le coffre, une fois chargé.
+  const attente = setInterval(() => {
+    const c = coffre(); if(!c) return;
+    clearInterval(attente);
+    choixRang.value = String(c.niveauLecture || 0);
+  }, 300);
+  lireVerrous();
 })();
 </script>
 </body>
