@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<script src="../config-classe.js"></script>
+<script src="../mode-enseignant.js"></script>
+<script src="../garde-classe.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exercices : les angles du triangle</title>
+<style id="grimoire-parchemin">
+  /* Fond transparent : le parchemin du Grimoire reste visible derrière les cartes. */
+  html, body{ background: transparent; }
+</style>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800&display=swap');
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:'Nunito', system-ui, sans-serif; color:#3b2a1a; }
+  main{ max-width:880px; margin:0 auto; padding:22px 16px 40px; display:flex; flex-direction:column; gap:14px; }
+  .entete{ background:rgba(255,250,236,0.78); border:1px solid #d9c49a; border-radius:16px; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .entete h1{ margin:0; font-size:22px; font-weight:800; }
+  .entete p{ margin:2px 0 0; font-size:14px; opacity:.8; }
+  .puces{ display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .puces span{ font-size:13px; font-weight:800; background:#fff; border:1px solid #e3d2ad; border-radius:999px; padding:3px 10px; }
+  .score{ font-weight:800; font-size:17px; background:#fff; border:1px solid #d9c49a; border-radius:999px; padding:6px 14px; white-space:nowrap; }
+  .barre{ height:8px; border-radius:99px; background:rgba(59,42,26,.12); overflow:hidden; margin-top:8px; width:100%; }
+  .barre i{ display:block; height:100%; width:0; background:linear-gradient(90deg,#e8b86a,#b45309); transition:width .3s; }
+
+  .notion{ background:rgba(255,250,236,0.9); border:1px solid #d9c49a; border-radius:16px; padding:18px 20px; }
+  .notion h2{ margin:0 0 4px; font-size:20px; font-weight:800; display:flex; align-items:center; gap:10px; }
+  .notion h2 .rond{ width:32px; height:32px; border-radius:50%; background:#4a2c0a; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:16px; flex:none; }
+  .notion .sous{ margin:0 0 12px 42px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; opacity:.65; font-weight:800; }
+  .notion p{ margin:8px 0; font-size:16.5px; line-height:1.5; }
+  .retiens{ margin-top:12px; background:#fff7e6; border:1px dashed #d9a441; border-radius:12px; padding:10px 14px; font-size:15.5px; font-weight:700; }
+  .piege{ margin-top:10px; background:#fdecec; border:1px solid #f1b4b4; border-radius:12px; padding:10px 14px; font-size:15.5px; }
+
+  /* le jouet : figure à déformer + les coins mis côte à côte */
+  .jouet{ display:flex; gap:14px; align-items:stretch; flex-wrap:wrap; margin-top:12px; background:#fff; border:1px solid #ecdcb8; border-radius:14px; padding:12px 14px; }
+  .jouet .fig{ flex:1 1 300px; min-width:0; }
+  .jouet .fig svg{ width:100%; height:auto; display:block; touch-action:none; }
+  .jouet .cote{ flex:1 1 220px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .jouet .cote svg{ width:100%; max-width:260px; height:auto; display:block; }
+  .egal{ font-size:21px; font-weight:800; text-align:center; line-height:1.35; }
+  .fam{ font-size:15.5px; font-weight:800; text-align:center; color:#7c3aed; min-height:1.3em; }
+  .aide-jouet{ font-size:14px; font-weight:700; opacity:.7; text-align:center; margin-top:4px; }
+  .poignee{ cursor:grab; } .poignee:active{ cursor:grabbing; }
+  .r{ color:#dc2626; } .b{ color:#2563eb; } .v{ color:#16a34a; } .o{ color:#c2410c; }
+  .bouton-doux{ font:inherit; font-size:14px; font-weight:800; padding:6px 12px; border-radius:999px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; cursor:pointer; }
+  .bouton-doux.choisi{ background:#4a2c0a; border-color:#4a2c0a; color:#fff; }
+
+  .familles{ display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-top:10px; }
+  .famille{ background:#fff; border:1px solid #ecdcb8; border-radius:12px; padding:8px; text-align:center; font-size:14px; font-weight:700; }
+  .famille b{ display:block; font-size:16px; }
+  .famille svg{ width:100%; max-width:250px; height:auto; }
+
+  .carte{ background:rgba(255,252,244,0.93); border:1px solid #e3d2ad; border-radius:16px; padding:16px 18px; display:flex; gap:14px; }
+  .carte.ok{ border-color:#86c79a; background:rgba(240,253,244,0.94); }
+  .gauche{ flex:0 0 58px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .image{ width:58px; height:58px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:32px; line-height:1; box-shadow:inset 0 0 0 1px rgba(59,42,26,.08); background:#EAF1FF; }
+  .num{ width:30px; height:30px; border-radius:50%; background:#4a2c0a; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; }
+  .carte.ok .num{ background:#16a34a; }
+  .corps{ flex:1; min-width:0; }
+  .enonce{ margin:4px 0 10px; font-size:17px; line-height:1.45; font-weight:700; }
+  .dessin svg{ width:100%; max-width:380px; height:auto; display:block; margin:0 auto 6px; }
+  .mini-grille{ display:grid; grid-template-columns:repeat(4, 1fr); gap:10px; }
+  .mini{ background:#fff; border:1px solid #ecdcb8; border-radius:12px; padding:8px; text-align:center; }
+  .mini.bon{ border-color:#86c79a; background:#f0fdf4; } .mini.faux{ border-color:#dc2626; }
+  .mini svg{ width:100%; max-width:300px; height:auto; }
+  .mini-grille.deux{ grid-template-columns:repeat(2, 1fr); }
+  .mini .trois{ font-size:17px; font-weight:800; margin:6px 0 8px; }
+  .pastilles{ display:flex; flex-wrap:wrap; gap:4px; justify-content:center; }
+  .pastille{ font:inherit; font-size:13px; font-weight:800; padding:4px 9px; border-radius:999px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; cursor:pointer; }
+  .pastille.choisi{ background:#4a2c0a; border-color:#4a2c0a; color:#fff; }
+  .pastille:disabled{ cursor:default; }
+  .etape{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:8px 0; }
+  .etape .lib{ font-weight:800; font-size:15.5px; }
+  input{ font:inherit; font-size:17px; width:90px; padding:8px 10px; border-radius:10px; border:2px solid #d9c49a; background:#fff; color:#3b2a1a; }
+  input:focus{ outline:none; border-color:#b45309; }
+  input.bon, input:disabled{ background:#f0fdf4; border-color:#86c79a; color:#14532d; }
+  input.faux{ border-color:#dc2626; background:#fff5f5; }
+  .unite{ font-weight:800; opacity:.7; }
+  .actions{ display:flex; align-items:center; gap:12px; margin-top:12px; flex-wrap:wrap; }
+  button{ font:inherit; font-weight:800; font-size:16px; padding:9px 18px; border-radius:10px; border:none; background:#4a2c0a; color:#fff; cursor:pointer; }
+  button:hover:not(:disabled){ background:#6b3f10; }
+  button:disabled{ background:#16a34a; cursor:default; }
+  button.pastille:hover:not(:disabled), button.bouton-doux:hover{ background:#fff3dc; } button.pastille.choisi:hover:not(:disabled), button.bouton-doux.choisi:hover{ background:#6b3f10; }
+  .msg{ font-weight:800; font-size:15px; }
+  .msg.bon{ color:#15803d; } .msg.faux{ color:#b91c1c; }
+  .conseil{ margin-top:8px; font-size:15px; font-weight:700; color:#8a4b08; background:#fff7e6; border-left:4px solid #d9a441; border-radius:8px; padding:8px 12px; }
+  @keyframes secoue{ 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+  .secoue{ animation:secoue .35s ease; }
+  .titre-section{ margin:8px 4px 0; font-size:19px; font-weight:800; }
+  svg text{ font-family:'Nunito', system-ui, sans-serif; font-weight:800; }
+  @media (max-width:620px){ .familles, .mini-grille.deux{ grid-template-columns:1fr; } .mini-grille{ grid-template-columns:repeat(2, 1fr); } .gauche{ flex-basis:44px; } .image{ width:44px; height:44px; font-size:24px; border-radius:12px; } }
+  .dessin.grand svg{ max-width:100%; }
+  .astuce{ text-align:center; font-size:14px; opacity:.7; }
+</style>
+</head>
+<body>
+<main>
+  <div class="entete">
+    <div style="flex:1;min-width:220px">
+      <h1>Exercices : les angles du triangle</h1>
+      <p>Trouve l'angle qui manque. Écris seulement le nombre de degrés.</p>
+      <div class="puces"><span>triangle : 180°</span><span>□ = angle droit (90°)</span><span>📐 = sort du rapporteur</span></div>
+      <div class="barre"><i id="barre"></i></div>
+    </div>
+    <div class="score" id="score">0 / 12 réussis</div>
+  </div>
+  <div id="groupe1" style="display:flex;flex-direction:column;gap:14px"></div>
+  <p class="astuce">Une réponse fausse ? Additionne de nouveau les angles connus et réessaie.</p>
+</main>
+<script>
+(function(){
+  const RAD = Math.PI / 180;
+  const COUL = ['#dc2626', '#2563eb', '#16a34a', '#c2410c'];
+  const FOND = ['rgba(220,38,38,.2)', 'rgba(37,99,235,.2)', 'rgba(22,163,74,.2)', 'rgba(194,65,12,.2)'];
+  const nombre = txt => { const t = String(txt || '').trim().replace(',', '.').replace(/[^0-9.]/g, ''); if(!t) return null; const x = parseFloat(t); return isNaN(x) ? null : x; };
+
+  /* ───────── géométrie ───────── */
+  // Triangle à partir de 2 angles (A au 1er sommet, B au 2e) — base horizontale, sommet en haut.
+  function sommetsTri(A, B){
+    const L = Math.sin(B * RAD) / Math.sin((A + B) * RAD);
+    return [[0, 0], [1, 0], [L * Math.cos(A * RAD), L * Math.sin(A * RAD)]];   // y vers le haut
+  }
+  // Quadrilatère convexe à partir de ses 4 angles (dans l'ordre, sens antihoraire).
+  function sommetsQuad(a){
+    const h = [0, 180 - a[1], 360 - a[1] - a[2], 540 - a[1] - a[2] - a[3]].map(x => x * RAD);
+    let meilleur = null;
+    for(let t = 0.45; t <= 1.3; t += 0.05){
+      // L0 = 1, L1 = t ; résoudre L2, L3 pour fermer la figure
+      const bx = -(Math.cos(h[0]) + t * Math.cos(h[1])), by = -(Math.sin(h[0]) + t * Math.sin(h[1]));
+      const det = Math.cos(h[2]) * Math.sin(h[3]) - Math.sin(h[2]) * Math.cos(h[3]);
+      if(Math.abs(det) < 1e-6) continue;
+      const L2 = (bx * Math.sin(h[3]) - by * Math.cos(h[3])) / det, L3 = (Math.cos(h[2]) * by - Math.sin(h[2]) * bx) / det;
+      if(L2 <= 0 || L3 <= 0) continue;
+      const Ls = [1, t, L2, L3], q = Math.min(...Ls) / Math.max(...Ls);
+      if(!meilleur || q > meilleur.q) meilleur = { q, Ls };
+    }
+    const Ls = meilleur ? meilleur.Ls : [1, 1, 1, 1];
+    const P = [[0, 0]];
+    for(let k = 0; k < 3; k++) P.push([P[k][0] + Ls[k] * Math.cos(h[k]), P[k][1] + Ls[k] * Math.sin(h[k])]);
+    return P;
+  }
+  // Mise à l'échelle dans une boîte W×H (y retourné pour le SVG).
+  function cadrer(P, W, H, marge){
+    const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const s = Math.min((W - 2 * marge) / (x1 - x0 || 1), (H - 2 * marge) / (y1 - y0 || 1));
+    const dx = (W - s * (x1 - x0)) / 2, dy = (H - s * (y1 - y0)) / 2;
+    return P.map(p => [dx + s * (p[0] - x0), H - dy - s * (p[1] - y0)]);
+  }
+  const f1 = x => x.toFixed(1);
+  // Le coin (angle) au sommet V, entre les voisins U et W. etiq = texte, coul = index de couleur ou 'q'
+  function coin(V, U, W, etiq, coul, opts){
+    opts = opts || {};
+    const u = [U[0] - V[0], U[1] - V[1]], w = [W[0] - V[0], W[1] - V[1]];
+    const nu = Math.hypot(...u), nw = Math.hypot(...w);
+    const uh = [u[0] / nu, u[1] / nu], wh = [w[0] / nw, w[1] / nw];
+    const deg = Math.acos(Math.max(-1, Math.min(1, uh[0] * wh[0] + uh[1] * wh[1]))) / RAD;
+    const c = coul === 'q' ? '#c2410c' : COUL[coul], fd = coul === 'q' ? 'rgba(245,158,11,.28)' : FOND[coul];
+    let s = '';
+    const droit = opts.droit || false;
+    if(droit){
+      const k = opts.carre || 17;
+      s += '<path d="M' + f1(V[0] + k * uh[0]) + ' ' + f1(V[1] + k * uh[1]) + ' L' + f1(V[0] + k * uh[0] + k * wh[0]) + ' ' + f1(V[1] + k * uh[1] + k * wh[1]) +
+           ' L' + f1(V[0] + k * wh[0]) + ' ' + f1(V[1] + k * wh[1]) + ' L' + f1(V[0]) + ' ' + f1(V[1]) + ' Z" fill="' + fd + '" stroke="' + c + '" stroke-width="2.5"/>';
+    } else {
+      const r = opts.r || (deg < 40 ? 34 : 26);
+      const sweep = (uh[0] * wh[1] - uh[1] * wh[0]) > 0 ? 1 : 0;
+      s += '<path d="M' + f1(V[0]) + ' ' + f1(V[1]) + ' L' + f1(V[0] + r * uh[0]) + ' ' + f1(V[1] + r * uh[1]) + ' A ' + r + ' ' + r + ' 0 0 ' + sweep + ' ' +
+           f1(V[0] + r * wh[0]) + ' ' + f1(V[1] + r * wh[1]) + ' Z" fill="' + fd + '" stroke="' + c + '" stroke-width="2.5"/>';
+    }
+    if(etiq){
+      let bx = uh[0] + wh[0], by = uh[1] + wh[1]; const nb = Math.hypot(bx, by) || 1; bx /= nb; by /= nb;
+      const dist = opts.dist || (droit ? 36 : deg < 30 ? 58 : deg < 45 ? 50 : deg > 110 ? 38 : 44);
+      s += '<text x="' + f1(V[0] + dist * bx) + '" y="' + f1(V[1] + dist * by + 6) + '" text-anchor="middle" font-size="' + (opts.taille || 17) + '" fill="' + c +
+           '" stroke="#fff" stroke-width="4" paint-order="stroke">' + etiq + '</text>';
+    }
+    return s;
+  }
+  function polygone(P, extra){
+    return '<polygon points="' + P.map(p => f1(p[0]) + ',' + f1(p[1])).join(' ') + '" fill="' + ((extra && extra.fond) || '#fffaf0') + '" stroke="#3b2a1a" stroke-width="3.5" stroke-linejoin="round"/>';
+  }
+  /* Dessin d'une figure d'exercice.
+     angles : les vrais angles ; montre : pour chaque coin, true (écrit), 'q' (le ? à trouver), false (rien), 'droit' (petit carré) */
+  function figure(type, angles, montre, W, H, marge){
+    const P0 = type === 'tri' ? sommetsTri(angles[0], angles[1]) : sommetsQuad(angles);
+    const P = cadrer(P0, W, H, marge || 34), n = P.length;
+    let s = polygone(P);
+    P.forEach((V, k) => {
+      const U = P[(k + n - 1) % n], Wv = P[(k + 1) % n], m = montre[k];
+      if(m === false) return;
+      if(m === 'q') s += coin(V, U, Wv, '?', 'q', { taille:22 });
+      else if(m === 'droit') s += coin(V, U, Wv, '', k % 3, { droit:true });
+      else s += coin(V, U, Wv, angles[k] + '°', k % 3);
+    });
+    P.forEach(V => { s += '<circle cx="' + f1(V[0]) + '" cy="' + f1(V[1]) + '" r="3.5" fill="#3b2a1a"/>'; });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '">' + s + '</svg>';
+  }
+
+
+  /* Figure à mesurer au rapporteur : dessinée en vrais pixels (1 unité = 1 px à pleine largeur),
+     avec les côtés du coin 📐 prolongés en pointillé pour atteindre les graduations du rapporteur (rayon 172 px). */
+  function figureRapporteur(angles, donne){
+    const T = sommetsTri(angles[0], angles[1]);
+    const W = 520, H = 300, base = Math.min(340, 236 / T[2][1]), O = [70, 272];   // le sommet du haut reste dans le dessin
+    const P = T.map(p => [O[0] + base * p[0], O[1] - base * p[1]]);
+    let s = polygone(P);
+    const prolonge = (A, B) => { const d = Math.hypot(B[0] - A[0], B[1] - A[1]); if(d >= 240) return '';
+      const k = 240 / d, X = [A[0] + k * (B[0] - A[0]), A[1] + k * (B[1] - A[1])];
+      return '<line x1="' + f1(B[0]) + '" y1="' + f1(B[1]) + '" x2="' + f1(X[0]) + '" y2="' + f1(X[1]) + '" stroke="#3b2a1a" stroke-width="2" stroke-dasharray="4 6" opacity=".55"/>'; };
+    s += prolonge(P[0], P[1]) + prolonge(P[0], P[2]);
+    s += coin(P[0], P[2], P[1], '📐', 1, { r:30, dist:62, taille:20 });
+    s += coin(P[1], P[0], P[2], donne + '°', 0);
+    s += coin(P[2], P[1], P[0], '?', 'q', { taille:22 });
+    P.forEach(V => { s += '<circle cx="' + f1(V[0]) + '" cy="' + f1(V[1]) + '" r="3.5" fill="#3b2a1a"/>'; });
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:' + W + 'px">' + s + '</svg>';
+  }
+
+  /* ───────── les numéros ─────────
+     champs : { lib, attendu, sorte, connus, tol } — sorte : 'tri' (angle manquant d'un triangle), 'quad' (d'un quadrilatère),
+              'mesure' (lu au rapporteur, ±3°) ; tol : écart accepté (0 par défaut)
+     choix  : petites cartes à classer avec des pastilles
+     famille: la bonne famille du triangle (pastilles après les cases) */
+  const FAMS = ['3 angles aigus', '1 angle droit', '1 angle obtus'];
+  const NUMEROS = [
+    { image:'🍕', fond:'#FFF3E8', texte:"Au bout de cette pointe de pizza, l'angle mesure 40°. Un autre coin mesure 70°. Combien mesure l'angle « ? » ?",
+      fig:['tri', [70, 70, 40], [true, 'q', true]],
+      champs:[{ lib:'« ? » =', attendu:70, sorte:'tri', connus:[70, 40] }] },
+    { image:'🏔️', fond:'#E8F7FF', texte:"Le versant de la montagne fait un angle de 65° avec le sol, l'autre versant un angle de 55°. Combien mesure l'angle « ? » au sommet ?",
+      fig:['tri', [65, 55, 60], [true, true, 'q']],
+      champs:[{ lib:'« ? » =', attendu:60, sorte:'tri', connus:[65, 55] }] },
+    { image:'⛺', fond:'#E6FFF4', texte:"Les deux angles du bas de la tente mesurent 75° chacun. Combien mesure l'angle « ? » en haut ?",
+      fig:['tri', [75, 75, 30], [true, true, 'q']], haut:330,
+      champs:[{ lib:'« ? » =', attendu:30, sorte:'tri', connus:[75, 75] }] },
+    { image:'🧀', fond:'#FFFBE6', texte:"Une pointe de fromage a un angle de 110° et un angle de 35°. Combien mesure l'angle « ? » ?",
+      fig:['tri', [35, 110, 35], [true, true, 'q']],
+      champs:[{ lib:'« ? » =', attendu:35, sorte:'tri', connus:[110, 35] }] },
+    { image:'🛹', fond:'#FFE8F0', texte:"La rampe de planche à roulettes monte avec un angle de 18°. Le coin du fond est droit. Combien mesure l'angle « ? » en haut ?",
+      fig:['tri', [18, 90, 72], [true, 'droit', 'q']],
+      champs:[{ lib:'« ? » =', attendu:72, sorte:'tri', connus:[18, 90], droit:true }] },
+    { image:'🏠', fond:'#EDE9FF', texte:"Les deux angles du bas du toit mesurent 30° chacun. Combien mesure l'angle « ? » tout en haut ?",
+      fig:['tri', [30, 30, 120], [true, true, 'q']],
+      champs:[{ lib:'« ? » =', attendu:120, sorte:'tri', connus:[30, 30] }] },
+    { image:'🏁', fond:'#EAF1FF', texte:"Le fanion de la course a un angle droit et un angle de 55°. Combien mesure l'angle « ? » ?",
+      fig:['tri', [90, 55, 35], ['droit', true, 'q']],
+      champs:[{ lib:'« ? » =', attendu:35, sorte:'tri', connus:[90, 55], droit:true }] },
+    { image:'⛵', fond:'#E8F2FF', texte:"La voile du bateau a un angle de 35° et un angle de 55°. Trouve le 3e angle, puis la famille du triangle.",
+      fig:['tri', [35, 55, 90], [true, true, 'q']],
+      champs:[{ lib:'a) Le 3e angle =', attendu:90, sorte:'tri', connus:[35, 55] }], famille:'1 angle droit' },
+    { image:'🎪', fond:'#FFF0E0', texte:"Le toit du chapiteau a un angle de 30° et un angle de 45°. Trouve le 3e angle, puis la famille du triangle.",
+      fig:['tri', [30, 45, 105], [true, true, 'q']],
+      champs:[{ lib:'a) Le 3e angle =', attendu:105, sorte:'tri', connus:[30, 45] }], famille:'1 angle obtus' },
+    { image:'🧐', fond:'#F0E8FF', texte:"Nora dit qu'elle a dessiné ces triangles. Lesquels sont possibles ?",
+      choix:{ options:['possible', 'impossible'], items:[
+        { texte:'95°, 90°, 5°', bonne:'impossible' },
+        { texte:'45°, 45°, 90°', bonne:'possible' },
+        { texte:'120°, 30°, 30°', bonne:'possible' },
+        { texte:'50°, 50°, 50°', bonne:'impossible' } ] },
+      conseil:"Additionne les 3 angles de chaque carte. Un vrai triangle donne 180° pile, et il n'a jamais plus d'un angle droit ou obtus." },
+    { image:'📐', fond:'#FFEFE8', texte:"Défi du rapporteur ! Mesure l'angle 📐 avec le sort du rapporteur (barre des sorts, en bas). L'angle rouge mesure 50°. Trouve l'angle « ? ».",
+      rap:[70, 50], grand:true,
+      champs:[{ lib:"a) L'angle 📐 mesure", attendu:70, sorte:'mesure', tol:3 },
+              { lib:'b) « ? » =', attendu:60, sorte:'tri', connus:[50], tol:3, apresMesure:true }] },
+    { image:'📐', fond:'#E8FFF0', texte:"Défi du rapporteur ! Mesure l'angle 📐 avec le sort du rapporteur. L'angle rouge mesure 100°. Trouve l'angle « ? ».",
+      rap:[35, 100], grand:true,
+      champs:[{ lib:"a) L'angle 📐 mesure", attendu:35, sorte:'mesure', tol:3 },
+              { lib:'b) « ? » =', attendu:45, sorte:'tri', connus:[100], tol:3, apresMesure:true }] }
+  ];
+
+  const etatInitial = (function(){ try{ return JSON.parse(new URLSearchParams(location.search).get('etat')); }catch(e){ return null; } })();
+  const valeurs = (etatInitial && etatInitial.v) || {};
+  const etapesOk = new Set((etatInitial && etatInitial.e) || []);
+  const reussis = new Set((etatInitial && etatInitial.ok) || []);
+  const derniereErreur = {};
+  function parent(msg){ try{ window.parent.postMessage(Object.assign({ source:'grimoire-doc' }, msg), '*'); }catch(e){} }
+
+  NUMEROS.forEach((q, i) => {
+    let corps = '<p class="enonce">' + q.texte + '</p>';
+    if(q.fig) corps += '<div class="dessin">' + figure(q.fig[0], q.fig[1], q.fig[2], 380, q.haut || 220) + '</div>';
+    if(q.rap) corps += '<div class="dessin grand">' + figureRapporteur([q.rap[0], q.rap[1], 180 - q.rap[0] - q.rap[1]], q.rap[1]) + '</div>';
+    if(q.choix){
+      corps += '<div class="mini-grille">' + q.choix.items.map((it, k) => '<div class="mini" id="mini' + i + '_' + k + '">' +
+        '<div class="trois">' + it.texte + '</div>' +
+        '<div class="pastilles">' + q.choix.options.map(f => '<button type="button" class="pastille" data-i="' + i + '" data-k="' + k + '" data-f="' + f + '">' + f + '</button>').join('') + '</div></div>').join('') + '</div>';
+    }
+    (q.champs || []).forEach((c, k) => {
+      corps += '<div class="etape"><span class="lib">' + c.lib + '</span><input id="c' + i + '_' + k + '" data-i="' + i + '" data-k="' + k + '" inputmode="numeric" autocomplete="off"><span class="unite">°</span></div>';
+    });
+    if(q.famille){
+      corps += '<div class="etape"><span class="lib">b) Sa famille :</span><span class="pastilles">' + FAMS.map(f => '<button type="button" class="pastille" data-i="' + i + '" data-k="f" data-f="' + f + '">' + f + '</button>').join('') + '</span></div>';
+    }
+    corps += '<div class="actions"><button type="button" data-verifier="' + i + '">Vérifier</button><span class="msg" id="msg' + i + '"></span></div><div id="conseil' + i + '"></div>';
+    document.getElementById('groupe1').insertAdjacentHTML('beforeend',
+      '<div class="carte" id="carte' + i + '"><div class="gauche"><div class="image" style="background:' + q.fond + '">' + q.image + '</div><div class="num">' + (i + 1) + '</div></div><div class="corps">' + corps + '</div></div>');
+  });
+
+  document.querySelectorAll('.pastille[data-i]').forEach(b => b.addEventListener('click', () => {
+    const i = +b.dataset.i, k = b.dataset.k, cle = i + ':' + k;
+    if(reussis.has(i) || etapesOk.has(cle)) return;
+    valeurs[cle] = b.dataset.f; afficherChoix(i, k);
+    const m = document.getElementById('mini' + i + '_' + k); if(m) m.classList.remove('faux');
+    envoyerEtat();
+  }));
+  function afficherChoix(i, k){
+    document.querySelectorAll('.pastille[data-i="' + i + '"][data-k="' + k + '"]').forEach(b => b.classList.toggle('choisi', valeurs[i + ':' + k] === b.dataset.f));
+  }
+  document.querySelectorAll('input[data-i]').forEach(el => {
+    const cle = el.dataset.i + ':c' + el.dataset.k;
+    if(valeurs[cle] != null) el.value = valeurs[cle];
+    el.addEventListener('input', () => { valeurs[cle] = el.value; el.classList.remove('faux'); envoyerEtat(); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter') verifier(+el.dataset.i); });
+  });
+
+  // Conseil selon l'erreur. Les exercices ne donnent jamais la réponse.
+  function conseilChamp(c, n){
+    const somme = (c.connus || []).reduce((a, b) => a + b, 0);
+    if(c.sorte === 'mesure'){
+      if(Math.abs(n - (180 - c.attendu)) <= 3) return "Tu as lu l'autre échelle du rapporteur ! Cet angle est-il plus petit ou plus grand qu'un angle droit ?";
+      return "Pose le centre du rapporteur sur le sommet de l'angle 📐, un côté sur le 0, puis lis sur l'échelle qui part de ce 0.";
+    }
+    if(c.apresMesure) return "Additionne l'angle que tu as mesuré et l'angle rouge, puis cherche combien il manque pour arriver à 180°.";
+    if(n === somme) return "Ça, c'est le total des angles connus. Il reste à trouver combien il manque.";
+    if(c.sorte === 'tri' && n === 360 - somme) return "Attention : un triangle, c'est une demi-tarte (180°), pas une tarte entière.";
+    if(c.sorte === 'quad' && n === 180 - somme) return "Attention : un quadrilatère, c'est 2 triangles, donc une tarte entière (360°).";
+    if(c.droit) return "N'oublie pas le petit carré : c'est un angle droit (90°). Compte-le avec les autres angles connus.";
+    return c.sorte === 'tri' ? "Un triangle : les 3 angles font 180°." : "Un quadrilatère : les 4 angles font 360°.";
+  }
+
+  function verifier(i){
+    if(reussis.has(i)) return;
+    const q = NUMEROS[i], m = document.getElementById('msg' + i);
+    let ok = true, leConseil = null, signature = '', rienDuTout = true;
+    if(q.choix){
+      q.choix.items.forEach((it, k) => {
+        const cle = i + ':' + k, box = document.getElementById('mini' + i + '_' + k);
+        if(valeurs[cle]) rienDuTout = false;
+        signature += (valeurs[cle] || '-') + ',';
+        if(etapesOk.has(cle)) return;
+        if(valeurs[cle] === it.bonne){ etapesOk.add(cle); box.classList.add('bon'); box.querySelectorAll('button').forEach(b => b.disabled = true); }
+        else { ok = false; if(valeurs[cle]){ box.classList.add('faux'); leConseil = q.conseil; } }
+      });
+    }
+    (q.champs || []).forEach((c, k) => {
+      const el = document.getElementById('c' + i + '_' + k), cle = i + ':c' + k;
+      if(el.value.trim()) rienDuTout = false;
+      signature += el.value.trim() + '|';
+      if(etapesOk.has(cle)) return;
+      const n = nombre(el.value);
+      if(n === null){ ok = false; if(el.value.trim()){ el.classList.add('faux'); leConseil = leConseil || "Écris seulement un nombre de degrés."; } return; }
+      if(Math.abs(n - c.attendu) <= (c.tol || 0)){ etapesOk.add(cle); el.classList.remove('faux'); el.classList.add('bon'); el.disabled = true; }
+      else { ok = false; el.classList.add('faux'); leConseil = leConseil || conseilChamp(c, n); }
+    });
+    if(q.famille){
+      const cle = i + ':f';
+      if(valeurs[cle]) rienDuTout = false;
+      signature += valeurs[cle] || '-';
+      if(!etapesOk.has(cle)){
+        if(valeurs[cle] === q.famille){ etapesOk.add(cle); document.querySelectorAll('.pastille[data-i="' + i + '"][data-k="f"]').forEach(b => b.disabled = true); }
+        else { ok = false; if(valeurs[cle]) leConseil = leConseil || "Regarde le plus grand angle du triangle : est-il aigu, droit ou obtus ?"; }
+      }
+    }
+    if(rienDuTout) return;                       // rien de rempli : pas une tentative
+    if(ok || derniereErreur[i] !== signature){
+      parent({ type:'tentative', numero:String(i + 1), correcte:ok });
+      if(!ok) derniereErreur[i] = signature;
+    }
+    if(ok){ reussis.add(i); marquer(i, true); maj(); }
+    else {
+      m.textContent = 'Pas tout à fait, réessaie !'; m.className = 'msg faux';
+      document.getElementById('conseil' + i).innerHTML = leConseil ? '<div class="conseil">💡 ' + leConseil + '</div>' : '';
+      const carte = document.getElementById('carte' + i); carte.classList.remove('secoue'); void carte.offsetWidth; carte.classList.add('secoue');
+    }
+    envoyerEtat();
+  }
+  function marquer(i, annoncer){
+    const carte = document.getElementById('carte' + i); carte.classList.add('ok');
+    carte.querySelector('.num').textContent = '✓';
+    carte.querySelectorAll('input, .pastille').forEach(el => { el.disabled = true; });
+    carte.querySelectorAll('input').forEach(el => { el.classList.remove('faux'); el.classList.add('bon'); });
+    carte.querySelectorAll('.mini').forEach(el => { el.classList.remove('faux'); el.classList.add('bon'); });
+    const b = carte.querySelector('[data-verifier]'); b.disabled = true; b.textContent = '✓ Réussi';
+    if(annoncer){ const m = document.getElementById('msg' + i); m.textContent = 'Bonne réponse !'; m.className = 'msg bon'; }
+    document.getElementById('conseil' + i).innerHTML = '';
+  }
+
+  // reprise d'une partie commencée
+  NUMEROS.forEach((q, i) => {
+    if(q.choix) q.choix.items.forEach((it, k) => { afficherChoix(i, k); if(etapesOk.has(i + ':' + k)){ const box = document.getElementById('mini' + i + '_' + k); box.classList.add('bon'); box.querySelectorAll('button').forEach(b => b.disabled = true); } });
+    (q.champs || []).forEach((c, k) => { if(etapesOk.has(i + ':c' + k)){ const el = document.getElementById('c' + i + '_' + k); el.classList.add('bon'); el.disabled = true; } });
+    if(q.famille){ afficherChoix(i, 'f'); if(etapesOk.has(i + ':f')) document.querySelectorAll('.pastille[data-i="' + i + '"][data-k="f"]').forEach(b => b.disabled = true); }
+  });
+  reussis.forEach(i => marquer(i, false));
+  document.querySelectorAll('[data-verifier]').forEach(b => b.addEventListener('click', () => verifier(+b.dataset.verifier)));
+
+  function envoyerEtat(){
+    const vide = reussis.size === 0 && etapesOk.size === 0 && Object.values(valeurs).every(x => !String(x || '').trim());
+    parent({ type:'etat', etat: (vide || reussis.size === NUMEROS.length) ? null : { v: valeurs, e: [...etapesOk], ok: [...reussis] } });
+  }
+  function maj(){
+    const n = reussis.size;
+    document.getElementById('score').textContent = n + ' / ' + NUMEROS.length + ' réussis';
+    document.getElementById('barre').style.width = (100 * n / NUMEROS.length) + '%';
+    parent({ type:'progress', vus:n, total:NUMEROS.length });
+    if(n === NUMEROS.length) parent({ type:'termine' });
+  }
+  maj();
+})();
+</script>
+<!-- Habiletés magiques de lecture (boule de cristal, narrateur, loupe) : agent qui parle à la fiche -->
+<script src="../lecture-magique.js" data-agent></script>
+</body>
+</html>

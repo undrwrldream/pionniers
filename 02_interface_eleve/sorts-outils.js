@@ -414,6 +414,9 @@
         .so-horl-form .deux-pts{ font:700 24px Georgia, serif; margin:0 3px; }
         .so-horl-form button{ margin-top:8px; font:700 14px system-ui, sans-serif; padding:8px 14px; border-radius:999px; border:2px solid #f5d67a;
           background:#6d28d9; color:#fff; cursor:pointer; }
+        .so-horl-form .aide-sens{ font:normal 600 12.5px/1.3 system-ui, sans-serif; opacity:.85; }
+        .so-horl.a-reculons .so-horl-num{ text-shadow:0 0 6px #bae6fd, 0 0 18px #38bdf8, 0 0 34px #6366f1; }
+        .so-horl.a-reculons .borne-fin{ text-shadow:0 0 6px #bae6fd, 0 0 16px #38bdf8, 0 0 30px #6366f1; }
         .so-horl-form .erreur{ min-height:16px; margin:6px 0 0; font-size:13px; color:#fca5a5; font-style:normal; }
         .so-horl-bornes{ position:absolute; right:-160px; top:50%; transform:translateY(-50%); width:140px; display:none; text-align:center; z-index:3; }
         .so-horl.en-duree .so-horl-bornes{ display:block; }
@@ -491,13 +494,13 @@
       el = document.createElement('div'); el.className = 'so-horl'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', 'Horloge magique');
       el.innerHTML = '<div class="so-horl-air" title="Glisse ici pour déplacer l\'horloge"><div class="so-horl-num">3:00</div><div class="so-horl-mots"></div></div>' +
         '<div class="so-horl-cadran"><img class="so-horl-art" src="' + IMG_HORLOGE + '" alt="" draggable="false">' + svg() +
-          '<button type="button" class="so-horl-duree-btn" title="Calculer le temps écoulé entre deux heures">⏱ Calculer la durée</button>' +
-          '<div class="so-horl-form" role="dialog" aria-label="Heure de début"><p>À quelle heure ça commence ?</p>' +
+          '<button type="button" class="so-horl-duree-btn" title="Calculer le temps écoulé entre deux heures, ou reculer pour trouver l\'heure qu\'il était">⏱ Calculer la durée</button>' +
+          '<div class="so-horl-form" role="dialog" aria-label="Heure de début"><p>À partir de quelle heure ?</p><p class="aide-sens">Avance : combien de temps a passé.<br>Recule : quelle heure il était.</p>' +
             '<input type="number" min="0" max="23" inputmode="numeric" class="duree-h" aria-label="Heure"><span class="deux-pts">:</span>' +
             '<input type="number" min="0" max="59" inputmode="numeric" class="duree-m" aria-label="Minutes"><br>' +
             '<button type="button" class="duree-ok">Commencer ✨</button><p class="erreur"></p></div>' +
-          '<div class="so-horl-bornes"><div class="so-horl-borne"><b class="borne-debut">0:00</b><span>début</span></div>' +
-            '<div class="so-horl-borne"><b class="borne-fin">0:00</b><span>fin</span></div></div>' +
+          '<div class="so-horl-bornes"><div class="so-horl-borne"><b class="borne-debut">0:00</b><span class="nom-debut">début</span></div>' +
+            '<div class="so-horl-borne"><b class="borne-fin">0:00</b><span class="nom-fin">fin</span></div></div>' +
         '</div>' +
         '<div class="so-horl-outils">' +
           '<button type="button" data-a="-1" title="Reculer d\'une minute">− 1 min</button>' +
@@ -594,7 +597,7 @@
       }, 260);
     }
     let dernierTexte = '';
-    let duree = null;   // mode « Calculer la durée » : { debut: minutes depuis minuit, ecoule: minutes écoulées (≥ 0) }
+    let duree = null;   // mode « Calculer la durée » : { debut: minutes depuis minuit, ecoule: minutes écoulées (négatif = à reculons) }
     function texteDuree(n){ const h = Math.floor(n / 60), m = n % 60; return h ? h + ' h' + (m ? ' ' + deux(m) : '') : m + ' min'; }
     function arreterDuree(){
       duree = null;
@@ -608,13 +611,17 @@
       const h = h24(), m = mm();
       el.querySelector('.aig-m').setAttribute('transform', 'rotate(' + (m * 6) + ')');
       el.querySelector('.aig-h').setAttribute('transform', 'rotate(' + ((h % 12) * 30 + m * 0.5) + ')');
-      const texte = duree ? texteDuree(duree.ecoule) : h + ':' + deux(m);
+      const recule = !!(duree && duree.ecoule < 0);
+      const texte = duree ? texteDuree(Math.abs(duree.ecoule)) : h + ':' + deux(m);
+      el.classList.toggle('a-reculons', recule);
       const num = el.querySelector('.so-horl-num');
       num.textContent = texte;
-      el.querySelector('.so-horl-mots').textContent = duree ? 'de temps écoulé' : motsHeure();
+      el.querySelector('.so-horl-mots').textContent = duree ? (recule ? 'plus tôt (à reculons)' : 'de temps écoulé') : motsHeure();
       if(duree){
         el.querySelector('.borne-debut').textContent = Math.floor(duree.debut / 60) + ':' + deux(duree.debut % 60);
         el.querySelector('.borne-fin').textContent = h + ':' + deux(m);
+        el.querySelector('.nom-debut').textContent = recule ? 'il est' : 'début';
+        el.querySelector('.nom-fin').textContent = recule ? 'il était' : 'fin';
       }
       el.querySelector('[data-a="matin"]').classList.toggle('actif', h < 12);
       el.querySelector('[data-a="soir"]').classList.toggle('actif', h >= 12);
@@ -629,8 +636,9 @@
         ecart = ((total - avant) % 1440 + 1440) % 1440; if(ecart > 720) ecart -= 1440;   // le chemin le plus court
       } else ecart = Math.round(total) - avant;
       if(duree){
-        if(duree.ecoule + ecart < 0){ ecart = -duree.ecoule; total = duree.debut; }   // on ne recule pas avant le début
-        duree.ecoule += ecart;
+        // On peut aussi reculer avant le départ : « quelle heure était-il il y a 2 h 10 ? » (ecoule négatif).
+        // Limite : moins d'une journée dans un sens comme dans l'autre.
+        duree.ecoule = Math.max(-1439, Math.min(1439, duree.ecoule + ecart));
       }
       totalMin = ((Math.round(total) % 1440) + 1440) % 1440;
       dessiner();
