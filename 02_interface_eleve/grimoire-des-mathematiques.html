@@ -733,7 +733,6 @@
   .fin-lecture-btns button{ font-family:inherit; font-size:1.05rem; border-radius:8px; padding:9px 18px; cursor:pointer; }
   #finLecturePoursuivre{ background:var(--gold); border:none; color:#1b1408; font-weight:bold; }
   #finLecturePoursuivre:hover{ background:var(--gold-bright, #f5d77a); }
-  #finLectureRester{ background:transparent; border:1.5px solid rgba(243,233,210,0.5); color:#F3E9D2; }
   @keyframes finLectureFondu{ from{ opacity:0; } to{ opacity:1; } }
   @keyframes finLectureCarte{ from{ transform:scale(.8); opacity:0; } to{ transform:none; opacity:1; } }
   #docOverlay .doc-bar{
@@ -990,8 +989,7 @@
         <p class="fin-lecture-titre" id="finLectureTitre">Lecture terminée !</p>
         <p class="fin-lecture-texte" id="finLectureTexte"></p>
         <div class="fin-lecture-btns">
-          <button type="button" id="finLecturePoursuivre">Poursuivre ➜</button>
-          <button type="button" id="finLectureRester">Rester sur le document</button>
+          <button type="button" id="finLecturePoursuivre">Continuer ➜ <span id="finLectureCompte">(4)</span></button>
         </div>
       </div>
     </div>
@@ -3573,6 +3571,7 @@
     $('docOverlay').classList.add('open');
   }
   function fermerDoc(){
+    clearInterval(finLectureMinuterie); finLectureMinuterie = null;
     $('finLecture').classList.remove('open');
     if(window.Rapports) window.Rapports.fin();
     viderSauvegardeEtatDoc();
@@ -3584,11 +3583,17 @@
   }
   $('docCloseBtn').addEventListener('click', fermerDoc);
   // Fin de lecture : « Poursuivre » ferme le document et ramène au menu de la section.
-  $('finLecturePoursuivre').addEventListener('click', fermerDoc);
-  $('finLectureRester').addEventListener('click', () => $('finLecture').classList.remove('open'));
+  // Même fin de section dans les 3 livres (29 sept. 2026) : la banderole, puis retour AUTOMATIQUE au choix
+  // des documents de la section après 4 s (ou tout de suite avec « Continuer »).
+  let finLectureMinuterie = null;
+  function quitterFinLecture(){ clearInterval(finLectureMinuterie); finLectureMinuterie = null; if($('finLecture').classList.contains('open')) fermerDoc(); }
+  $('finLecturePoursuivre').addEventListener('click', quitterFinLecture);
   function afficherFinLecture(html){
     $('finLectureTexte').innerHTML = html;
     $('finLecture').classList.add('open');
+    let reste = 4; $('finLectureCompte').textContent = '(' + reste + ')';
+    clearInterval(finLectureMinuterie);
+    finLectureMinuterie = setInterval(() => { reste--; $('finLectureCompte').textContent = '(' + reste + ')'; if(reste <= 0) quitterFinLecture(); }, 1000);
     setTimeout(() => { try{ $('finLecturePoursuivre').focus(); }catch(e){} }, 50);
   }
   $('copieFermer').addEventListener('click', () => { $('copieOverlay').classList.remove('open'); document.querySelector('#copieOverlay .copie-carte').classList.remove('large'); });
@@ -3683,8 +3688,7 @@
       (sectionExigee(a.chapterId, a.sectionIdx + 1) === a.sectionIdx && !restantsSectionExigee(a.chapterId, a.sectionIdx + 1).length);
     // Fenêtre au centre (lecture ET exercices), comme la fin d'une section de français.
     $('finLectureTitre').textContent = a.doc.mode === 'lecture' ? 'Lecture terminée !' : 'Bravo !';
-    $('finLectureRester').textContent = a.doc.mode === 'lecture' ? 'Rester sur le document' : 'Revoir mes réponses';
-    afficherFinLecture((a.doc.mode === 'lecture' ? 'Tu as lu le document. Tu peux poursuivre !' : 'Bravo, tout est réussi !') +
+    afficherFinLecture((a.doc.mode === 'lecture' ? 'Tu as lu le document.' : 'Tout est réussi !') +
       '<br><strong>+' + a.doc.recompense + ' 🪙</strong>' +
       (debloque ? '<small>La ' + escapeHtml(SECTION_META[a.sectionIdx + 1].name.split('— ').pop()) + ' est débloquée !</small>' : ''));
     return;

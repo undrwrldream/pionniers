@@ -1005,9 +1005,17 @@ function fenetreFin(texteHtml){
   }
   f.innerHTML = '<div class="fin-section-carte"><img src="livre_assets/banderole_completee.webp" alt="Section complétée" draggable="false">' +
     '<p class="fin-section-titre">Bravo !</p><p class="fin-section-texte">' + texteHtml + '</p>' +
-    '<div class="fin-section-btns"><button type="button" id="finSectionOk">Poursuivre ➜</button></div></div>';
+    '<div class="fin-section-btns"><button type="button" id="finSectionOk">Continuer ➜ <span id="finSectionCompte">(4)</span></button></div></div>';
   f.classList.add('open');
-  document.getElementById('finSectionOk').onclick = () => f.classList.remove('open');
+  // Même fin de section dans les 3 livres (29 sept. 2026) : retour AUTOMATIQUE au choix des sections après 4 s.
+  let reste = 4, fini = false;
+  const partir = () => {
+    if(fini) return; fini = true; clearInterval(t); f.classList.remove('open');
+    if(document.getElementById('docModal').classList.contains('open')) fermerDoc();          // questionnaire, livret
+    else if(courant && courant.chemin.length > 1){ aller(hashDe(courant.chemin.slice(0, -1))); }   // lecture à pages : retour à la liste
+  };
+  const t = setInterval(() => { reste--; const c = document.getElementById('finSectionCompte'); if(c) c.textContent = '(' + reste + ')'; if(reste <= 0) partir(); }, 1000);
+  document.getElementById('finSectionOk').onclick = partir;
   setTimeout(() => { try{ document.getElementById('finSectionOk').focus(); }catch(e){} }, 50);
 }
 function toastXp(html){ const t = document.getElementById('xpToast'); t.innerHTML = html; t.classList.add('visible'); clearTimeout(toastXp.m); toastXp.m = setTimeout(() => t.classList.remove('visible'), 3800); }

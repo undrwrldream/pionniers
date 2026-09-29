@@ -2207,6 +2207,8 @@ function guideBleu(conteneur, selecteur){
 /* ---------------- Banderole « section complétée » ---------------- */
 const BANDEROLE_HTML = '<img class="banderole-ligne" src="livre_assets/banderole_completee.webp" alt="Section complétée" draggable="false">';
 // Fenêtre au centre de l'écran, à la première réussite d'une section.
+// 29 sept. 2026 — même fin de section dans les 3 livres : la banderole, puis retour AUTOMATIQUE au choix
+// des sections après 4 s (ou tout de suite avec « Continuer »), pour enchaîner facilement.
 function afficherFinSection(texteHtml, libelleRetour, surRetour){
   let f = document.getElementById("finSection");
   if(!f){
@@ -2219,13 +2221,13 @@ function afficherFinSection(texteHtml, libelleRetour, surRetour){
       <p class="fin-section-titre">Bravo !</p>
       <p class="fin-section-texte">${texteHtml}</p>
       <div class="fin-section-btns">
-        <button type="button" class="principal" id="finSectionRetour">${libelleRetour}</button>
-        <button type="button" class="secondaire" id="finSectionRevoir">Revoir mes réponses</button>
+        <button type="button" class="principal" id="finSectionRetour">Continuer ➜ <span id="finSectionCompte">(4)</span></button>
       </div></div>`;
   f.classList.add("open");
-  const fermer = () => f.classList.remove("open");
-  document.getElementById("finSectionRevoir").onclick = fermer;
-  document.getElementById("finSectionRetour").onclick = () => { fermer(); surRetour(); };
+  let reste = 4, fini = false;
+  const partir = () => { if(fini) return; fini = true; clearInterval(t); f.classList.remove("open"); surRetour(); };
+  const t = setInterval(() => { reste--; const c = document.getElementById("finSectionCompte"); if(c) c.textContent = "(" + reste + ")"; if(reste <= 0) partir(); }, 1000);
+  document.getElementById("finSectionRetour").onclick = partir;
   setTimeout(() => { try{ document.getElementById("finSectionRetour").focus(); }catch(e){} }, 50);
 }
 
