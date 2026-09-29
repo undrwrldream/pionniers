@@ -151,6 +151,7 @@
     <button class="onglet" role="tab" data-vue="classements" aria-selected="false">Classements</button>
     <button class="onglet" role="tab" data-vue="economie" aria-selected="false">Économie</button>
     <button class="onglet" role="tab" data-vue="rapports" aria-selected="false">Rapports détaillés</button>
+    <button class="onglet" role="tab" data-vue="rattrapage" aria-selected="false">Rattrapage</button>
   </nav>
 
   <!-- ===================== ARÈNE (télécommande, inchangée) ===================== -->
@@ -234,6 +235,27 @@
   </div>
 
   <!-- ===================== RAPPORTS DÉTAILLÉS ===================== -->
+  <!-- ===================== RATTRAPAGE (29 sept. 2026) ===================== -->
+  <div class="vue" id="vue-rattrapage" hidden>
+    <p class="sous-titre">Compléter d'un coup, pour toute la classe, le début des livres (avec les récompenses).</p>
+    <section class="panneau">
+      <h2>Ce que le rattrapage donne à chaque élève</h2>
+      <ul class="aide" style="margin:8px 0 0 18px;line-height:1.5">
+        <li><b>Parchemins, chapitre 1 :</b> la section 1 des Invocations (« L'école et l'apprentissage »), 20 / 20. <b>+100 XP</b> (compté à sa prochaine visite des Parchemins).</li>
+        <li><b>Parchemins, chapitre 2 :</b> la 1re Conjuration (« Conjure Chrono-Bot ! »), série 1, 36 / 36. <b>+200 XP</b>.</li>
+        <li><b>Grimoire, chapitre IX, Les Bases :</b> les 8 documents avant l'horloge magique, et le sort de la règle enchantée. <b>+130 🪙</b> au plus.</li>
+      </ul>
+      <p class="note" style="margin-top:10px">Un élève déjà plus avancé n'est pas touché. Ce qu'un élève a déjà fait n'est jamais redonné : on peut relancer le rattrapage sans risque.
+        L'entraînement de l'horloge magique n'est PAS donné : chaque élève le fait lui-même.</p>
+      <div class="rangee" style="margin-top:14px;gap:10px;display:flex;flex-wrap:wrap">
+        <button class="petit" id="btnApercu" type="button">1. Voir l'aperçu</button>
+        <button class="cmd" id="btnAppliquer" type="button" disabled style="min-height:auto;padding:10px 18px;font-size:16px">2. Appliquer le rattrapage</button>
+      </div>
+      <p id="etatRattrapage" class="aide" style="margin-top:10px"></p>
+    </section>
+    <div class="defile" style="margin-top:14px"><table id="tableRattrapage"></table></div>
+  </div>
+
   <div class="vue" id="vue-rapports" hidden>
     <div class="entete-vue">
       <p id="majRapports">Chargement de la feuille Google…</p>
@@ -458,6 +480,121 @@ function ouvrirVue(vue){
   if(vue === 'rapports' && D.charge) afficherRapports();
 }
 document.querySelectorAll('[data-actualiser]').forEach(b => b.addEventListener('click', () => chargerTout()));
+
+/* ---------- Rattrapage (29 sept. 2026) ----------
+   Écrit, pour chaque élève, exactement ce que les livres écrivent quand l'élève termine lui-même :
+   evoc_<élève>_1, conj_<élève>_1_s1, doc_<élève>_mesure2_<doc>, sorts_<élève>, et l'or dans son coffre
+   (avec coffre.recus['doc:<doc>'] : le Grimoire ne le redonnera jamais). */
+const RATT_DOCS = [
+  ['heure-tarte', 10], ['exercices-fondamentaux', 20], ['heure-tarte-2', 10], ['mission-grandeurs', 10],
+  ['formes-mesures-1', 20], ['formes-mesures-2', 20], ['heure-bmx-1', 20], ['heure-bmx-2', 20]
+];
+// Documents APRÈS l'horloge magique : si l'un d'eux est fait, l'élève est plus avancé → on ne le touche pas.
+const RATT_PLUS_LOIN = ['notions-durees', 'heure-quarts-demis', 'heure-vraie-vie', 'heure-multiples-5', 'mission-biscuits-soda',
+  'notions-rapporteur', 'angles-sportifs-1', 'angles-sportifs-2', 'heure-taux-b', 'heure-taux-c', 'notions-angles-triangle', 'exercices-angles-triangle'];
+const SEL_SCEAU = 'GRIMOIRE-MEQ-C6-2026';
+function sceau(d){ const t = SEL_SCEAU + JSON.stringify(d); let h = 0x811c9dc5; for(let i = 0; i < t.length; i++){ h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16); }
+let planRattrapage = null;
+
+async function lireJSON(url){
+  for(let i = 0; i < 4; i++){
+    try{ const r = await fetch(url, { cache:'no-store' }); const d = await r.json(); if(d && !d.error) return d; }catch(e){}
+    await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+  }
+  throw new Error('La feuille Google ne répond pas.');
+}
+async function ecrireCle(corps){
+  for(let i = 0; i < 5; i++){
+    try{
+      const r = await fetch(CFG.URL_SCRIPT, { method:'POST', headers:{ 'Content-Type':'text/plain;charset=utf-8' },
+        body: JSON.stringify(Object.assign({ secret: CFG.SECRET_PARTAGE }, corps)) });
+      const d = await r.json(); if(d && d.ok) return true;
+    }catch(e){}
+    await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+  }
+  throw new Error('Écriture refusée pour ' + corps.cle);
+}
+const lireVal = (v, k) => { try{ return v[k] ? JSON.parse(v[k]) : null; }catch(e){ return null; } };
+
+async function preparerRattrapage(){
+  $('etatRattrapage').textContent = 'Lecture de la classe dans la feuille Google…';
+  $('btnAppliquer').disabled = true;
+  const [el, lot] = await Promise.all([
+    lireJSON(CFG.URL_SCRIPT + '?eleves=1&t=' + Date.now()),
+    lireJSON(CFG.URL_SCRIPT + '?lot=' + encodeURIComponent('coffre_,doc_,evoc_,conj_,sorts_') + '&t=' + Date.now())
+  ]);
+  const v = lot.valeurs || {};
+  const plan = preparerEleves(el.eleves || []).map(e => {
+    const p = { nom: e.nom, slug: e.slug, evoc: false, conj: false, docs: [], or: 0, maths: '' };
+    const ev = lireVal(v, 'evoc_' + e.slug + '_1');
+    p.evoc = !(ev && ev.meilleurScore != null);
+    const c1 = lireVal(v, 'conj_' + e.slug + '_1_s1'), c2 = lireVal(v, 'conj_' + e.slug + '_1_s2');
+    p.conj = !((c1 && c1.meilleurScore != null) || (c2 && c2.meilleurScore != null));
+    const fait = id => { const d = lireVal(v, 'doc_' + e.slug + '_mesure2_' + id); return !!(d && d.done); };
+    const sorts = lireVal(v, 'sorts_' + e.slug) || {};
+    if(RATT_PLUS_LOIN.some(fait) || sorts.horloge){ p.maths = 'déjà plus loin'; }
+    else {
+      p.docs = RATT_DOCS.filter(([id]) => !fait(id));
+      p.or = p.docs.reduce((a, [, r]) => a + r, 0);
+      p.regle = !sorts.regle;
+      p.maths = p.docs.length ? p.docs.length + ' document(s), +' + p.or + ' 🪙' + (p.regle ? ' + sort de la règle' : '') : (p.regle ? 'sort de la règle' : 'déjà fait');
+    }
+    p.coffre = lireVal(v, 'coffre_' + e.slug);
+    p.sortsActuels = sorts;
+    p.rien = !p.evoc && !p.conj && !p.docs.length && !p.regle;
+    return p;
+  });
+  planRattrapage = plan;
+  const oui = x => x ? '<b>à compléter</b>' : 'déjà fait';
+  $('tableRattrapage').innerHTML = '<tr><th>Élève</th><th>Invocations 1</th><th>Conjuration 1</th><th>Grimoire (jusqu’à l’horloge)</th></tr>' +
+    plan.map(p => '<tr' + (p.rien ? ' style="opacity:.55"' : '') + '><td>' + p.nom + '</td><td>' + oui(p.evoc) + '</td><td>' + oui(p.conj) + '</td><td>' + p.maths + '</td></tr>').join('');
+  const n = plan.filter(p => !p.rien).length;
+  $('etatRattrapage').textContent = n ? n + ' élève(s) recevront quelque chose. Vérifie le tableau, puis clique sur « Appliquer ».' : 'Rien à faire : tous les élèves sont déjà à ce point ou plus loin.';
+  $('btnAppliquer').disabled = !n;
+}
+
+async function appliquerRattrapage(){
+  if(!planRattrapage) return;
+  $('btnAppliquer').disabled = true; $('btnApercu').disabled = true;
+  const aFaire = planRattrapage.filter(p => !p.rien);
+  let i = 0;
+  try{
+    for(const p of aFaire){
+      i++; $('etatRattrapage').textContent = 'Élève ' + i + ' / ' + aFaire.length + ' : ' + p.nom + '…';
+      const maintenant = Date.now();
+      if(p.evoc) await ecrireCle({ cle: 'evoc_' + p.slug + '_1', valeur: JSON.stringify({ meilleurScore: 20, derniereTentative: 20, rattrapage: maintenant }) });
+      if(p.conj) await ecrireCle({ cle: 'conj_' + p.slug + '_1_s1', valeur: JSON.stringify({ meilleurScore: 36, derniereTentative: 36, rattrapage: maintenant }) });
+      if(p.docs.length){
+        // L'or d'abord (une seule fois grâce à coffre.recus), puis les documents « terminés ».
+        const env = p.coffre;
+        const donnees = (env && env.donnees && sceau(env.donnees) === env.seal) ? env.donnees
+          : { nom: p.nom, genre: null, or: 0, orGagne: 0, niveauLecture: 0, equipement: { inventory: [], equipped: {}, portraitImage: null } };
+        donnees.recus = donnees.recus || {};
+        let ajout = 0;
+        p.docs.forEach(([id, r]) => { if(!donnees.recus['doc:' + id]){ donnees.recus['doc:' + id] = maintenant; ajout += r; } });
+        if(typeof donnees.orGagne !== 'number') donnees.orGagne = donnees.or || 0;
+        donnees.or = (donnees.or || 0) + ajout; donnees.orGagne += ajout;
+        await ecrireCle({ action: 'coffre', cle: 'coffre_' + p.slug, bak1: 'coffre_bak1_' + p.slug, bak2: 'coffre_bak2_' + p.slug,
+          valeur: JSON.stringify({ donnees, seal: sceau(donnees) }) });
+        for(const [id, r] of p.docs)
+          await ecrireCle({ cle: 'doc_' + p.slug + '_mesure2_' + id, valeur: JSON.stringify({ done: true, rewardPaid: r, date: maintenant, rattrapage: true }) });
+      }
+      if(p.regle){
+        const sorts = Object.assign({}, p.sortsActuels, { regle: maintenant });
+        await ecrireCle({ cle: 'sorts_' + p.slug, valeur: JSON.stringify(sorts) });
+      }
+    }
+    await preparerRattrapage();
+    $('etatRattrapage').textContent = '✓ Rattrapage appliqué à ' + aFaire.length + ' élève(s). Les élèves le verront en rouvrant leur fiche. (Le tableau montre maintenant l\u2019état à jour.)';
+  }catch(e){
+    $('etatRattrapage').textContent = '⚠️ Arrêt à l’élève ' + i + ' (' + (e.message || e) + '). Relance l’aperçu puis « Appliquer » : ce qui est déjà fait ne sera pas refait.';
+  }finally{ $('btnApercu').disabled = false; }
+}
+$('btnApercu').addEventListener('click', () => preparerRattrapage().catch(e => { $('etatRattrapage').textContent = '⚠️ ' + (e.message || e); }));
+$('btnAppliquer').addEventListener('click', () => {
+  if(!confirm('Appliquer le rattrapage à toute la classe ?')) return;
+  appliquerRattrapage();
+});
 
 /* ---------- Identifiants : même algorithme que l'écran d'accueil ---------- */
 function slugify(str){
