@@ -71,6 +71,11 @@
     if(p.has('eleves')) return vraiFetch(entree, options);          // la vraie liste des élèves (lecture seulement)
     if(ARENE) return vraiFetch(entree, options);                    // l'arène combat avec la vraie classe (lecture seulement)
     if(p.has('cle')){ const v = lire(p.get('cle')); return reponse({ value: v === null ? null : v }); }
+    if(p.has('cles')){   // lecture groupée de clés exactes (stockage-classe.js, version 2)
+      const valeurs = {};
+      (p.get('cles') || '').split(',').filter(Boolean).forEach(k => { valeurs[k] = lire(k); });
+      return reponse({ valeurs });
+    }
     if(p.has('lot')){
       const prefixes = (p.get('lot') || '').split(',').filter(Boolean);
       const valeurs = {};

@@ -45,7 +45,7 @@ Error generating stack: `+o.message+`
 <script>
 /* Suivi de lecture pour le Grimoire : le document compte comme « lu » quand
    l'élève a fait défiler chacune des 2 sections jusqu'à sa fin, puis a atteint
-   le pied de page (ou 90 % de la page). Un simple saut tout en bas ne suffit pas.
+   le pied de page (ou 75 % de la page). Un simple saut tout en bas ne suffit pas.
    L'état (parties vues + position) est envoyé au Grimoire, qui le conserve :
    en revenant, l'élève reprend là où il en était. */
 (function(){
@@ -73,9 +73,9 @@ Error generating stack: `+o.message+`
     liste.forEach(function(el, i){
       if(vus[i]) return;
       var r = el.getBoundingClientRect();
-      // Repère = le BAS de la section, mais jamais plus loin que 90 % de la page :
+      // Repère = le BAS de la section, mais jamais plus loin que 75 % de la page :
       // l'élève n'a pas à se rendre au bout complet du défilement.
-      var haut = window.scrollY, limite = 0.9 * document.documentElement.scrollHeight;
+      var haut = window.scrollY, limite = 0.75 * document.documentElement.scrollHeight;
       var repere = Math.min(r.bottom + haut, limite) - haut;
       // le repère est entré dans l'écran (et n'est pas déjà passé au-dessus)
       if(repere > 0 && repere <= window.innerHeight + 2){ vus[i] = true; nbVus++; }

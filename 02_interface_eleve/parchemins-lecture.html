@@ -1608,6 +1608,14 @@ const HOMOPHONE_PAIRES = [[0,1],[2,3],[4,5],[6,7],[8,9]];
    ============================================================ */
 let textState = {};
 let view = {mode:"toc"};
+// Retour à la fiche : les Parchemins reviennent à leur table des matières (29 sept. 2026).
+window.addEventListener('message', e => {
+  const d = e.data;
+  if(!d || d.source !== 'fiche' || d.type !== 'retour-accueil' || e.source !== window.parent) return;
+  const fin = document.getElementById('finSection'); if(fin) fin.classList.remove('open');
+  view = {mode:"toc"};
+  try{ render(); window.scrollTo(0, 0); }catch(_){}
+});
 
 const app = document.getElementById("app");
 

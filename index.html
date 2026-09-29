@@ -115,6 +115,17 @@
     <p class="consigne">Le royaume rassemble ses élèves…</p>
   </section>
 
+  <!-- 1 bis. Élève reconnu sur cet appareil (29 sept. 2026) : pas besoin de rechoisir son nom -->
+  <section class="ecran" id="ecran-retour" hidden>
+    <h1 tabindex="-1">Bon retour,</h1>
+    <div class="etiquette-nom" id="nomRetour"></div>
+    <p class="consigne" id="texteRetour">Ton grimoire s'ouvre…</p>
+    <div class="rangee">
+      <button class="bouton" id="btnEntrer" type="button">Entrer</button>
+      <button class="bouton discret" id="btnPasMoi" type="button">Ce n'est pas moi</button>
+    </div>
+  </section>
+
   <!-- 2. Choix du nom -->
   <section class="ecran" id="ecran-noms" hidden>
     <h1 tabindex="-1">Qui ouvre le grimoire ?</h1>
@@ -215,7 +226,7 @@ function preparerEleves(brut){
 }
 
 /* ---------- Affichage ---------- */
-const ECRANS = ['ecran-liste-attente','ecran-noms','ecran-confirmation','ecran-coffre-attente','ecran-couvertures','ecran-erreur'];
+const ECRANS = ['ecran-liste-attente','ecran-retour','ecran-noms','ecran-confirmation','ecran-coffre-attente','ecran-couvertures','ecran-erreur'];
 function montrer(id){
   ECRANS.forEach(e => { $(e).hidden = (e !== id); });
   const titre = $(id).querySelector('h1');
@@ -257,7 +268,41 @@ async function lireListeEleves(){
   throw derniere;
 }
 
-async function demarrer(){
+/* ---------- 0. Élève déjà reconnu sur cet appareil ----------
+   Après une première entrée réussie, l'appareil se souvient de l'élève : les fois suivantes, il entre
+   directement (après 2 secondes, ou tout de suite avec « Entrer »). « Ce n'est pas moi » ramène à la liste.
+   Chaque élève ayant son propre compte sur son Chromebook, chacun a sa propre mémoire. */
+const CLE_MEMOIRE = 'pionniers_eleve_memorise';
+function eleveMemorise(){
+  try{ const e = JSON.parse(localStorage.getItem(CLE_MEMOIRE) || 'null'); return (e && e.slug && e.nom) ? e : null; }catch(e){ return null; }
+}
+function memoriserEleve(el){ try{ localStorage.setItem(CLE_MEMOIRE, JSON.stringify({ nom: el.nom, slug: el.slug })); }catch(e){} }
+function oublierEleve(){ try{ localStorage.removeItem(CLE_MEMOIRE); }catch(e){} }
+
+let minuterieRetour = null;
+function accueillirEleveMemorise(el){
+  eleveCourant = el;
+  $('nomRetour').textContent = el.nom;
+  montrer('ecran-retour');
+  let reste = 2;
+  $('texteRetour').textContent = 'Ton grimoire s\u2019ouvre dans ' + reste + ' secondes…';
+  clearInterval(minuterieRetour);
+  minuterieRetour = setInterval(() => {
+    reste--;
+    if(reste > 0){ $('texteRetour').textContent = 'Ton grimoire s\u2019ouvre dans ' + reste + ' seconde' + (reste > 1 ? 's' : '') + '…'; return; }
+    clearInterval(minuterieRetour); ouvrirCoffre();
+  }, 1000);
+}
+$('btnEntrer').addEventListener('click', () => { clearInterval(minuterieRetour); ouvrirCoffre(); });
+$('btnPasMoi').addEventListener('click', () => { clearInterval(minuterieRetour); oublierEleve(); eleveCourant = null; demarrerListe(); });
+
+function demarrer(){
+  const el = eleveMemorise();
+  if(el && configurationValide()){ accueillirEleveMemorise(el); return; }
+  demarrerListe();
+}
+
+async function demarrerListe(){
   montrer('ecran-liste-attente');
   if(!configurationValide()){
     montrerErreur('Configuration incomplète',
@@ -268,12 +313,12 @@ async function demarrer(){
   try{
     brut = await lireListeEleves();
   }catch(e){
-    montrerErreur(ERR_RESEAU[0], ERR_RESEAU[1], demarrer);
+    montrerErreur(ERR_RESEAU[0], ERR_RESEAU[1], demarrerListe);
     return;
   }
   if(!brut.length){
     montrerErreur('Aucun élève dans la liste',
-      "L'onglet « Élèves » de la feuille Google est vide. Avertis ton enseignant.", demarrer);
+      "L'onglet « Élèves » de la feuille Google est vide. Avertis ton enseignant.", demarrerListe);
     return;
   }
   eleves = preparerEleves(brut);
@@ -341,7 +386,7 @@ async function ouvrirCoffre(){
       if(resultat.source === 'defaut'){
         montrerErreur('Ton grimoire a besoin d\u2019aide',
           "Tes données n'ont pas pu être lues. Ne choisis pas de nouveau grimoire : avertis ton enseignant.",
-          () => afficherNoms(), 'Retour à la liste');
+          () => { oublierEleve(); demarrerListe(); }, 'Retour à la liste');
         return;
       }
     }
@@ -406,6 +451,7 @@ $('btnValiderGenre').addEventListener('click', async () => {
 
 /* ---------- 5. Redirection ---------- */
 function partir(){
+  memoriserEleve(eleveCourant);
   const url = PAGE_SUIVANTE +
     '?eleve=' + encodeURIComponent(eleveCourant.slug) +
     '&nom=' + encodeURIComponent(eleveCourant.nom);

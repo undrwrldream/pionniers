@@ -91,29 +91,19 @@ window.PasserelleCore = (function(){
     };
   }
 
-  /* ---------- Accès bas niveau — maintenant via Google Apps Script ---------- */
+  /* ---------- Accès bas niveau — via window.storage (stockage-classe.js) ---------- */
+  // 29 sept. 2026 : avant, une lecture lente ou ratée renvoyait « rien » : la page croyait
+  // l'élève tout neuf (0 or, pas de couverture) et pouvait ENREGISTRER ce coffre vide par-dessus
+  // le vrai. Maintenant tout passe par stockage-classe.js, qui patiente (voile « patiente »)
+  // et réessaie jusqu'à la réponse : « absente » veut vraiment dire absente.
 
   async function lireCle(cle){
     try{
-      const res = await fetch(URL_SCRIPT + '?cle=' + encodeURIComponent(cle));
-      const data = await res.json();
-      return (data && data.value) ? JSON.parse(data.value) : null;
+      const r = await window.storage.get(cle, true);
+      try{ return JSON.parse(r.value); }catch(e){ return { __illisible: true }; }
     }catch(e){
-      return null; // clé absente, réseau indisponible, ou erreur ponctuelle
-    }
-  }
-
-  async function ecrireCle(cle, valeur){
-    try{
-      const res = await fetch(URL_SCRIPT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // évite le "preflight" CORS
-        body: JSON.stringify({ cle: cle, valeur: JSON.stringify(valeur), secret: SECRET_PARTAGE })
-      });
-      const data = await res.json();
-      return !!(data && data.ok);
-    }catch(e){
-      return false;
+      if(e && e.code === 'ABSENTE') return null;
+      throw e;   // autre problème (configuration) : on ne fait surtout pas comme si le coffre était vide
     }
   }
 
@@ -142,8 +132,10 @@ window.PasserelleCore = (function(){
       { cle: cles.bak1,    source: 'sauvegarde1' },
       { cle: cles.bak2,    source: 'sauvegarde2' }
     ];
+    let premier = null;
     for(const tentative of tentatives){
       const enveloppe = await lireCle(tentative.cle);
+      if(tentative.source === 'courant') premier = enveloppe;
       if(enveloppeValide(enveloppe)){
         // On rafraîchit le nom affiché au passage (au cas où l'enseignant
         // aurait corrigé une coquille dans le lien depuis la dernière visite).
@@ -154,7 +146,7 @@ window.PasserelleCore = (function(){
     // Rien de valide trouvé : soit première visite, soit corruption totale
     // (extrêmement improbable — il faudrait que les 3 copies soient toutes
     // altérées en même temps).
-    const existaitDejaQuelqueChose = !!(await lireCle(cles.courant));
+    const existaitDejaQuelqueChose = !!premier;
     return { donnees: coffreParDefaut(nomAffiche), source: 'defaut', restaure: existaitDejaQuelqueChose };
   }
 
@@ -166,19 +158,14 @@ window.PasserelleCore = (function(){
    * corrompue au rang de "sauvegarde de secours".
    */
   async function sauvegarderCoffre(slug, donnees){
-    const cles = clesPour(slug);
-
-    const courantActuel = await lireCle(cles.courant);
-    if(enveloppeValide(courantActuel)){
-      const bak1Actuel = await lireCle(cles.bak1);
-      if(enveloppeValide(bak1Actuel)){
-        await ecrireCle(cles.bak2, bak1Actuel);
-      }
-      await ecrireCle(cles.bak1, courantActuel);
-    }
-
+    // Un seul appel : le script Google fait lui-même la rotation courant → sauvegarde1 → sauvegarde2
+    // (seulement si la version décalée est saine). Patiente et réessaie tant qu'il le faut.
     const nouvelleEnveloppe = { donnees: donnees, seal: calculerSceau(donnees) };
-    return await ecrireCle(cles.courant, nouvelleEnveloppe);
+    try{
+      return await window.storage.ecrireCoffre(slug, JSON.stringify(nouvelleEnveloppe));
+    }catch(e){
+      return false;
+    }
   }
 
   return {

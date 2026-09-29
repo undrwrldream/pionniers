@@ -1903,17 +1903,45 @@
     coffre.or = (coffre.or || 0) + montant;
     coffre.orGagne += montant;
   }
-  async function awardCoins(amount){
-    if(amount <= 0) return;
+  // idRecompense (facultatif) : le coffre retient les récompenses déjà reçues (coffre.recus), pour qu'une
+  // récompense rejouée (page fermée pendant l'enregistrement, double clic) ne soit JAMAIS versée deux fois.
+  async function awardCoins(amount, idRecompense){
+    if(amount <= 0) return true;
     try{
       // On passe par le coffre unifié (le même que celui de la Boutique
       // d'équipement) pour que l'or reste une seule et même bourse partout.
       const resultat = await window.PasserelleCore.chargerCoffre(currentSlug, currentStudentName);
       const coffre = resultat.donnees;
+      if(idRecompense){
+        coffre.recus = coffre.recus || {};
+        if(coffre.recus[idRecompense]) return true;          // déjà versée
+        coffre.recus[idRecompense] = Date.now();
+      }
       verserOr(coffre, amount);
       coffre.nom = currentStudentName;
-      await window.PasserelleCore.sauvegarderCoffre(currentSlug, coffre);
-    }catch(e){ /* la pièce d'or sera quand même reflétée dans progress_ pour la prochaine tentative */ }
+      return await window.PasserelleCore.sauvegarderCoffre(currentSlug, coffre);
+    }catch(e){ return false; }
+  }
+
+  /* Récompense d'un document : l'or D'ABORD (une seule fois, grâce à coffre.recus), puis « terminé ».
+     Avant le 29 sept. 2026, c'était l'inverse : une page fermée entre les deux laissait le document
+     « terminé » sans or, pour toujours. L'intention est notée sur l'appareil avant de commencer :
+     si la page se ferme en plein milieu, elle est terminée au prochain chargement du Grimoire. */
+  const CLE_INTENTIONS = 'pionniers_recompenses_en_attente';
+  function lireIntentions(){ try{ const l = JSON.parse(localStorage.getItem(CLE_INTENTIONS) || '[]'); return Array.isArray(l) ? l : []; }catch(e){ return []; } }
+  function ecrireIntentions(l){ try{ localStorage.setItem(CLE_INTENTIONS, JSON.stringify(l)); }catch(e){} }
+  async function crediterDoc(it){
+    ecrireIntentions(lireIntentions().filter(x => !(x.slug === it.slug && x.docId === it.docId)).concat([it]));
+    await awardCoins(it.montant, 'doc:' + it.docId);
+    const progres = { done:true, rewardPaid:it.montant, date:Date.now() };
+    docProgressCache[it.docId] = progres;
+    await window.storage.set(it.cleProgres || docProgressKey(it.chapterId, it.docId), JSON.stringify(progres), true).catch(() => {});
+    ecrireIntentions(lireIntentions().filter(x => !(x.slug === it.slug && x.docId === it.docId)));
+  }
+  async function terminerIntentionsEnAttente(){
+    const miennes = lireIntentions().filter(x => x.slug === currentSlug);
+    for(const it of miennes){ try{ await crediterDoc(it); }catch(e){} }
+    if(miennes.length && currentChapter) renderChapterMenu();
   }
   function shuffle(arr){
     const a = arr.slice();
@@ -2653,7 +2681,7 @@
       fb.insertAdjacentHTML('afterend', '<button class="quest-success-btn" id="questContinuerBtn" type="button">Continuer</button>');
       $('questContinuerBtn').addEventListener('click', () => fermerQuestParchemin(true));
     }
-    await awardCoins(recompense);
+    await awardCoins(recompense, 'quete:addition:' + questNiveauActif);
     const progres = await chargerQuestProgress('addition');
     progres.niveauComplete = Math.max(progres.niveauComplete, questNiveauActif);
     await sauvegarderQuestProgress('addition', progres);
@@ -2892,7 +2920,7 @@
       fb.insertAdjacentHTML('afterend', '<button class="quest-success-btn" id="questContinuerBtn" type="button">Continuer</button>');
       $('questContinuerBtn').addEventListener('click', () => fermerQuestParchemin(true));
     }
-    await awardCoins(recompense);
+    await awardCoins(recompense, 'quete:multiplication:' + questNiveauActif);
     const progres = await chargerQuestProgress('multiplication');
     progres.niveauComplete = Math.max(progres.niveauComplete, questNiveauActif);
     await sauvegarderQuestProgress('multiplication', progres);
@@ -2978,7 +3006,7 @@
       fb.insertAdjacentHTML('afterend', '<button class="quest-success-btn" id="questContinuerBtn" type="button">Continuer</button>');
       $('questContinuerBtn').addEventListener('click', () => fermerQuestParchemin(true));
     }
-    await awardCoins(recompense);
+    await awardCoins(recompense, 'quete:' + op + ':' + questNiveauActif);
     const progres = await chargerQuestProgress(op);
     progres.niveauComplete = Math.max(progres.niveauComplete, questNiveauActif);
     await sauvegarderQuestProgress(op, progres);
@@ -3027,7 +3055,7 @@
       $('questContinuerBtn').addEventListener('click', () => fermerQuestParchemin(true));
       fb.scrollIntoView({ behavior:'smooth', block:'center' });
     }
-    await awardCoins(recompense);
+    await awardCoins(recompense, 'quete:angles:' + questNiveauActif);
     const progres = await chargerQuestProgress('angles');
     progres.niveauComplete = Math.max(progres.niveauComplete, questNiveauActif);
     await sauvegarderQuestProgress('angles', progres);
@@ -3637,10 +3665,8 @@
     const sceau = sceauChapitre(a.chapterId);
     if(sceau && sceau.aRefaire.hasOwnProperty(a.doc.id) && !sceau.aRefaire[a.doc.id]) await marquerRefait(a);
     if(docFait(a.doc.id)) return;                     // déjà récompensé : aucune récompense de plus
-    const progres = { done:true, rewardPaid:a.doc.recompense, date:Date.now() };
-    docProgressCache[a.doc.id] = progres;
-    await window.storage.set(docProgressKey(a.chapterId, a.doc.id), JSON.stringify(progres), true).catch(() => {});
-    await awardCoins(a.doc.recompense);
+    await crediterDoc({ slug: currentSlug, chapterId: a.chapterId, docId: a.doc.id, montant: a.doc.recompense,
+                        cleProgres: docProgressKey(a.chapterId, a.doc.id), nom: currentStudentName });
     await enregistrerCopieDoc(a);
     if(docActif !== a) return;   // l'élève a fermé le document (ou en a ouvert un autre) entre-temps : le menu se remettra à jour tout seul
     if(a.doc.evaluation){
@@ -3655,12 +3681,13 @@
     }
     const debloque = docExigePourSection(a.chapterId, a.sectionIdx + 1) === a.doc.id ||
       (sectionExigee(a.chapterId, a.sectionIdx + 1) === a.sectionIdx && !restantsSectionExigee(a.chapterId, a.sectionIdx + 1).length);
-    if(a.doc.mode === 'lecture'){
-      afficherFinLecture('Tu as lu le document jusqu\'à la fin. Tu peux poursuivre !' +
-        '<br><strong>+' + a.doc.recompense + ' 🪙</strong>' +
-        (debloque ? '<small>La ' + escapeHtml(SECTION_META[a.sectionIdx + 1].name.split('— ').pop()) + ' est débloquée !</small>' : ''));
-      return;
-    }
+    // Fenêtre au centre (lecture ET exercices), comme la fin d'une section de français.
+    $('finLectureTitre').textContent = a.doc.mode === 'lecture' ? 'Lecture terminée !' : 'Bravo !';
+    $('finLectureRester').textContent = a.doc.mode === 'lecture' ? 'Rester sur le document' : 'Revoir mes réponses';
+    afficherFinLecture((a.doc.mode === 'lecture' ? 'Tu as lu le document. Tu peux poursuivre !' : 'Bravo, tout est réussi !') +
+      '<br><strong>+' + a.doc.recompense + ' 🪙</strong>' +
+      (debloque ? '<small>La ' + escapeHtml(SECTION_META[a.sectionIdx + 1].name.split('— ').pop()) + ' est débloquée !</small>' : ''));
+    return;
     afficherToastDoc('🎉 ' + (a.doc.mode === 'lecture' ? 'Document lu jusqu\'au bout !' : 'Bravo, tout est réussi !') +
       '<br><strong>+' + a.doc.recompense + ' 🪙</strong>' +
       (debloque ? '<br><span style="font-size:0.85rem;">La ' + escapeHtml(SECTION_META[a.sectionIdx + 1].name.split('— ').pop()) + ' est débloquée !</span>' : ''));
@@ -4331,6 +4358,22 @@
   renderLeftPage();
   // Les ouvertures (atelier, élève) arrivent du stockage : on redessine la table des matières si elle est encore affichée.
   chargerOuverturesChapitres().then(async () => { await chargerPortes(); if($('tocList')) renderLeftPage(); installerSorts(); });
+  // Retour à la fiche (✕ Fiche de personnage) : le Grimoire revient à sa table des matières, pour que l'élève
+  // reparte toujours du début au prochain passage. Un document ouvert est fermé (son état est gardé :
+  // il reprendra là où il était). Les enregistrements en cours continuent en arrière-plan.
+  window.addEventListener('message', e => {
+    const d = e.data;
+    if(!d || d.source !== 'fiche' || d.type !== 'retour-accueil' || e.source !== window.parent) return;
+    try{ if(docActif || $('docOverlay').classList.contains('open')) fermerDoc(); }catch(_){}
+    try{ fermerPunchMath(); fermerSerpent(); fermerJeu(); }catch(_){}
+    try{ if(window.SortsOutils) window.SortsOutils.toutFermer(); }catch(_){}
+    sectionChoisie = null;
+    currentChapter = null;
+    renderLeftPage();
+    renderTocView();
+  });
+  // Récompenses de documents interrompues (page fermée pendant l'enregistrement) : on les termine.
+  if(currentSlug) setTimeout(terminerIntentionsEnAttente, 500);
 
   // ---------- Barre de sorts (sorts-core.js) : outils appris par les entraînements ----------
   // Sorts appris : clé « sorts_<élève> ». Dans l'atelier tout ouvert, tous les sorts sont utilisables.

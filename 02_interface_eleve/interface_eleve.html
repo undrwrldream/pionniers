@@ -1158,47 +1158,96 @@ let identiteEleve = null; // { slug, nom } — fourni par la passerelle
 let busy = false; // verrou global anti-clic-frénétique
 const RESALE_RATE = 1.0; // remboursement à 100% — les prix en cascade tiennent déjà compte de la revente
 
-async function saveState(){
+// 29 sept. 2026 : la fiche ne réécrit plus JAMAIS sa vieille copie du coffre. Elle relit le coffre
+// frais (le Grimoire a pu y verser de l'or entre-temps), y applique SEULEMENT ses propres changements
+// (l'or dépensé ou remboursé à la boutique, l'équipement), puis l'enregistre. Les enregistrements se
+// suivent un à la fois (file d'attente) : deux clics rapides ne s'écrasent pas.
+let fileSauvegarde = Promise.resolve();
+function saveState(){
+  fileSauvegarde = fileSauvegarde.then(sauverMaintenant, sauverMaintenant);
+  return fileSauvegarde;
+}
+async function sauverMaintenant(){
   if(!identiteEleve || !state) return;
   try{
-    const coffre = window.Passerelle.coffre || window.PasserelleCore.coffreParDefaut(identiteEleve.nom);
+    const frais = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
+    const coffre = frais.donnees;
+    const orConnu = (window.Passerelle.orConnu != null) ? window.Passerelle.orConnu : coffre.or;
+    const difference = state.gold - orConnu;            // ce que la boutique a dépensé (-) ou remboursé (+)
     coffre.nom = identiteEleve.nom;
-    coffre.or = state.gold;
+    coffre.or = Math.max(0, (coffre.or || 0) + difference);
     coffre.equipement = {
       inventory: state.inventory,
       equipped: state.equipped,
       portraitImage: state.portraitImage
     };
-    window.Passerelle.coffre = coffre;
     await window.PasserelleCore.sauvegarderCoffre(identiteEleve.slug, coffre);
+    window.Passerelle.coffre = coffre;
+    window.Passerelle.orConnu = coffre.or;
+    if(state.gold !== coffre.or){ state.gold = coffre.or; render(); }   // de l'or arrivé d'ailleurs s'affiche
   }catch(e){ console.error('Sauvegarde impossible', e); }
 }
 
 // Relit le coffre depuis le stockage partagé (source de vérité) et met à
 // jour l'affichage local — utilisé quand on revient du Grimoire, où l'or a
 // pu changer indépendamment de cette page (fiche de personnage).
+// La boutique attend la fin de cette relecture (busy) : aucun achat sur un or périmé.
 async function resynchroniserApresModule(){
   if(!identiteEleve || !state) return;
-  const resultat = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
-  window.Passerelle.coffre = resultat.donnees;
-  state.gold = resultat.donnees.or;
-  state.inventory = resultat.donnees.equipement.inventory;
-  state.equipped = resultat.donnees.equipement.equipped;
-  state.portraitImage = resultat.donnees.equipement.portraitImage;
-  state.niveau = resultat.donnees.niveauLecture || 0;
-  state.xp = resultat.donnees.xp || 0;
-  state.genre = resultat.donnees.genre || null;
-  const rangTitreEl = document.getElementById('rangTitre');
-  if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[resultat.donnees.niveauLecture || 0] || NIVEAUX_LECTURE[0];
-  render();
+  await fileSauvegarde.catch(() => {});
+  const avant = busy; busy = true;
+  try{
+    const resultat = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
+    window.Passerelle.coffre = resultat.donnees;
+    window.Passerelle.orConnu = resultat.donnees.or;
+    state.gold = resultat.donnees.or;
+    state.inventory = resultat.donnees.equipement.inventory;
+    state.equipped = resultat.donnees.equipement.equipped;
+    state.portraitImage = resultat.donnees.equipement.portraitImage;
+    state.niveau = resultat.donnees.niveauLecture || 0;
+    state.xp = resultat.donnees.xp || 0;
+    state.genre = resultat.donnees.genre || null;
+    const rangTitreEl = document.getElementById('rangTitre');
+    if(rangTitreEl) rangTitreEl.textContent = NIVEAUX_LECTURE[resultat.donnees.niveauLecture || 0] || NIVEAUX_LECTURE[0];
+    render();
+  }finally{ busy = avant; }
 }
 
 // Appelé une seule fois par la passerelle, une fois l'identité confirmée et
 // le coffre chargé (avec restauration automatique si nécessaire).
 const NIVEAUX_LECTURE = ["Apprenti", "Novice", "Invocateur", "Magicien", "Sorcier", "Archimage"];
 
+/* Récompenses de documents du Grimoire interrompues (page fermée pendant l'enregistrement) :
+   la fiche les termine dès son chargement, sans attendre que l'élève rouvre le Grimoire.
+   Même logique que crediterDoc() du Grimoire : l'or une seule fois (coffre.recus), puis « terminé ». */
+async function terminerRecompensesEnAttente(){
+  let liste = [];
+  try{ liste = JSON.parse(localStorage.getItem('pionniers_recompenses_en_attente') || '[]'); }catch(e){}
+  const miennes = (Array.isArray(liste) ? liste : []).filter(x => identiteEleve && x.slug === identiteEleve.slug && x.cleProgres);
+  if(!miennes.length) return;
+  await fileSauvegarde.catch(() => {});
+  for(const it of miennes){
+    try{
+      const r = await window.PasserelleCore.chargerCoffre(identiteEleve.slug, identiteEleve.nom);
+      const c = r.donnees; c.recus = c.recus || {};
+      if(!c.recus['doc:' + it.docId]){
+        c.recus['doc:' + it.docId] = Date.now();
+        if(typeof c.orGagne !== 'number') c.orGagne = c.or || 0;
+        c.or = (c.or || 0) + it.montant; c.orGagne += it.montant;
+        await window.PasserelleCore.sauvegarderCoffre(identiteEleve.slug, c);
+      }
+      await window.storage.set(it.cleProgres, JSON.stringify({ done:true, rewardPaid:it.montant, date:Date.now() }), true);
+      let l = []; try{ l = JSON.parse(localStorage.getItem('pionniers_recompenses_en_attente') || '[]'); }catch(e){}
+      localStorage.setItem('pionniers_recompenses_en_attente', JSON.stringify(l.filter(x => !(x.slug === it.slug && x.docId === it.docId))));
+    }catch(e){ /* on réessaiera au prochain chargement */ }
+  }
+  await resynchroniserApresModule();
+}
+
 window.onPasserelleReady = function(identite, coffre){
   identiteEleve = identite;
+  window.Passerelle.orConnu = coffre.or;
+  setTimeout(terminerRecompensesEnAttente, 800);
   state = {
     gold: coffre.or, // 0 pour un nouvel élève — tout l'or se gagne, aucun cadeau de départ
     inventory: coffre.equipement.inventory,
@@ -1402,6 +1451,13 @@ function urlAvecIdentite(fichier){
   return fichier + '?' + params.toString();
 }
 
+// 29 sept. 2026 : quand l'élève revient à sa fiche, le livre retourne à sa table des matières
+// (sinon, au retour, il retombait au fond d'une section ou d'un sous-menu et ne retrouvait plus le chemin).
+function livreAuDebut(idCadre){
+  const f = document.getElementById(idCadre);
+  try{ if(f && f.contentWindow) f.contentWindow.postMessage({ source:'fiche', type:'retour-accueil' }, '*'); }catch(e){}
+}
+
 // Le grimoire ne se charge qu'au premier clic — jamais chargé d'avance.
 // Il s'ouvre en plein écran, par-dessus la fiche de personnage, qui reste intacte en dessous.
 // Les "Exercices supplémentaires" vivent dans le même fichier (grimoire-des-mathematiques.html) —
@@ -1426,6 +1482,7 @@ document.getElementById('exercicesSuppToggle').addEventListener('click', () => o
 document.getElementById('grimoireCloseBtn').addEventListener('click', () => {
   document.getElementById('grimoireModal').classList.remove('open');
   if(window.Compagnon) window.Compagnon.maj({ grimoireOuvert: false });
+  livreAuDebut('grimoireFrame');
   resynchroniserApresModule(); // l'or gagné dans le Grimoire doit apparaître ici sans recharger la page
 });
 
@@ -1440,6 +1497,7 @@ document.getElementById('parcheminsToggle').addEventListener('click', () => {
 });
 document.getElementById('parcheminsCloseBtn').addEventListener('click', () => {
   document.getElementById('parcheminsModal').classList.remove('open');
+  livreAuDebut('parcheminsFrame');
   resynchroniserApresModule();   // XP et rang gagnés dans les Parchemins
 });
 
@@ -1457,7 +1515,7 @@ document.getElementById('histoireCloseBtn').addEventListener('click', () => {
   const f = document.getElementById('histoireFrame');
   let garde = null;
   try{ garde = f && f.contentWindow && f.contentWindow.GardeLecture; }catch(e){ garde = null; }   // ouvert depuis un dossier : Chrome interdit de regarder dans le livre
-  const fermer = () => { document.getElementById('histoireModal').classList.remove('open'); resynchroniserApresModule(); };
+  const fermer = () => { document.getElementById('histoireModal').classList.remove('open'); livreAuDebut('histoireFrame'); resynchroniserApresModule(); };
   if(garde && garde.enCours()) garde.demanderSortie(fermer); else fermer();
 });
 

@@ -983,6 +983,33 @@ async function sauverProgression(){
   try{ await window.storage.set(cleProgression(), JSON.stringify(progression), true); }catch(e){}
 }
 const xpGagne = cle => progression.gains[cle] || 0;
+/* Fenêtre au centre de l'écran quand une lecture ou un questionnaire est réussi (comme les Parchemins). */
+function fenetreFin(texteHtml){
+  let f = document.getElementById('finSection');
+  if(!f){
+    const st = document.createElement('style');
+    st.textContent =
+      '.fin-section{position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center;background:rgba(8,10,24,.62);padding:16px}' +
+      '.fin-section.open{display:flex;animation:finSectionFondu .3s ease-out}' +
+      '.fin-section-carte{width:min(94vw,520px);text-align:center;color:#F3E9D2;background:radial-gradient(ellipse at top,#1d2a55,#0e1430 70%);' +
+      'border:2px solid #c9a13b;border-radius:14px;padding:18px 22px 22px;box-shadow:0 14px 40px rgba(0,0,0,.6);animation:finSectionCarte .45s cubic-bezier(.2,1.4,.4,1)}' +
+      '.fin-section-carte img{width:100%;max-width:440px;display:block;margin:-4px auto 6px;filter:drop-shadow(0 4px 10px rgba(40,120,255,.45))}' +
+      '.fin-section-titre{font-family:"Cinzel Decorative",Georgia,serif;font-size:1.35rem;color:#f5d77a;margin:2px 0 6px}' +
+      '.fin-section-texte{font-size:1.1rem;line-height:1.4;margin:0 0 16px}.fin-section-texte small{display:block;font-size:.92rem;opacity:.85;margin-top:4px}' +
+      '.fin-section-btns button{font:inherit;font-size:1.05rem;border-radius:8px;padding:9px 20px;cursor:pointer;background:#c9a13b;border:none;color:#1b1408;font-weight:bold}' +
+      '@keyframes finSectionFondu{from{opacity:0}to{opacity:1}}@keyframes finSectionCarte{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}';
+    document.head.appendChild(st);
+    f = document.createElement('div');
+    f.id = 'finSection'; f.className = 'fin-section'; f.setAttribute('role', 'dialog'); f.setAttribute('aria-modal', 'true');
+    document.body.appendChild(f);
+  }
+  f.innerHTML = '<div class="fin-section-carte"><img src="livre_assets/banderole_completee.webp" alt="Section complétée" draggable="false">' +
+    '<p class="fin-section-titre">Bravo !</p><p class="fin-section-texte">' + texteHtml + '</p>' +
+    '<div class="fin-section-btns"><button type="button" id="finSectionOk">Poursuivre ➜</button></div></div>';
+  f.classList.add('open');
+  document.getElementById('finSectionOk').onclick = () => f.classList.remove('open');
+  setTimeout(() => { try{ document.getElementById('finSectionOk').focus(); }catch(e){} }, 50);
+}
 function toastXp(html){ const t = document.getElementById('xpToast'); t.innerHTML = html; t.classList.add('visible'); clearTimeout(toastXp.m); toastXp.m = setTimeout(() => t.classList.remove('visible'), 3800); }
 // Donne l'XP une seule fois, et met à jour le coffre (total + rang).
 async function donnerXp(cle, xp, titre){
@@ -1000,7 +1027,8 @@ async function donnerXp(cle, xp, titre){
       if(res.donnees.genre) genreEleve = res.donnees.genre;
     }catch(e){}
   }
-  toastXp('✨ +' + xp + ' XP<small>' + esc(titre) + (monte ? ' — Tu es maintenant ' + esc(monte) + ' !' : '') + '</small>');
+  fenetreFin('Tu as gagné <b>' + xp + ' XP</b> !<small>' + esc(titre) + '</small>' +
+    (monte ? '<small>✨ Tu es maintenant <b>' + esc(monte) + '</b> !</small>' : ''));
   return true;
 }
 function pastilleXp(cle, xp){
@@ -1031,13 +1059,14 @@ window.GardeLecture = (function(){
   let actif = null;          // { cle, titre, restant, vues:Set, total, complet, prefixe, doc }
   let minuterie = null, question = false, phrase = 0, tic = 0;
   const mmss = t => Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0');
-  function vuAuComplet(){ return actif && actif.total > 0 && actif.vues.size >= actif.total; }
+  // 75 % de la lecture suffit (29 sept. 2026) : 75 % des pages, ou 75 % du défilement d'un document.
+  function vuAuComplet(){ return actif && actif.total > 0 && actif.vues.size >= Math.ceil(0.75 * actif.total); }
   function afficher(){
     if(!actif || question) return;
     const fini = actif.restant <= 0, vu = vuAuComplet();
-    const vues = actif.doc === 'defiler' ? (vu ? '✓ Lu jusqu\'en bas' : '📜 Lis jusqu\'en bas du document')
-      : (vu ? '✓ Toutes les pages vues' : '📖 Pages vues : ' + actif.vues.size + ' / ' + (actif.total || '?'));
-    compagnon((fini ? '<b>Le temps est écoulé !</b> Il te reste à tout voir pour gagner ton XP.' : esc(ENCOURAGEMENTS_LECTURE[phrase])) +
+    const vues = actif.doc === 'defiler' ? (vu ? '✓ Assez lu' : '📜 Lis le document jusqu\'aux trois quarts')
+      : (vu ? '✓ Assez de pages vues' : '📖 Pages vues : ' + actif.vues.size + ' / ' + (actif.total ? Math.ceil(0.75 * actif.total) : '?'));
+    compagnon((fini ? '<b>Le temps est écoulé !</b> Lis encore un peu pour gagner ton XP.' : esc(ENCOURAGEMENTS_LECTURE[phrase])) +
       '<div class="lect-temps"><span class="sablier">⏳</span><span class="chiffres">' + mmss(Math.max(0, actif.restant)) + '</span></div>' +
       '<div class="lect-barre"><i style="width:' + (100 * (DUREE_LECTURE - Math.max(0, actif.restant)) / DUREE_LECTURE) + '%"></i></div>' +
       '<div class="lect-vues">' + vues + '</div>');
@@ -1108,7 +1137,7 @@ window.GardeLecture = (function(){
     } else if(actif.doc === 'defiler'){
       actif.total = 1;
       const el = d.scrollingElement || d.documentElement, w = f.contentWindow;
-      if(el && w && el.scrollTop + w.innerHeight >= 0.9 * el.scrollHeight) actif.vues.add(1);   // 90 % suffit
+      if(el && w && el.scrollTop + w.innerHeight >= 0.75 * el.scrollHeight) actif.vues.add(1);   // 75 % suffit
     }
   }
   return { commencer, vue, enCours, demanderSortie, arreter, dansLecture: h => !!(actif && actif.prefixe && (h === actif.prefixe || h.indexOf(actif.prefixe + '/') === 0)), actif: () => actif };
@@ -1235,6 +1264,17 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-go]');
   if(!b || b.disabled) return;
   aller(b.getAttribute('data-go'));
+});
+// Retour à la fiche : le livre revient à sa table des matières (29 sept. 2026).
+window.addEventListener('message', e => {
+  const d = e.data;
+  if(!d || d.source !== 'fiche' || d.type !== 'retour-accueil' || e.source !== window.parent) return;
+  try{ fermerVideo(); fermerZoom(); fermerJeu(false); }catch(_){}
+  try{ if(typeof fermerEchecs === 'function') fermerEchecs(); }catch(_){}
+  try{ if(document.getElementById('docModal').classList.contains('open')) fermerDoc(); }catch(_){}
+  try{ GardeLecture.arreter(); cacherCompagnon(); }catch(_){}
+  history.replaceState(null, '', '#/'); dernierHash = null; route();
+  window.scrollTo(0, 0);
 });
 function enCours(){   // chemin de la vue affichée (utile pour l'exercice)
   const segs = (location.hash || '#/').replace(/^#\/?/, '').split('/').filter(Boolean);
